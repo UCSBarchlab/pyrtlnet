@@ -1,0 +1,4 @@
+ai-edge-litert
+tensorflow
+tensorflow-model-optimization
+tf-keras
