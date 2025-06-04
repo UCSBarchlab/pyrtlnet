@@ -1,9 +1,15 @@
-# Implement quantized inference, following the equations in
-# https://arxiv.org/pdf/1712.05877.pdf . All Equation references in code comments refer
-# to equations in this paper.
-#
-# The first layer is quantized per-axis, see
-# https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
+"""Implement quantized inference with numpy and fxpmath.
+
+This does not invoke the LiteRT reference implementation, though it does instantiate an
+Interpreter to extract weights, biases, and quantization metadata.
+
+This implements the equations in https://arxiv.org/pdf/1712.05877.pdf . All Equation
+references in code comments refer to equations in this paper.
+
+The first layer is quantized per-axis, which is not described in the paper above. See
+https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
+
+"""
 
 import argparse
 
@@ -14,16 +20,40 @@ import tensorflow as tf
 from fxpmath import Fxp
 
 
-def normalization_constants(s1: float, s2: float, s3: float) -> (Fxp, int):
+def normalization_constants(s1: np.ndarray, s2: np.ndarray, s3: np.ndarray) -> (Fxp, np.ndarray):
+    """Normalize multiplier `m` to a fixed-point multiplier `m0` and a bit-shift `n`.
+
+    See Section 2.2 in the paper. The multiplier `m` (Equation 5) is computed from:
+
+    `s1`, the scale factors for the matrix multiplication's left input, which is the
+        layer's weight matrix.
+    `s2`, the scale factors for the matrix multiplication's right input, which is the
+        layer's input matrix.
+    `s3`, the scale factors for the matrix multiplication's output, which is the layer's
+        output matrix.
+
+    This multiplier `m` can then be expressed as a bit-shifted fixed-point multiplier
+    `m0`. `m == (2 ** -n) * m0`, where `m0` is in the interval [0.5, 1). So a
+    floating-point multiplication by `m` is equivalent to a fixed-point multiplication
+    by `m0`, followed by a bitwise right-shift by `n`. This fixed-point multiplication
+    and bitwise shift are done by `normalize()`.
+
+    A layer can have per-axis scale factors, so `s1`, `s2`, and `s3` are vectors of
+    scale factors. This function returns a vector of fixed-point `m0` values and a
+    vector of integer `n` values. See
+    https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
+
+    """
     # Equation 5.
     m = s1 * s2 / s3
 
-    # Equation 6: Express M as a bit-shifted fixed-point multiplier M0.
-    # M == (2 ** -n) * M0, where M is in the interval [0.5, 1).
+    # Find the smallest value of `n` such that `m0 == m * (2^n)`, where
+    # `m0 >= 0.5` and `m0 < 1`.
     m0 = []
     n = []
     for m_in in m:
         for n_out in range(0, 32):
+            # Equation 6.
             m0_out = m_in * (2 ** n_out)
             if m0_out >= 0.5 and m0_out < 1:
                 m0.append(m0_out)
@@ -33,48 +63,62 @@ def normalization_constants(s1: float, s2: float, s3: float) -> (Fxp, int):
     n = np.array(n)
     assert len(m0) == len(m)
     assert len(n) == len(m)
-    assert (m0 >= 0.5).all()
-    assert (m0 < 1).all()
 
     m0 = Fxp(m0, signed=False, n_word=32, n_frac=32)
     return m0, n
 
 
 def relu(x):
-    return x * (x > 0)
+    return np.maximum(0, x)
 
 
 def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.ndarray:
-    # Equation 7 (the part in parentheses) and Equation 8. The part of equation 7 #
-    # that's outside the parentheses (addition of Z3 and multiplication by M) are done
-    # by normalize(), after adding the bias.
+    """Quantized matrix multiplication of `q1` and `q2`.
+
+    `z1` is the zero point for `q1`, and `z2` is the zero point for `q2`.
+
+    This function returns the *un-normalized* matrix multiplication output, which is
+    int32. See Sections 2.3 and 2.4 in the paper. The layer's int32 bias can be added to
+    this function's output, and the activation function applied. The output must be
+    normalized back to int8 with `normalize()` before proceeding to the next layer.
+
+    """
+    # Equation 7 (the part in parentheses) and Equation 8. The part of equation 7 that's
+    # outside the parentheses (addition of z3 and multiplication by m) are done by
+    # normalize(), after adding the bias.
     #
     # All the math in this function is ordinary integer arithmetic. Fixed-point
     # calculations only occur in normalize().
+
+    # Accumulations are done with 32-bit integers, see Section 2.4 in the paper.
     q1 = q1.astype(np.int32)
     q2 = q2.astype(np.int32)
     inner_dim = q1.shape[1]
 
-    # Equation 8, left half. This sums each column of q2.
+    # Equation 8, left half. This sums each column of `q2`.
     a2 = np.zeros((q2.shape[1],), dtype=np.int32)
     for k in range(a2.shape[0]):
         a2[k] = sum(q2[j][k] for j in range(inner_dim))
 
-    # Equation 8, right half. This sums each row of q1.
+    # Equation 8, right half. This sums each row of `q1`.
     a1_ = np.zeros((q1.shape[0],), dtype=np.int32)
     for i in range(a1_.shape[0]):
         a1_[i] = sum(q1[i][j] for j in range(inner_dim))
 
     output = np.zeros((q1.shape[0], q2.shape[1]), dtype=np.int32)
     assert q1.shape[1] == q2.shape[0]
-    # z1 is always zero, which can simplify the math below.
     z1 = np.broadcast_to(z1, [inner_dim])
     z2 = np.broadcast_to(z2, [inner_dim])
+    # `z1` is always zero, which can simplify the math below.
     assert (z1 == 0).all()
     for i in range(q1.shape[0]):
         for k in range(q2.shape[1]):
-            # Matrix multiplication with per-axis zero points, as described at:
+            # Matrix multiplication with per-axis zero points. This is the equation in
+            # the "Symmetric vs asymmetric" section at:
             # https://ai.google.dev/edge/litert/models/quantization_spec#symmetric_vs_asymmetric
+            #
+            # This calculation can be simplified, but we leave it as-is so it's easier
+            # to see how it maps to the equation in the LiteRT quantization spec.
             output[i][k] = (
                 sum(q1[i][j] * q2[j][k] for j in range(inner_dim))
                 - sum(q1[i][j] * z2[j] for j in range(inner_dim))
@@ -84,31 +128,66 @@ def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.nda
     return output
 
 def normalize(product: np.ndarray, m0: Fxp, n: int, z3: int) -> np.ndarray:
-    # Equation 7, the part outside the parentheses. This function adds Z3 and
-    # multiplies by M, using fixed-point arithmetic. M is decomposed into (m0, n) by
-    # normalization_constants(), using Equation 6.
+    """Convert an un-normalized int32 layer output back to int8.
+
+    This function effectively multiplies the layer's output by its scale factor `m` and
+    adds its zero point `z3`.
+
+    `m` is a floating-point number, which can also be represented by a fixed-point
+    multiplier `m0` and bitwise right shift `n`, see `normalization_constants()`. So
+    instead of doing a floating-point multiplication, we do a fixed-point
+    multiplication, followed by a bitwise right shift.
+
+    """
+    # Implement Equation 7, the part outside the parentheses. This function adds `z3`
+    # and multiplies by `m`, using fixed-point arithmetic. `m` is decomposed into `(m0,
+    # n)` by `normalization_constants()`, using Equation 6.
     product = Fxp(product, signed=True, n_word=32, n_frac=0)
     if m0.size == product.size:
+        # Per-axis quantization, so there is one value of `m0` for each dimension in the
+        # product. Make the shapes match so we can elementwise-multiply `m0` and
+        # `product`.
         m0 = np.reshape(m0, product.shape)
     else:
+        # Per-tensor quantization, so there is just one shared value of `m0` for the
+        # whole tensor. Broadcast to make copies of `m0` so we can elementwise-multiply
+        # `m0` and `product`.
         m0 = np.broadcast_to(m0, product.shape)
+    # Multiply by `m0`. The `*` on the next line performs elementwise 32-bit fixed-point
+    # multiplication.
     multiplied = m0 * product
     if n.size != multiplied.size:
         n = np.broadcast_to(n, (multiplied.size,))
     shifted = []
     for i, multiplier in enumerate(multiplied):
-        shifted.append((multiplier >> int(n[i])).astype(np.int8))
+        # Bitwise right shift by `n`.
+        shifted.append(multiplier >> int(n[i]))
     shifted = np.array(shifted)
+    # Add `z3` and convert to int8.
     added = z3 + shifted
-    return added
+    return added.astype(np.int8)
 
 
 def get_tensor_scale_zero(interpreter, tensor_index):
+    """Retrieve a tensor's scales and zero points from the LiteRT interpreter.
+
+    These scales and zero points may be per-axis or per-tensor.
+
+    """
     tensors = interpreter.get_tensor_details()
     quantization_parameters = tensors[tensor_index]["quantization_parameters"]
     return quantization_parameters["scales"], quantization_parameters["zero_points"]
 
 class QuantizedLayer:
+    """Retrieve and store a layer's quantization metadata.
+
+    This retrieves quantization metadata from the LiteRT Interpreter, and performs some
+    additional computations. For example, the layer's floating-point scale factor `m` is
+    converted to a fixed-point scale factor `m0` and a bitwise right-shift `n`.
+
+    QuantizedLayer also holds the layer's quantized weights and biases.
+
+    """
     def __init__(
         self, interpreter, input_scale, weight_index, bias_index, output_index
     ):
@@ -122,10 +201,7 @@ class QuantizedLayer:
         self.weight = interpreter.get_tensor(weight_index)
         self.bias = np.expand_dims(interpreter.get_tensor(bias_index), axis=1)
 
-def main(start_image: int, num_images: int):
-    # Load quantized model.
-    tflite_file = "quantized.tflite"
-    interpreter = Interpreter(model_path=tflite_file)
+def numpy_inference(interpreter, start_image: int, num_images: int):
     tensors = interpreter.get_tensor_details()
 
     # Tensor metadata, from the Model Explorer
@@ -182,9 +258,9 @@ def main(start_image: int, num_images: int):
         #
         # Adding input_zero (-128) effectively converts the uint8 test_image data to
         # int8, by shifting the range [0, 255] to [-128, 127].
-        flat_size = (test_image.shape[0] * test_image.shape[1], 1)
+        flat_shape = (test_image.shape[0] * test_image.shape[1], 1)
         flat_image = np.reshape(
-            (test_image / 255.0 / input_scale) + input_zero, newshape=flat_size
+            (test_image / 255.0 / input_scale) + input_zero, newshape=flat_shape
         ).astype(np.int8)
         print("flat_image", flat_image.shape, flat_image.dtype, "\n")
         print("layer0 weight", layer[0].weight.shape, layer[0].weight.dtype)
@@ -195,7 +271,7 @@ def main(start_image: int, num_images: int):
         layer0_output = normalize(layer0_output, layer[0].m0, layer[0].n, layer[0].zero)
         layer0_output = layer0_output.astype(np.int8)
         # layer0_output should approximately equal the layer 0 output from
-        # tflite_inference.py. The tflite interpreter has unusual rounding behavior to
+        # litert_inference.py. The LiteRT interpreter has unusual rounding behavior to
         # match ARM intrinsics, see
         # https://github.com/tensorflow/tensorflow/issues/25087#issuecomment-634262762
         print("layer0 output", layer0_output.shape, layer0_output.dtype)
@@ -232,8 +308,13 @@ def main(start_image: int, num_images: int):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="pyrtl_inference.py")
+    parser = argparse.ArgumentParser(prog="numpy_inference.py")
     parser.add_argument("--start_image", type=int, default=0)
     parser.add_argument("--num_images", type=int, default=1)
     args = parser.parse_args()
-    main(start_image=args.start_image, num_images=args.num_images)
+
+    # Load quantized model.
+    tflite_file = "quantized.tflite"
+    interpreter = Interpreter(model_path=tflite_file)
+
+    numpy_inference(interpreter, start_image=args.start_image, num_images=args.num_images)
