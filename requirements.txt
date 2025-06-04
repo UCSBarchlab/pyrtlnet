@@ -1,4 +1,5 @@
 ai-edge-litert
+fxpmath
 tensorflow
 tensorflow-model-optimization
 tf-keras
