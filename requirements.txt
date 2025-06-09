@@ -1,5 +1,8 @@
 ai-edge-litert
 fxpmath
+numpy
+pyrtl
 tensorflow
 tensorflow-model-optimization
 tf-keras
+tqdm
