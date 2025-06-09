@@ -10,6 +10,7 @@ setting num_images, but the images will run through the interpreter one at a tim
 """
 
 import argparse
+import shutil
 
 from ai_edge_litert.interpreter import Interpreter
 import inference_util
@@ -114,6 +115,9 @@ if __name__ == "__main__":
     parser.add_argument("--num_images", type=int, default=1,
                         help="Number of images to run inference on")
     args = parser.parse_args()
+
+    terminal_columns = shutil.get_terminal_size((80, 24)).columns
+    np.set_printoptions(linewidth=terminal_columns)
 
     # Load MNIST dataset.
     mnist = tf.keras.datasets.mnist

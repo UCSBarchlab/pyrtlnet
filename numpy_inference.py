@@ -12,6 +12,7 @@ https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tenso
 """
 
 import argparse
+import shutil
 
 from ai_edge_litert.interpreter import Interpreter
 import inference_util
@@ -95,16 +96,6 @@ def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.nda
     q2 = q2.astype(np.int32)
     inner_dim = q1.shape[1]
 
-    # Equation 8, left half. This sums each column of `q2`.
-    a2 = np.zeros((q2.shape[1],), dtype=np.int32)
-    for k in range(a2.shape[0]):
-        a2[k] = sum(q2[j][k] for j in range(inner_dim))
-
-    # Equation 8, right half. This sums each row of `q1`.
-    a1_ = np.zeros((q1.shape[0],), dtype=np.int32)
-    for i in range(a1_.shape[0]):
-        a1_[i] = sum(q1[i][j] for j in range(inner_dim))
-
     output = np.zeros((q1.shape[0], q2.shape[1]), dtype=np.int32)
     assert q1.shape[1] == q2.shape[0]
     z1 = np.broadcast_to(z1, [inner_dim])
@@ -127,7 +118,7 @@ def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.nda
             )
     return output
 
-def normalize(product: np.ndarray, m0: Fxp, n: int, z3: int) -> np.ndarray:
+def normalize(product: np.ndarray, m0: Fxp, n: np.ndarray, z3: np.ndarray) -> np.ndarray:
     """Convert an un-normalized int32 layer output back to int8.
 
     This function effectively multiplies the layer's output by its scale factor `m` and
@@ -156,16 +147,25 @@ def normalize(product: np.ndarray, m0: Fxp, n: int, z3: int) -> np.ndarray:
     # Multiply by `m0`. The `*` on the next line performs elementwise 32-bit fixed-point
     # multiplication.
     multiplied = m0 * product
-    if n.size != multiplied.size:
-        n = np.broadcast_to(n, (multiplied.size,))
-    shifted = []
-    for i, multiplier in enumerate(multiplied):
-        # Bitwise right shift by `n`.
-        shifted.append(multiplier >> int(n[i]))
-    shifted = np.array(shifted)
+
+    # Fxp only supports shifting by a scalar integer. `n` is a tensor of shift amounts,
+    # so we implement a bitwise right shift by `n` as division by the appropriate power
+    # of two.
+    shift_powers = 2 ** n
+    if shift_powers.size == multiplied.size:
+        shift_powers = np.reshape(shift_powers, multiplied.shape)
+    else:
+        shift_powers = np.broadcast_to(shift_powers, multiplied.shape)
+    shifted = multiplied / shift_powers
+
     # Add `z3` and convert to int8.
     added = z3 + shifted
-    return added.astype(np.int8)
+    # Right shift to drop all fractional bits, then convert to 8-bit signed. Values
+    # larger than 127 or smaller than -128 must wrap around (128 -> -128) to match the
+    # LiteRT implementation.
+    added_int8 = Fxp(added.val >> added.n_frac, signed=True, n_word=8, n_frac=0,
+                     overflow="wrap").astype(np.int8)
+    return added_int8
 
 
 def get_tensor_scale_zero(interpreter, tensor_index):
@@ -223,7 +223,6 @@ def numpy_inference(interpreter, start_image: int, num_images: int):
     # Read model tensor quantization metadata.
     input_scale, input_zero = get_tensor_scale_zero(interpreter=interpreter, tensor_index=2)
 
-    print("layer0")
     layer0 = QuantizedLayer(
         interpreter=interpreter,
         input_scale=input_scale,
@@ -231,7 +230,6 @@ def numpy_inference(interpreter, start_image: int, num_images: int):
         bias_index=4,
         output_index=5,
     )
-    print("layer1")
     layer1 = QuantizedLayer(
         interpreter=interpreter,
         input_scale=layer0.scale,
@@ -312,6 +310,9 @@ if __name__ == "__main__":
     parser.add_argument("--start_image", type=int, default=0)
     parser.add_argument("--num_images", type=int, default=1)
     args = parser.parse_args()
+
+    terminal_columns = shutil.get_terminal_size((80, 24)).columns
+    np.set_printoptions(linewidth=terminal_columns)
 
     # Load quantized model.
     tflite_file = "quantized.tflite"
