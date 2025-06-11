@@ -64,7 +64,9 @@ def run_tflite_model(interpreter, start_image: int, num_images: int):
         # tensor 7: layer 1 bias   int32[10]
         # tensor 8: layer 1 output int8[1, 10]
 
-        # Retrieve and display the first layer's output.
+        # Retrieve and display the first layer's output. This is not necessary for
+        # correctness, but useful for debugging differences between inference
+        # implementations.
         layer0_output_index = 5
         layer0_output = interpreter.get_tensor(layer0_output_index)
         print(
@@ -90,6 +92,10 @@ def run_tflite_model(interpreter, start_image: int, num_images: int):
 
         output = interpreter.get_tensor(output_details["index"])[0]
         output_scale, output_zero_point = output_details["quantization"]
+
+        # Second layer's output should be the model's output.
+        assert np.logical_and.reduce(layer1_output == output, axis=None)
+
         actual = output.argmax()
         expected = test_labels[test_index]
         print(f"network output (#{test_index}):")
@@ -130,7 +136,9 @@ if __name__ == "__main__":
     # values help when debugging alternative quantized inference implementations like
     # numpy_inference.py
     tflite_file = "quantized.tflite"
-    interpreter = Interpreter(model_path=tflite_file, experimental_preserve_all_tensors=True)
+    interpreter = Interpreter(
+        model_path=tflite_file, experimental_preserve_all_tensors=True)
     interpreter.allocate_tensors()
 
-    run_tflite_model(interpreter, start_image=args.start_image, num_images=args.num_images)
+    run_tflite_model(
+        interpreter, start_image=args.start_image, num_images=args.num_images)

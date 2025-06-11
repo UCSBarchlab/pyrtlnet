@@ -21,7 +21,8 @@ import tensorflow as tf
 from fxpmath import Fxp
 
 
-def normalization_constants(s1: np.ndarray, s2: np.ndarray, s3: np.ndarray) -> (Fxp, np.ndarray):
+def normalization_constants(
+        s1: np.ndarray, s2: np.ndarray, s3: np.ndarray) -> (Fxp, np.ndarray):
     """Normalize multiplier `m` to a fixed-point multiplier `m0` and a bit-shift `n`.
 
     See Section 2.2 in the paper. The multiplier `m` (Equation 5) is computed from:
@@ -33,11 +34,11 @@ def normalization_constants(s1: np.ndarray, s2: np.ndarray, s3: np.ndarray) -> (
     `s3`, the scale factors for the matrix multiplication's output, which is the layer's
         output matrix.
 
-    This multiplier `m` can then be expressed as a bit-shifted fixed-point multiplier
-    `m0`. `m == (2 ** -n) * m0`, where `m0` is in the interval [0.5, 1). So a
-    floating-point multiplication by `m` is equivalent to a fixed-point multiplication
-    by `m0`, followed by a bitwise right-shift by `n`. This fixed-point multiplication
-    and bitwise shift are done by `normalize()`.
+    This multiplier `m` can then be expressed as a pair of `(m0, n)`, where `m0` is a
+    fixed-point 32-bit multiplier. `m == (2 ** -n) * m0`, where `m0` must be in the
+    interval [0.5, 1). So a floating-point multiplication by `m` is equivalent to a
+    fixed-point multiplication by `m0`, followed by a bitwise right-shift by `n`. This
+    fixed-point multiplication and bitwise shift are done by `normalize()`.
 
     A layer can have per-axis scale factors, so `s1`, `s2`, and `s3` are vectors of
     scale factors. This function returns a vector of fixed-point `m0` values and a
@@ -88,8 +89,8 @@ def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.nda
     # outside the parentheses (addition of z3 and multiplication by m) are done by
     # normalize(), after adding the bias.
     #
-    # All the math in this function is ordinary integer arithmetic. Fixed-point
-    # calculations only occur in normalize().
+    # All the math in this function is ordinary integer arithmetic. All fixed-point
+    # calculations are done in normalize().
 
     # Accumulations are done with 32-bit integers, see Section 2.4 in the paper.
     q1 = q1.astype(np.int32)
@@ -119,15 +120,21 @@ def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.nda
     return output
 
 def normalize(product: np.ndarray, m0: Fxp, n: np.ndarray, z3: np.ndarray) -> np.ndarray:
-    """Convert an un-normalized int32 layer output back to int8.
+    """Convert a 32-bit layer output to a normalized 8-bit output.
 
     This function effectively multiplies the layer's output by its scale factor `m` and
     adds its zero point `z3`.
 
-    `m` is a floating-point number, which can also be represented by a fixed-point
-    multiplier `m0` and bitwise right shift `n`, see `normalization_constants()`. So
-    instead of doing a floating-point multiplication, we do a fixed-point
-    multiplication, followed by a bitwise right shift.
+    `m` is a floating-point number, which can also be represented by a 32-bit
+    fixed-point multiplier `m0` and bitwise right shift `n`, see
+    `normalization_constants()`. So instead of doing a floating-point multiplication, we
+    do a fixed-point multiplication, followed by a bitwise right shift. This
+    multiplication and shift reduces 32-bit `product` values into 8-bit outputs,
+    utilizing the 8-bit output range as effectively as possible.
+
+    Layers can have per-axis scale factors, so `m0` and `n` will be vectors of scale
+    factors and shift amounts. See
+    https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
 
     """
     # Implement Equation 7, the part outside the parentheses. This function adds `z3`
@@ -193,9 +200,11 @@ class QuantizedLayer:
     ):
         tensors = interpreter.get_tensor_details()
 
-        weight_scale, weight_zero = get_tensor_scale_zero(interpreter=interpreter, tensor_index=weight_index)
+        weight_scale, weight_zero = get_tensor_scale_zero(
+            interpreter=interpreter, tensor_index=weight_index)
         assert (weight_zero == 0).all()
-        self.scale, self.zero = get_tensor_scale_zero(interpreter=interpreter, tensor_index=output_index)
+        self.scale, self.zero = get_tensor_scale_zero(
+            interpreter=interpreter, tensor_index=output_index)
         # Equation 6.
         self.m0, self.n = normalization_constants(weight_scale, input_scale, self.scale)
         self.weight = interpreter.get_tensor(weight_index)
@@ -221,7 +230,8 @@ def numpy_inference(interpreter, start_image: int, num_images: int):
     # tensor 8: layer 1 output int8[1, 10]
 
     # Read model tensor quantization metadata.
-    input_scale, input_zero = get_tensor_scale_zero(interpreter=interpreter, tensor_index=2)
+    input_scale, input_zero = get_tensor_scale_zero(
+        interpreter=interpreter, tensor_index=2)
 
     layer0 = QuantizedLayer(
         interpreter=interpreter,
@@ -278,7 +288,8 @@ def numpy_inference(interpreter, start_image: int, num_images: int):
         print("layer1 weight", layer[1].weight.shape, layer[1].weight.dtype)
         print("layer1 bias", layer[1].bias.shape, layer[1].bias.dtype)
 
-        layer1_output = quantized_matmul(layer[1].weight, 0, layer0_output, layer[0].zero)
+        layer1_output = quantized_matmul(
+            layer[1].weight, 0, layer0_output, layer[0].zero)
         layer1_output = layer1_output + layer[1].bias
         layer1_output = normalize(
             layer1_output, layer[1].m0, layer[1].n, layer[1].zero)
@@ -318,4 +329,5 @@ if __name__ == "__main__":
     tflite_file = "quantized.tflite"
     interpreter = Interpreter(model_path=tflite_file)
 
-    numpy_inference(interpreter, start_image=args.start_image, num_images=args.num_images)
+    numpy_inference(
+        interpreter, start_image=args.start_image, num_images=args.num_images)

@@ -3,6 +3,24 @@ import pyrtl
 
 
 class WireMatrix2D:
+    """WireMatrix2D is a 2D wrapper around pyrtl.wire_matrix.
+
+    WireMatrix2D serves as the input and output type for all operations in `matrix.py`.
+    These matrix operations can be composed. For example, when computing x ⋅ y + a,
+    there is an intermediate WireMatrix2D that serves as both the output of the
+    multiplication, and the input to the addition.
+
+    WireMatrix2D provides several useful fields and methods:
+
+    * `self.shape` is the matrix's shape, as a pair of integers.
+    * `self.ready` is a 1-bit WireVector indicating if the downstream operation is ready
+      for input.
+    * `self.valid` is a 1-bit WireVector indicating if the upstream operation has
+      finished writing its output.
+    * `self.bitwidth` is the bitwidth of each element in the matrix.
+    * `self[i][j]` accesses the `(i, j)`th element of the matrix.
+
+    """
     def __init__(
         self,
         values,
@@ -19,7 +37,7 @@ class WireMatrix2D:
         - A Numpy ndarray. ``shape`` will be inferred from the ndarray.
         - A list of lists of WireVectors, with shape ``shape``.
         - a concatenated WireVector representing all values in the matrix.
-        - a MemBlock containing the input data. The matrix's shape must be (N, 1).
+        - a MemBlock containing the input data.
 
         The 2D matrix has shape ``shape`` and bitwidth ``bitwidth``.
 
@@ -41,6 +59,7 @@ class WireMatrix2D:
         self.matrix = None
         self.memblock = None
         if values is None:
+            # Creating a WireMatrix2D of Inputs.
             rows = []
             for row_index in range(num_rows):
                 row = self.Row(component_type=pyrtl.Input)
@@ -51,10 +70,14 @@ class WireMatrix2D:
             # Inputs are always valid.
             valid = True
         elif isinstance(values, pyrtl.WireVector):
+            # Creating a WireMatrix2D from a concatenated WireVector containing all
+            # values.
             self.matrix = self.Matrix(name=name, values=[values])
         elif isinstance(values, pyrtl.MemBlock):
+            # Creating a WireMatrix2D from a MemBlock containing all values.
             self.memblock = values
         else:
+            # Creating a WireMatrix2D of constants from an ndarray or list of lists.
             assert len(values) == num_rows
             rows = []
             for row in values:
@@ -64,46 +87,49 @@ class WireMatrix2D:
                 rows.append(self.Row(values=row))
             self.matrix = self.Matrix(name=name, values=rows)
 
-        ready_name = ""
-        if not name == "":
-            ready_name = f"{name}.ready"
-        if ready is None:
-            self.ready = pyrtl.WireVector(name=ready_name, bitwidth=1)
-        else:
-            self.ready = pyrtl.as_wires(ready)
-            assert self.ready.bitwidth == 1
-            if self.ready.name.startswith("tmp") or self.ready.name.startswith(
-                "const_"
-            ):
-                self.ready.name = ready_name
+        def create_ready_valid(value, suffix: str) -> pyrtl.WireVector:
+            """Generate a 1-bit ready or valid wire, if necessary."""
+            output_name = ""
+            if not name == "":
+                output_name = f"{name}{suffix}"
+            if value is None:
+                output = pyrtl.WireVector(name=output_name, bitwidth=1)
+            else:
+                output = pyrtl.as_wires(value)
+                assert output.bitwidth == 1
+                if output.name.startswith("tmp") or output.name.startswith("const_"):
+                    output.name = output_name
+            return output
 
-        valid_name = ""
-        if not name == "":
-            valid_name = f"{name}.valid"
-        if valid is None:
-            self.valid = pyrtl.WireVector(name=valid_name, bitwidth=1)
-        else:
-            self.valid = pyrtl.as_wires(valid)
-            assert self.valid.bitwidth == 1
-            if self.valid.name.startswith("tmp") or self.valid.name.startswith(
-                "const_"
-            ):
-                self.valid.name = valid_name
+        self.ready = create_ready_valid(value=ready, suffix=".ready")
+        self.valid = create_ready_valid(value=valid, suffix=".valid")
 
     def __getitem__(self, key):
+        """Implements WireMatrix2D's [] operator."""
         if self.memblock is not None:
             return self.memblock[key]
         else:
             return self.matrix[key]
 
     def transpose(self):
-        num_rows, num_columns = self.shape
-        # Collect a 2D array of transposed outputs.
-        outputs = [[None for column in range(num_rows)] for row in range(num_columns)]
+        """Return a transposed version of `self`, as another WireMatrix2D.
 
-        for row in range(num_rows):
-            for column in range(num_columns):
-                outputs[column][row] = self[row][column]
+        WARNING: If `self.memblock` is not `None`, this does not reformat the MemBlock
+        data. It only changes the shape; the MemBlock is assumed to already contain
+        correctly formatted data.
+
+        """
+        num_rows, num_columns = self.shape
+        if self.memblock is not None:
+            outputs = self.memblock
+        else:
+            # Collect a 2D array of transposed outputs.
+            outputs = [[None for column in range(num_rows)]
+                       for row in range(num_columns)]
+
+            for row in range(num_rows):
+                for column in range(num_columns):
+                    outputs[column][row] = self[row][column]
 
         outputs_matrix = WireMatrix2D(
             values=outputs,
