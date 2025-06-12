@@ -8,8 +8,6 @@ import numpy as np
 import numpy_inference
 import pyrtl
 import tensorflow as tf
-from tqdm import tqdm
-
 import matrix
 import wire_matrix_2d
 
@@ -239,16 +237,10 @@ def main(start_image: int, num_images: int):
         reset_registers(sim)
 
         # Simulate layer 0.
-        with tqdm(
-            total=num_cycles(layer[0].weight, flat_image) + 1,
-            desc="Simulating layer0",
-            unit="cycle",
-        ) as progress:
-            done = False
-            while not done:
-                sim.step()
-                progress.update(1)
-                done = sim.inspect("output_layer0.output.valid")
+        done = False
+        while not done:
+            sim.step()
+            done = sim.inspect("output_layer0.output.valid")
 
         # Check layer 0.
         expected_product0 = numpy_inference.quantized_matmul(
@@ -278,15 +270,10 @@ def main(start_image: int, num_images: int):
 
         # Simulate layer 1.
         print()
-        with tqdm(total=num_cycles(layer[1].weight, actual_layer0_output),
-                  desc="Simulating layer1",
-                  unit="cycle",
-                  ) as progress:
-            done = False
-            while not done:
-                sim.step()
-                progress.update(1)
-                done = sim.inspect("output_layer1.output.valid")
+        done = False
+        while not done:
+            sim.step()
+            done = sim.inspect("output_layer1.output.valid")
 
         # Check layer 1.
         expected_product1 = numpy_inference.quantized_matmul(
@@ -305,7 +292,7 @@ def main(start_image: int, num_images: int):
             actual=actual_layer1_output.T,
         )
 
-        print(f"\npyrtl network output (#{test_index}):")
+        print(f"\nPyRTL network output (#{test_index}):")
         actual_argmax = sim.inspect("argmax")
         inference_util.display_outputs(
             actual_layer1_output.reshape((10,)),
