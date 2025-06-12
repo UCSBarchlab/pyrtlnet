@@ -4,10 +4,10 @@ import shutil
 
 from ai_edge_litert.interpreter import Interpreter
 import inference_util
+import mnist_util
 import numpy as np
 import numpy_inference
 import pyrtl
-import tensorflow as tf
 import matrix
 import wire_matrix_2d
 
@@ -175,10 +175,8 @@ def main(start_image: int, num_images: int):
     np.set_printoptions(linewidth=terminal_columns)
 
     # Load MNIST data set.
-    mnist = tf.keras.datasets.mnist
-    _, (test_images, test_labels) = mnist.load_data()
+    _, (test_images, test_labels) = mnist_util.load_mnist_images()
 
-    test_images = inference_util.preprocess_images(test_images)
     flat_shape = (test_images[0].shape[0] * test_images[0].shape[1], 1)
     num_rows, num_inner = (18, flat_shape[0])
     _, num_columns = flat_shape
@@ -222,8 +220,21 @@ def main(start_image: int, num_images: int):
         print(f"network input (#{test_index}):")
         inference_util.display_image(test_image)
 
+        # The MNIST image data contains pixel values in the range [0, 255]. The neural
+        # network was trained by first converting these values to floating point, in the
+        # range [0, 1.0]. Dividing by input_scale below undoes this conversion,
+        # converting the range from [0, 1.0] back to [0, 255].
+        #
+        # We could avoid these back-and-forth conversions by modifying
+        # `load_mnist_images()` to skip the first conversion, and returning `x +
+        # input_zero_point` below to skip the second conversion, but we do them anyway
+        # to simplify the code and make it more consistent with existing sample code
+        # like https://ai.google.dev/edge/litert/models/post_training_integer_quant
+        #
+        # Adding input_zero_point (-128) effectively converts the uint8 image data to
+        # int8, by shifting the range [0, 255] to [-128, 127].
         flat_image = np.reshape(
-            (test_image / 255.0 / input_scale) + input_zero, newshape=flat_shape
+            test_image / input_scale + input_zero, newshape=flat_shape
         ).astype(np.int8)
         data_dict = {
             i: d

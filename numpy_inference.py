@@ -16,8 +16,8 @@ import shutil
 
 from ai_edge_litert.interpreter import Interpreter
 import inference_util
+import mnist_util
 import numpy as np
-import tensorflow as tf
 from fxpmath import Fxp
 
 
@@ -250,10 +250,7 @@ def numpy_inference(interpreter, start_image: int, num_images: int):
     layer = [layer0, layer1]
 
     # Load MNIST data set.
-    mnist = tf.keras.datasets.mnist
-    _, (test_images, test_labels) = mnist.load_data()
-
-    test_images = inference_util.preprocess_images(test_images)
+    _, (test_images, test_labels) = mnist_util.load_mnist_images()
 
     correct = 0
     for test_index in range(start_image, start_image + num_images):
@@ -262,13 +259,22 @@ def numpy_inference(interpreter, start_image: int, num_images: int):
         print(f"network input (#{test_index}):")
         inference_util.display_image(test_image)
 
-        # Dividing by input_scale effectively cancels out the division by 255.0.
-        #
-        # Adding input_zero (-128) effectively converts the uint8 test_image data to
-        # int8, by shifting the range [0, 255] to [-128, 127].
         flat_shape = (test_image.shape[0] * test_image.shape[1], 1)
+        # The MNIST image data contains pixel values in the range [0, 255]. The neural
+        # network was trained by first converting these values to floating point, in the
+        # range [0, 1.0]. Dividing by input_scale below undoes this conversion,
+        # converting the range from [0, 1.0] back to [0, 255].
+        #
+        # We could avoid these back-and-forth conversions by modifying
+        # `load_mnist_images()` to skip the first conversion, and returning `x +
+        # input_zero_point` below to skip the second conversion, but we do them anyway
+        # to simplify the code and make it more consistent with existing sample code
+        # like https://ai.google.dev/edge/litert/models/post_training_integer_quant
+        #
+        # Adding input_zero_point (-128) effectively converts the uint8 image data to
+        # int8, by shifting the range [0, 255] to [-128, 127].
         flat_image = np.reshape(
-            (test_image / 255.0 / input_scale) + input_zero, newshape=flat_shape
+            test_image / input_scale + input_zero, newshape=flat_shape
         ).astype(np.int8)
         print("flat_image", flat_image.shape, flat_image.dtype, "\n")
         print("layer0 weight", layer[0].weight.shape, layer[0].weight.dtype)

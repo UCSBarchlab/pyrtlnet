@@ -14,14 +14,29 @@ import shutil
 
 from ai_edge_litert.interpreter import Interpreter
 import inference_util
+import mnist_util
 import numpy as np
-import tensorflow as tf
 
 
 def normalize_input(interpreter, x):
+    """Normalize input data to int8."""
     input_details = interpreter.get_input_details()[0]
-    _, input_zero_point = input_details["quantization"]
-    return x + input_zero_point
+
+    input_scale, input_zero_point = input_details["quantization"]
+    # The MNIST image data contains pixel values in the range [0, 255]. The neural
+    # network was trained by first converting these values to floating point, in the
+    # range [0, 1.0]. Dividing by input_scale below undoes this conversion, converting
+    # the range from [0, 1.0] back to [0, 255].
+    #
+    # We could avoid these back-and-forth conversions by modifying `load_mnist_images()`
+    # to skip the first conversion, and returning `x + input_zero_point` below to skip
+    # the second conversion, but we do them anyway to simplify the code and make it more
+    # consistent with existing sample code like
+    # https://ai.google.dev/edge/litert/models/post_training_integer_quant
+    #
+    # Adding input_zero_point (-128) effectively converts the uint8 image data to int8,
+    # by shifting the range [0, 255] to [-128, 127].
+    return x / input_scale + input_zero_point
 
 
 # Helper function to run inference on a TFLite model
@@ -126,10 +141,7 @@ if __name__ == "__main__":
     np.set_printoptions(linewidth=terminal_columns)
 
     # Load MNIST dataset.
-    mnist = tf.keras.datasets.mnist
-    _, (test_images, test_labels) = mnist.load_data()
-
-    test_images = inference_util.preprocess_images(test_images)
+    _, (test_images, test_labels) = mnist_util.load_mnist_images()
 
     # Load the quantized model and initialize the LiteRT interpreter. Set
     # preserve_all_tensors so we can inspect intermediate tensor values. Intermediate

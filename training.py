@@ -7,20 +7,16 @@ https://www.tensorflow.org/model_optimization/guide/quantization/training_exampl
 
 import pathlib
 
-import inference_util
+import mnist_util
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from tensorflow_model_optimization.python.core.keras.compat import keras
 
+
 def training():
     # Load MNIST dataset.
-    mnist = tf.keras.datasets.mnist
-    (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
-
-    # Normalize images to [0, 1] and resize from 28×28 to 12×12 to reduce hardware
-    # simulation time.
-    train_images = inference_util.preprocess_images(train_images / 255.0)
-    test_images = inference_util.preprocess_images(test_images / 255.0)
+    (train_images, train_labels), (test_images, test_labels) = (
+        mnist_util.load_mnist_images())
 
     # Define the model architecture. This model is unoptimized, so higher accuracy
     # should be possible.

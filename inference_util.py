@@ -4,23 +4,6 @@ import numpy as np
 import tensorflow as tf
 
 
-def resize_images(images, new_size):
-    """Resize images to `new_size`."""
-    images = tf.constant(images)
-    images = images[..., tf.newaxis]
-    images = tf.image.resize(images, new_size)[..., 0].numpy()
-    return images
-
-
-def preprocess_images(images):
-    """Resize images from 28×28 to 12×12."""
-    assert len(images) > 0
-    assert images[0].shape == (28, 28)
-
-    # Normalize images.
-    return resize_images(images, new_size=(12, 12))
-
-
 def set_fg(r: int, g: int, b: int):
     """Emit escape codes to set the foreground color to {r, g, b}.
 
