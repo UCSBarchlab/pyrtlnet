@@ -2,4 +2,7 @@
 filterwarnings = [
     # note the use of single quote below to denote "raw" strings in TOML
     'ignore:distutils Version classes are deprecated:DeprecationWarning',
+    'ignore:Warning. Enabling `experimental_preserve_all_tensors` with the BUILTIN or AUTO op resolver is intended for debugging purposes only:UserWarning',
+    # TODO: Figure out how to provide statistics for quantized inputs.
+    'ignore:Statistics for quantized inputs were expected, but not specified; continuing anyway:UserWarning',
 ]
