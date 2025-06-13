@@ -70,7 +70,7 @@ def normalization_constants(
     return m0, n
 
 
-def relu(x):
+def relu(x: np.ndarray):
     return np.maximum(0, x)
 
 
@@ -119,7 +119,8 @@ def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.nda
             )
     return output
 
-def normalize(product: np.ndarray, m0: Fxp, n: np.ndarray, z3: np.ndarray) -> np.ndarray:
+def normalize(
+        product: np.ndarray, m0: Fxp, n: np.ndarray, z3: np.ndarray) -> np.ndarray:
     """Convert a 32-bit layer output to a normalized 8-bit output.
 
     This function effectively multiplies the layer's output by its scale factor `m` and
@@ -167,15 +168,27 @@ def normalize(product: np.ndarray, m0: Fxp, n: np.ndarray, z3: np.ndarray) -> np
 
     # Add `z3` and convert to int8.
     added = z3 + shifted
-    # Right shift to drop all fractional bits, then convert to 8-bit signed. Values
-    # larger than 127 or smaller than -128 must wrap around (128 -> -128) to match the
-    # LiteRT implementation.
-    added_int8 = Fxp(added.val >> added.n_frac, signed=True, n_word=8, n_frac=0,
-                     overflow="wrap").astype(np.int8)
+
+    # Rounding right shift to drop all fractional bits, then convert to 8-bit signed.
+    # Fractions are rounded to the nearest integer:
+    #   100.4 -> 100
+    #   100.5 -> 101
+    #   -10.4 -> -10
+    #   -10.5 -> -11
+    #
+    # round_up is the value of the most significant fractional bit (0.5). round_up
+    # indicates if the fractional part is greater than or equal to 0.5 for positive
+    # numbers. The value is two's complement encoded, so if the value is negative, this
+    # bit will be inverted and indicate if the fractional part is less than 0.5.
+    round_up = (added.val >> (added.n_frac - 1)) & 1
+    # overflow="wrap" makes values larger than 127 or smaller than -128 wrap around (128
+    # -> -128).
+    added_int8 = Fxp((added.val >> added.n_frac) + round_up,
+                     signed=True, n_word=8, n_frac=0, overflow="wrap").astype(np.int8)
     return added_int8
 
 
-def get_tensor_scale_zero(interpreter, tensor_index):
+def get_tensor_scale_zero(interpreter: Interpreter, tensor_index: int):
     """Retrieve a tensor's scales and zero points from the LiteRT interpreter.
 
     These scales and zero points may be per-axis or per-tensor.
@@ -210,7 +223,7 @@ class QuantizedLayer:
         self.weight = interpreter.get_tensor(weight_index)
         self.bias = np.expand_dims(interpreter.get_tensor(bias_index), axis=1)
 
-def numpy_inference(interpreter, start_image: int, num_images: int):
+def run_numpy_inference(interpreter: Interpreter, start_image: int, num_images: int):
     tensors = interpreter.get_tensor_details()
 
     # Tensor metadata, from the Model Explorer
@@ -321,8 +334,7 @@ def numpy_inference(interpreter, start_image: int, num_images: int):
             f"{100.0 * correct / num_images:.0f}% accuracy"
         )
 
-
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(prog="numpy_inference.py")
     parser.add_argument("--start_image", type=int, default=0)
     parser.add_argument("--num_images", type=int, default=1)
@@ -335,5 +347,9 @@ if __name__ == "__main__":
     tflite_file = "quantized.tflite"
     interpreter = Interpreter(model_path=tflite_file)
 
-    numpy_inference(
+    run_numpy_inference(
         interpreter, start_image=args.start_image, num_images=args.num_images)
+
+
+if __name__ == "__main__":
+    main()
