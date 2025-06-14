@@ -25,6 +25,8 @@ charset-normalizer==3.4.2
     # via requests
 dm-tree==0.1.9
     # via tensorflow-model-optimization
+execnet==2.1.1
+    # via pytest-xdist
 flatbuffers==25.2.10
     # via
     #   ai-edge-litert
@@ -100,6 +102,10 @@ pygments==2.19.1
 pyrtl==0.11.3
     # via -r requirements.in
 pytest==8.4.0
+    # via
+    #   -r requirements.in
+    #   pytest-xdist
+pytest-xdist==3.7.0
     # via -r requirements.in
 requests==2.32.4
     # via tensorflow

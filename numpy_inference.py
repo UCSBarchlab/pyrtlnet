@@ -119,6 +119,7 @@ def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.nda
             )
     return output
 
+
 def normalize(
         product: np.ndarray, m0: Fxp, n: np.ndarray, z3: np.ndarray) -> np.ndarray:
     """Convert a 32-bit layer output to a normalized 8-bit output.
@@ -180,6 +181,9 @@ def normalize(
     # indicates if the fractional part is greater than or equal to 0.5 for positive
     # numbers. The value is two's complement encoded, so if the value is negative, this
     # bit will be inverted and indicate if the fractional part is less than 0.5.
+    #
+    # See https://github.com/tensorflow/tensorflow/issues/25087#issuecomment-634262762
+    # for more details.
     round_up = (added.val >> (added.n_frac - 1)) & 1
     # overflow="wrap" makes values larger than 127 or smaller than -128 wrap around (128
     # -> -128).
@@ -197,6 +201,7 @@ def get_tensor_scale_zero(interpreter: Interpreter, tensor_index: int):
     tensors = interpreter.get_tensor_details()
     quantization_parameters = tensors[tensor_index]["quantization_parameters"]
     return quantization_parameters["scales"], quantization_parameters["zero_points"]
+
 
 class QuantizedLayer:
     """Retrieve and store a layer's quantization metadata.
@@ -223,56 +228,68 @@ class QuantizedLayer:
         self.weight = interpreter.get_tensor(weight_index)
         self.bias = np.expand_dims(interpreter.get_tensor(bias_index), axis=1)
 
-def run_numpy_inference(interpreter: Interpreter, start_image: int, num_images: int):
-    tensors = interpreter.get_tensor_details()
 
-    # Tensor metadata, from the Model Explorer
-    # (https://github.com/google-ai-edge/model-explorer):
-    #
-    # tensor 0: input          int8[1, 12, 12]
-    #
-    # tensor 1: reshape shape  int32[2]
-    # tensor 2: reshape output int8[1, 144]
-    #
-    # tensor 3: layer 0 weight int8[18, 144]
-    # tensor 4: layer 0 bias   int32[18]
-    # tensor 5: layer 0 output int8[1, 18]
-    #
-    # tensor 6: layer 1 weight int8[10, 18]
-    # tensor 7: layer 1 bias   int32[10]
-    # tensor 8: layer 1 output int8[1, 10]
+class NumpyInference:
+    """Run quantized inference on an input image."""
+    def __init__(self, interpreter: Interpreter):
+        """Collect weights, biases, and quantization metadata from a LiteRT Interpreter.
 
-    # Read model tensor quantization metadata.
-    input_scale, input_zero = get_tensor_scale_zero(
-        interpreter=interpreter, tensor_index=2)
+        """
+        tensors = interpreter.get_tensor_details()
 
-    layer0 = QuantizedLayer(
-        interpreter=interpreter,
-        input_scale=input_scale,
-        weight_index=3,
-        bias_index=4,
-        output_index=5,
-    )
-    layer1 = QuantizedLayer(
-        interpreter=interpreter,
-        input_scale=layer0.scale,
-        weight_index=6,
-        bias_index=7,
-        output_index=8,
-    )
-    layer = [layer0, layer1]
+        # Tensor metadata, from the Model Explorer
+        # (https://github.com/google-ai-edge/model-explorer):
+        #
+        # tensor 0: input          int8[1, 12, 12]
+        #
+        # tensor 1: reshape shape  int32[2]
+        # tensor 2: reshape output int8[1, 144]
+        #
+        # tensor 3: layer 0 weight int8[18, 144]
+        # tensor 4: layer 0 bias   int32[18]
+        # tensor 5: layer 0 output int8[1, 18]
+        #
+        # tensor 6: layer 1 weight int8[10, 18]
+        # tensor 7: layer 1 bias   int32[10]
+        # tensor 8: layer 1 output int8[1, 10]
 
-    # Load MNIST data set.
-    _, (test_images, test_labels) = mnist_util.load_mnist_images()
+        # Read model tensor quantization metadata.
+        self.input_scale, self.input_zero = get_tensor_scale_zero(
+            interpreter=interpreter, tensor_index=2)
 
-    correct = 0
-    for test_index in range(start_image, start_image + num_images):
-        # Run inference on test_index.
-        test_image = test_images[test_index]
-        print(f"network input (#{test_index}):")
-        inference_util.display_image(test_image)
+        layer0 = QuantizedLayer(
+            interpreter=interpreter,
+            input_scale=self.input_scale,
+            weight_index=3,
+            bias_index=4,
+            output_index=5,
+        )
+        layer1 = QuantizedLayer(
+            interpreter=interpreter,
+            input_scale=layer0.scale,
+            weight_index=6,
+            bias_index=7,
+            output_index=8,
+        )
+        self.layer = [layer0, layer1]
 
+
+    def run(self, test_image: np.ndarray) -> (np.ndarray, np.ndarray, int):
+        """Run quantized inference on a single image.
+
+        All calculations are done with numpy and fxpmath.
+
+        Returns (layer0_output, layer1_output, predicted_digit), where:
+
+        * `layer0_output` is the first layer's raw Tensor output (shape (1, 18)).
+        * `layer1_output` is the second layer's raw Tensor output (shape (1, 10)).
+        * `predicted_digit` is the actual predicted digit. It is equivalent to
+          `layer1_output.flatten().argmax()`.
+
+        """
+        # Flatten the image and add the batch dimension.
         flat_shape = (test_image.shape[0] * test_image.shape[1], 1)
+
         # The MNIST image data contains pixel values in the range [0, 255]. The neural
         # network was trained by first converting these values to floating point, in the
         # range [0, 1.0]. Dividing by input_scale below undoes this conversion,
@@ -287,52 +304,28 @@ def run_numpy_inference(interpreter: Interpreter, start_image: int, num_images: 
         # Adding input_zero_point (-128) effectively converts the uint8 image data to
         # int8, by shifting the range [0, 255] to [-128, 127].
         flat_image = np.reshape(
-            test_image / input_scale + input_zero, newshape=flat_shape
+            test_image / self.input_scale + self.input_zero, newshape=flat_shape
         ).astype(np.int8)
-        print("flat_image", flat_image.shape, flat_image.dtype, "\n")
-        print("layer0 weight", layer[0].weight.shape, layer[0].weight.dtype)
-        print("layer0 bias", layer[0].bias.shape, layer[0].bias.dtype)
 
-        layer0_output = quantized_matmul(layer[0].weight, 0, flat_image, input_zero)
-        layer0_output = relu(layer0_output + layer[0].bias)
-        layer0_output = normalize(layer0_output, layer[0].m0, layer[0].n, layer[0].zero)
+        layer0_output = quantized_matmul(
+            self.layer[0].weight, 0, flat_image, self.input_zero)
+        layer0_output = relu(layer0_output + self.layer[0].bias)
+        layer0_output = normalize(
+            layer0_output, self.layer[0].m0, self.layer[0].n, self.layer[0].zero)
         layer0_output = layer0_output.astype(np.int8)
-        # layer0_output should approximately equal the layer 0 output from
-        # litert_inference.py. The LiteRT interpreter has unusual rounding behavior to
-        # match ARM intrinsics, see
-        # https://github.com/tensorflow/tensorflow/issues/25087#issuecomment-634262762
-        print("layer0 output", layer0_output.shape, layer0_output.dtype)
-        print(layer0_output.T, "\n")
-
-        print("layer1 weight", layer[1].weight.shape, layer[1].weight.dtype)
-        print("layer1 bias", layer[1].bias.shape, layer[1].bias.dtype)
 
         layer1_output = quantized_matmul(
-            layer[1].weight, 0, layer0_output, layer[0].zero)
-        layer1_output = layer1_output + layer[1].bias
+            self.layer[1].weight, 0, layer0_output, self.layer[0].zero)
+        layer1_output = layer1_output + self.layer[1].bias
         layer1_output = normalize(
-            layer1_output, layer[1].m0, layer[1].n, layer[1].zero)
+            layer1_output, self.layer[1].m0, self.layer[1].n, self.layer[1].zero)
 
-        print("layer1 output", layer1_output.shape, layer1_output.dtype)
-        print(layer1_output.T, "\n")
         layer1_output = layer1_output.reshape((10,))
 
         actual = layer1_output.argmax()
-        print(f"network output (#{test_index}):")
-        expected = test_labels[test_index]
-        inference_util.display_outputs(layer1_output, expected=expected, actual=actual)
 
-        if actual == expected:
-            correct += 1
+        return layer0_output, layer1_output, actual
 
-        if test_index < num_images - 1:
-            print()
-
-    if num_images > 1:
-        print(
-            f"{correct}/{num_images} correct predictions, "
-            f"{100.0 * correct / num_images:.0f}% accuracy"
-        )
 
 def main():
     parser = argparse.ArgumentParser(prog="numpy_inference.py")
@@ -347,8 +340,43 @@ def main():
     tflite_file = "quantized.tflite"
     interpreter = Interpreter(model_path=tflite_file)
 
-    run_numpy_inference(
-        interpreter, start_image=args.start_image, num_images=args.num_images)
+    # Colllect weights, biases, and quantization metadata.
+    numpy_inference = NumpyInference(interpreter)
+
+    # Load MNIST data set.
+    _, (test_images, test_labels) = mnist_util.load_mnist_images()
+
+    correct = 0
+    for test_index in range(args.start_image, args.start_image + args.num_images):
+        # Run inference on test_index.
+        test_image = test_images[test_index]
+
+        print(f"network input (#{test_index}):")
+        inference_util.display_image(test_image)
+        print("test_image", test_image.shape, test_image.dtype, "\n")
+
+        layer0_output, layer1_output, actual = numpy_inference.run(test_image)
+        print("layer0 output (transposed)", layer0_output.shape, layer0_output.dtype)
+        print(layer0_output.T, "\n")
+
+        print("layer1 output (transposed)", layer1_output.shape, layer1_output.dtype)
+        print(layer1_output.T, "\n")
+
+        print(f"network output (#{test_index}):")
+        expected = test_labels[test_index]
+        inference_util.display_outputs(layer1_output, expected=expected, actual=actual)
+
+        if actual == expected:
+            correct += 1
+
+        if test_index < args.num_images - 1:
+            print()
+
+    if args.num_images > 1:
+        print(
+            f"{correct}/{args.num_images} correct predictions, "
+            f"{100.0 * correct / args.num_images:.0f}% accuracy"
+        )
 
 
 if __name__ == "__main__":

@@ -16,7 +16,6 @@ from ai_edge_litert.interpreter import Interpreter
 import inference_util
 import mnist_util
 import numpy as np
-import tensorflow as tf
 
 
 def load_tflite_model(model_file_name: str) -> Interpreter:
@@ -29,7 +28,7 @@ def load_tflite_model(model_file_name: str) -> Interpreter:
     return interpreter
 
 
-def normalize_input(interpreter: Interpreter, input: tf.Tensor):
+def normalize_input(interpreter: Interpreter, input: np.ndarray):
     """Normalize input data to int8."""
     input_details = interpreter.get_input_details()[0]
 
@@ -51,7 +50,7 @@ def normalize_input(interpreter: Interpreter, input: tf.Tensor):
 
 
 def run_tflite_model(
-        interpreter: Interpreter, test_image: tf.Tensor) -> (tf.Tensor, tf.Tensor, int):
+        interpreter: Interpreter, test_image: np.ndarray) -> (np.ndarray, np.ndarray, int):
     """Run inference on a single image with a TFLite model.
 
     Returns (layer0_output, layer1_output, predicted_digit), where:

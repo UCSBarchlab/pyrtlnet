@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 
 import litert_inference
@@ -8,19 +9,22 @@ class TestLiteRTInference(unittest.TestCase):
     def setUp(self):
         (train_images, train_labels), (self.test_images, self.test_labels) = (
             mnist_util.load_mnist_images())
-        model_file_name="quantized.tflite"
-        learning_rate = 0.001
-        epochs = 1
 
-        model = tensorflow_training.train_unquantized_model(
-            learning_rate=learning_rate, epochs=epochs,
-            train_images=train_images, train_labels=train_labels)
-        model = tensorflow_training.quantize_model(
-            model=model, learning_rate=learning_rate / 10000, epochs=epochs,
-            train_images=train_images, train_labels=train_labels,
-            model_file_name=model_file_name)
-        self.interpreter = litert_inference.load_tflite_model(
-            model_file_name=model_file_name)
+        with tempfile.NamedTemporaryFile(prefix="quantized_tflite_model") as file:
+            model_file_name = file.name
+
+            learning_rate = 0.001
+            epochs = 1
+
+            model = tensorflow_training.train_unquantized_model(
+                learning_rate=learning_rate, epochs=epochs,
+                train_images=train_images, train_labels=train_labels)
+            model = tensorflow_training.quantize_model(
+                model=model, learning_rate=learning_rate / 10000, epochs=epochs,
+                train_images=train_images, train_labels=train_labels,
+                model_file_name=model_file_name)
+            self.interpreter = litert_inference.load_tflite_model(
+                model_file_name=model_file_name)
 
     def test_litert_inference(self):
         num_images = 10

@@ -3,6 +3,7 @@ fxpmath
 numpy
 pyrtl
 pytest
+pytest-xdist
 tensorflow
 tensorflow-model-optimization
 tf-keras
