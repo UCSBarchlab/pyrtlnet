@@ -167,29 +167,29 @@ def normalize(
         shift_powers = np.broadcast_to(shift_powers, multiplied.shape)
     shifted = multiplied / shift_powers
 
-    # Add `z3` and convert to int8.
-    added = z3 + shifted
-
-    # Rounding right shift to drop all fractional bits, then convert to 8-bit signed.
-    # Fractions are rounded to the nearest integer:
+    # Rounding right shift to drop all fractional bits. Fractions are rounded to the
+    # nearest integer:
     #   100.4 -> 100
     #   100.5 -> 101
     #   -10.4 -> -10
     #   -10.5 -> -11
     #
-    # round_up is the value of the most significant fractional bit (0.5). round_up
+    # `round_up` is the value of the most significant fractional bit (0.5). `round_up`
     # indicates if the fractional part is greater than or equal to 0.5 for positive
     # numbers. The value is two's complement encoded, so if the value is negative, this
     # bit will be inverted and indicate if the fractional part is less than 0.5.
     #
     # See https://github.com/tensorflow/tensorflow/issues/25087#issuecomment-634262762
     # for more details.
-    round_up = (added.val >> (added.n_frac - 1)) & 1
-    # overflow="wrap" makes values larger than 127 or smaller than -128 wrap around (128
-    # -> -128).
-    added_int8 = Fxp((added.val >> added.n_frac) + round_up,
-                     signed=True, n_word=8, n_frac=0, overflow="wrap").astype(np.int8)
-    return added_int8
+    round_up = (shifted.val >> (shifted.n_frac - 1)) & 1
+    shifted = (shifted.val >> shifted.n_frac) + round_up
+
+    # Add `z3` and convert to int8. overflow="wrap" makes values larger than 127 or
+    # smaller than -128 wrap around (128 -> -128).
+    added = Fxp(
+        z3 + shifted, signed=True, n_word=8, n_frac=0, overflow="wrap").astype(np.int8)
+
+    return added
 
 
 def get_tensor_scale_zero(interpreter: Interpreter, tensor_index: int):

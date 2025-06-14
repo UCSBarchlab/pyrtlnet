@@ -170,7 +170,12 @@ def make_inference(
     return input_scale, input_zero, layer, layer1.valid, argmax
 
 
-def main(start_image: int, num_images: int):
+def main():
+    parser = argparse.ArgumentParser(prog="pyrtl_inference.py")
+    parser.add_argument("--start_image", type=int, default=0)
+    parser.add_argument("--num_images", type=int, default=1)
+    args = parser.parse_args()
+
     terminal_columns = shutil.get_terminal_size((80, 24)).columns
     np.set_printoptions(linewidth=terminal_columns)
 
@@ -214,7 +219,7 @@ def main(start_image: int, num_images: int):
         return num_rows + a_num_inner + num_columns + 2
 
     correct = 0
-    for test_index in range(start_image, start_image + num_images):
+    for test_index in range(args.start_image, args.start_image + args.num_images):
         # Run inference on test_index.
         test_image = test_images[test_index]
         print(f"network input (#{test_index}):")
@@ -314,20 +319,15 @@ def main(start_image: int, num_images: int):
         if actual_argmax == test_labels[test_index]:
             correct += 1
 
-        if test_index < num_images - 1:
+        if test_index < args.num_images - 1:
             print()
 
-    if num_images > 1:
+    if args.num_images > 1:
         print(
-            f"{correct}/{num_images} correct predictions, "
-            f"{100.0 * correct / num_images:.0f}% accuracy"
+            f"{correct}/{args.num_images} correct predictions, "
+            f"{100.0 * correct / args.num_images:.0f}% accuracy"
         )
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="pyrtl_inference.py")
-    parser.add_argument("--start_image", type=int, default=0)
-    parser.add_argument("--num_images", type=int, default=1)
-    args = parser.parse_args()
-
-    main(start_image=args.start_image, num_images=args.num_images)
+    main()

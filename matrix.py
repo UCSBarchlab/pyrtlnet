@@ -606,9 +606,10 @@ def make_elementwise_normalize(
           for multiplier in m0]
 
     # Collect a 2D array of normalized `outputs`. Intermediate results are collected in
-    # these additional `multiplied` and `shifted` arrays to make them easier to inspect
-    # while debugging.
+    # these additional `multiplied`, `round_up`, and `shifted` arrays to make them
+    # easier to inspect while debugging.
     multiplied = [[None for column in range(num_columns)] for row in range(num_rows)]
+    round_up = [[None for column in range(num_columns)] for row in range(num_rows)]
     shifted = [[None for column in range(num_columns)] for row in range(num_rows)]
     outputs = [[None for column in range(num_columns)] for row in range(num_rows)]
 
@@ -621,15 +622,41 @@ def make_elementwise_normalize(
             # fixed-point 64-bit value. There may be an additional zero-valued high bit
             # because we zero-extended `m0` above.
             multiplied[row][column] = pyrtl.signed_mult(a[row][column], m0[row])
-            # Right shift by `input_bitwidth + n[row]`. Shifting by `input_bitwidth`
-            # converts the multiplier output from a 64-bit value to a 32-bit value.
-            # Shifting by `n[row]` shifts the output by its per-axis `n` value, which
-            # drops all fractional bits, and results in a signed integer with bitwidth
-            # between 8 and 32 bits.
-            shifted[row][column] = multiplied[row][column][input_bitwidth + n[row]:]
+
+            # Rounding right shift by `input_bitwidth + n[row]`. Shifting by
+            # `input_bitwidth` converts the multiplier output from a 64-bit value to a
+            # 32-bit value. Shifting by `n[row]` shifts the output by its per-axis `n`
+            # value, which drops all fractional bits, and results in a signed integer
+            # with bitwidth between 8 and 32 bits.
+            #
+            # This rounding right shift drops all fractional bits. Fractions are rounded
+            # to the nearest integer:
+            #   100.4 -> 100
+            #   100.5 -> 101
+            #   -10.4 -> -10
+            #   -10.5 -> -11
+            #
+            # `round_up` is the value of the most significant fractional bit (0.5).
+            # `round_up` indicates if the fractional part is greater than or equal to
+            # 0.5 for positive numbers. The value is two's complement encoded, so if the
+            # value is negative, this bit will be inverted and indicate if the
+            # fractional part is less than 0.5.
+            #
+            # The `round_up` bit must be `zero_extended` to two bits so the `signed_add`
+            # below does not interpret it as a negative number.
+            #
+            # See
+            # https://github.com/tensorflow/tensorflow/issues/25087#issuecomment-634262762
+            # for more details.
+            shift_amount = input_bitwidth + n[row]
+            round_up[row][column] = (
+                multiplied[row][column][shift_amount - 1: shift_amount]
+                .zero_extended(2))
+            shifted[row][column] = pyrtl.signed_add(
+                multiplied[row][column][shift_amount:], round_up[row][column])
+
             # Elementwise add `z3`, then keep only the low 8 bits of the result. The
-            # high bits may not all be zero, so this truncation may overflow. This
-            # behavior is consistent with the litert_inference implementation.
+            # high bits may not all be zero, so this truncation may overflow.
             outputs[row][column] = pyrtl.signed_add(
                 z3, shifted[row][column]).truncate(output_bitwidth)
 

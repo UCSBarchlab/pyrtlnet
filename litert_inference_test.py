@@ -7,6 +7,11 @@ import tensorflow_training
 
 class TestLiteRTInference(unittest.TestCase):
     def setUp(self):
+        """Train a quantized TensorFlow model and load it in the LiteRT Interpreter.
+
+        The model is only trained for one epoch to reduce run time.
+
+        """
         (train_images, train_labels), (self.test_images, self.test_labels) = (
             mnist_util.load_mnist_images())
 
@@ -27,6 +32,7 @@ class TestLiteRTInference(unittest.TestCase):
                 model_file_name=model_file_name)
 
     def test_litert_inference(self):
+        """Run the LiteRT Interpreter on several images and check its accuracy."""
         num_images = 10
         correct = 0
         for test_index in range(num_images):

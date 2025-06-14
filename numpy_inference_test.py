@@ -9,6 +9,14 @@ import tensorflow_training
 
 class TestNumpyInference(unittest.TestCase):
     def setUp(self):
+        """Prepare a LiteRT Interpreter and NumpyInference for a comparison test.
+
+        This trains a quantized TensorFlow model for one epoch, to reduce run time.
+
+        The trained model is loaded in the LiteRT Interpreter, and an instance of
+        NumpyInference.
+
+        """
         (train_images, train_labels), (self.test_images, self.test_labels) = (
             mnist_util.load_mnist_images())
 
@@ -31,6 +39,12 @@ class TestNumpyInference(unittest.TestCase):
 
 
     def test_numpy_inference(self):
+        """Check that LiteRT Interpreter and NumpyInference produce the same results.
+
+        This runs one image through both inference systems and compares the tensor
+        outputs from each layer.
+
+        """
         test_image = self.test_images[0]
 
         litert_layer0_output, litert_layer1_output, litert_actual = (
@@ -40,18 +54,21 @@ class TestNumpyInference(unittest.TestCase):
         numpy_layer0_output, numpy_layer1_output, numpy_actual = (
             self.numpy_inference.run(test_image=test_image))
 
+        # Check the first layer's outputs.
         self.assertEqual(litert_layer0_output.size, numpy_layer0_output.size)
         litert_layer0_output = np.reshape(
             litert_layer0_output, numpy_layer0_output.shape)
 
         self.assertTrue(np.array_equal(litert_layer0_output, numpy_layer0_output))
 
+        # Check the second layer's outputs.
         self.assertEqual(litert_layer1_output.size, numpy_layer1_output.size)
         litert_layer1_output = np.reshape(
             litert_layer1_output, numpy_layer1_output.shape)
 
         self.assertTrue(np.array_equal(litert_layer1_output, numpy_layer1_output))
 
+        # Also verify that the actual predicted digits match.
         self.assertEqual(litert_actual, numpy_actual)
 
 
