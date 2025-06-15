@@ -32,22 +32,12 @@ def make_input_romdata(a: np.ndarray, input_bitwidth: int, addrwidth: int) -> li
             else:
                 data[cycle][row] = a[row][cycle - row]
 
-    def cycle_to_int(cycle_datas: list[int]) -> int:
-        """Concatenate all the input data needed in one cycle into an integer."""
-        output = 0
-        input_mask = -1 & (2**input_bitwidth - 1)
-        for cycle_data in cycle_datas:
-            output = output << input_bitwidth
-            # `output` may be very large, easily exceeding 64 bits. The `int()` below
-            # ensures we do these computations with Python's arbitrary precision
-            # integers, rather than a fixed-width type like np.int64.
-            output |= int(cycle_data) & input_mask
-        return int(output)
-
     # Pack the per-cycle data into romdata.
     romblock_data = [None for _ in range(num_cycles)]
     for cycle in range(num_cycles):
-        romblock_data[cycle] = cycle_to_int(data[cycle])
+        romblock_data[cycle] = wire_matrix_2d.make_concatenated_value(
+            values=np.array([data[cycle]]), bitwidth=input_bitwidth
+        )
     return romblock_data
 
 
@@ -735,20 +725,6 @@ def make_argmax(a: wire_matrix_2d.WireMatrix2D) -> pyrtl.WireVector:
     return argmax.index
 
 
-def inspect_matrix(
-    sim: pyrtl.Simulation, prefix: str, shape: tuple, bitwidth: int, suffix=".output"
-) -> np.ndarray:
-    """Collect output values from a Simulation and return them as a NumPy matrix."""
-    num_rows, num_columns = shape
-    array = [[None for _ in range(num_columns)] for _ in range(num_rows)]
-    for row in range(num_rows):
-        for column in range(num_columns):
-            array[row][column] = pyrtl.val_to_signed_integer(
-                sim.inspect(f"{prefix}{suffix}[{row}][{column}]"), bitwidth=bitwidth
-            )
-    return np.array(array)
-
-
 def minimum_bitwidth(a: np.ndarray) -> int:
     """Return the number of bits needed to represent all values in `a`.
 
@@ -836,12 +812,14 @@ def main():
         input_bitwidth=input_bitwidth,
         accumulator_bitwidth=accumulator_bitwidth,
     )
+    wire_matrix_2d.make_outputs(matrix=matrix_xy)
     matrix_a = wire_matrix_2d.WireMatrix2D(
         values=a, bitwidth=input_bitwidth, name="a", valid=True
     )
     matrix_xya = make_elementwise_add(
         name="add0", a=matrix_xy, b=matrix_a, output_bitwidth=accumulator_bitwidth
     )
+    wire_matrix_2d.make_outputs(matrix=matrix_xya)
     matrix_xya.ready <<= True
 
     # Simulate the systolic array by providing inputs for each cycle.
@@ -915,7 +893,7 @@ def main():
         ]
     )
 
-    actual_xy = inspect_matrix(sim, "mm0", expected_xy.shape, accumulator_bitwidth)
+    actual_xy = wire_matrix_2d.inspect_matrix(sim=sim, matrix=matrix_xy)
     verify_tensor("x ⋅ y", expected_xy, actual_xy)
 
     print("\nComputing x ⋅ y + a")
@@ -931,9 +909,7 @@ def main():
     )
 
     expected_xya = expected_xy + a
-    actual_xya = inspect_matrix(
-        sim, "add0", expected_xy.shape, bitwidth=accumulator_bitwidth
-    )
+    actual_xya = wire_matrix_2d.inspect_matrix(sim=sim, matrix=matrix_xya)
     verify_tensor("x ⋅ y + a", expected_xya, actual_xya)
 
 
