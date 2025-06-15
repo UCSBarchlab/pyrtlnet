@@ -160,7 +160,7 @@ def _make_systolic_array_memblock_inputs(
 
 
 def num_systolic_array_cycles(a_shape: (int, int), b_shape: (int, int)):
-    """Return the total number of cycles needed to multiply a and b, given their shapes."""
+    """Return the number of cycles needed to multiply a and b, given their shapes."""
     num_rows, num_inner = a_shape
     assert num_inner == b_shape[0]
     num_columns = b_shape[1]
@@ -738,7 +738,7 @@ def make_argmax(a: wire_matrix_2d.WireMatrix2D) -> pyrtl.WireVector:
 def inspect_matrix(
     sim: pyrtl.Simulation, prefix: str, shape: tuple, bitwidth: int, suffix=".output"
 ) -> np.ndarray:
-    """Collect output values from a PyRTL Simulation and return them as a numpy matrix."""
+    """Collect output values from a Simulation and return them as a NumPy matrix."""
     num_rows, num_columns = shape
     array = [[None for _ in range(num_columns)] for _ in range(num_rows)]
     for row in range(num_rows):

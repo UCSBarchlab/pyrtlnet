@@ -1,9 +1,10 @@
 import tempfile
 import unittest
 
+import numpy as np
+
 import litert_inference
 import mnist_util
-import numpy as np
 import numpy_inference
 import tensorflow_training
 

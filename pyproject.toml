@@ -6,3 +6,23 @@ filterwarnings = [
     # TODO: Figure out how to provide statistics for quantized inputs.
     'ignore:Statistics for quantized inputs were expected, but not specified; continuing anyway:UserWarning',
 ]
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+ignore = [
+    # Use ternary operator.
+    "SIM108"
+]

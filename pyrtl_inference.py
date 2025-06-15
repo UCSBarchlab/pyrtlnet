@@ -1,13 +1,14 @@
 import argparse
 import shutil
 
-from ai_edge_litert.interpreter import Interpreter
-import inference_util
-import mnist_util
 import numpy as np
-import numpy_inference
 import pyrtl
+from ai_edge_litert.interpreter import Interpreter
+
+import inference_util
 import matrix
+import mnist_util
+import numpy_inference
 import wire_matrix_2d
 
 

@@ -33,7 +33,8 @@ def load_mnist_images() -> ((tf.Tensor, tf.Tensor), (tf.Tensor, tf.Tensor)):
     mnist = tf.keras.datasets.mnist
     (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
 
-    # Normalize images from [0, 255] to [0.0, 1.0] and resize images from 28×28 to 12×12.
+    # Normalize images from [0, 255] to [0.0, 1.0] and resize images from 28×28 to
+    # 12×12.
     train_images = _preprocess_images(train_images / 255.0)
     test_images = _preprocess_images(test_images / 255.0)
 

@@ -12,10 +12,11 @@ setting num_images, but the images will run through the interpreter one at a tim
 import argparse
 import shutil
 
+import numpy as np
 from ai_edge_litert.interpreter import Interpreter
+
 import inference_util
 import mnist_util
-import numpy as np
 
 
 def load_tflite_model(model_file_name: str) -> Interpreter:

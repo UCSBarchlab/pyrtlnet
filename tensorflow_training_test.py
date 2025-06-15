@@ -1,7 +1,7 @@
 import unittest
 
-import tensorflow_training
 import mnist_util
+import tensorflow_training
 
 
 class TestTensorFlowTraining(unittest.TestCase):

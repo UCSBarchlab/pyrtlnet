@@ -91,7 +91,7 @@ class WireMatrix2D:
         def create_ready_valid(value, suffix: str) -> pyrtl.WireVector:
             """Generate a 1-bit ready or valid wire, if necessary."""
             output_name = ""
-            if not name == "":
+            if name != "":
                 output_name = f"{name}{suffix}"
             if value is None:
                 output = pyrtl.WireVector(name=output_name, bitwidth=1)
@@ -162,11 +162,3 @@ def make_outputs(matrix):
             wire = matrix[row][column]
             output = pyrtl.Output(name="output_" + wire.name, bitwidth=wire.bitwidth)
             output <<= wire
-
-
-def main():
-    pass
-
-
-if __name__ == "__main__":
-    main()

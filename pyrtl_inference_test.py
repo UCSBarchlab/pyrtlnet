@@ -1,12 +1,13 @@
 import tempfile
 import unittest
 
-from ai_edge_litert.interpreter import Interpreter
-import mnist_util
 import numpy as np
+from ai_edge_litert.interpreter import Interpreter
+
+import mnist_util
 import numpy_inference
-import tensorflow_training
 import pyrtl_inference
+import tensorflow_training
 
 
 class TestPyRTLInference(unittest.TestCase):

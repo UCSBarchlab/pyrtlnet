@@ -14,11 +14,12 @@ https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tenso
 import argparse
 import shutil
 
+import numpy as np
 from ai_edge_litert.interpreter import Interpreter
+from fxpmath import Fxp
+
 import inference_util
 import mnist_util
-import numpy as np
-from fxpmath import Fxp
 
 
 def normalization_constants(
@@ -237,7 +238,7 @@ class NumPyInference:
     """Run quantized inference on an input image with NumPy and fxpmath."""
 
     def __init__(self, interpreter: Interpreter):
-        """Collect weights, biases, and quantization metadata from a LiteRT Interpreter."""
+        """Collect weights, biases, and quantization metadata from an Interpreter."""
         # Tensor metadata, from the Model Explorer
         # (https://github.com/google-ai-edge/model-explorer):
         #

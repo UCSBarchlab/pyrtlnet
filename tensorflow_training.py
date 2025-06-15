@@ -7,10 +7,11 @@ https://www.tensorflow.org/model_optimization/guide/quantization/training_exampl
 
 import pathlib
 
-import mnist_util
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from tensorflow_model_optimization.python.core.keras.compat import keras
+
+import mnist_util
 
 
 def train_unquantized_model(
