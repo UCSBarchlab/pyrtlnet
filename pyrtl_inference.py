@@ -152,8 +152,8 @@ class PyRTLInference:
             output_bitwidth=self.input_bitwidth,
         )
 
-        # Create a WireMatrix2D for this layer's output. This can be used as the next
-        # layer's input.
+        # Create pyrtl.Outputs for the layer's output. These can be inspected with
+        # wire_matrix_2d.inspect_matrix.
         wire_matrix_2d.make_outputs(output)
 
         return output
@@ -171,6 +171,8 @@ class PyRTLInference:
         layer1 = self._make_layer(
             layer_num=1, input=layer0, input_zero=self.layer[0].zero, relu=False
         )
+
+        self.layer_outputs = [layer0, layer1]
 
         # Compute argmax for the last layer's output.
         argmax = matrix.make_argmax(a=layer1)
@@ -204,10 +206,6 @@ class PyRTLInference:
         layer0_weight_shape = self.layer[0].weight.shape
         batch_size = 1
         input_shape = (layer0_weight_shape[1], batch_size)
-        layer0_output_shape = (layer0_weight_shape[0], batch_size)
-
-        layer1_weight_shape = self.layer[1].weight.shape
-        layer1_output_shape = (layer1_weight_shape[0], batch_size)
 
         # The MNIST image data contains pixel values in the range [0, 255]. The neural
         # network was trained by first converting these values to floating point, in the
@@ -251,11 +249,11 @@ class PyRTLInference:
             done = sim.inspect("valid")
 
         # Retrieve each layer's outputs.
-        layer0_output = matrix.inspect_matrix(
-            sim, "output_layer0", layer0_output_shape, bitwidth=self.input_bitwidth
+        layer0_output = wire_matrix_2d.inspect_matrix(
+            sim=sim, matrix=self.layer_outputs[0]
         )
-        layer1_output = matrix.inspect_matrix(
-            sim, "output_layer1", layer1_output_shape, bitwidth=self.input_bitwidth
+        layer1_output = wire_matrix_2d.inspect_matrix(
+            sim=sim, matrix=self.layer_outputs[1]
         )
 
         # Retrieve the predicted digit.
