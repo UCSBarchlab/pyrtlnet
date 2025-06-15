@@ -5,6 +5,7 @@ import litert_inference
 import mnist_util
 import tensorflow_training
 
+
 class TestLiteRTInference(unittest.TestCase):
     def setUp(self):
         """Train a quantized TensorFlow model and load it in the LiteRT Interpreter.
@@ -13,7 +14,8 @@ class TestLiteRTInference(unittest.TestCase):
 
         """
         (train_images, train_labels), (self.test_images, self.test_labels) = (
-            mnist_util.load_mnist_images())
+            mnist_util.load_mnist_images()
+        )
 
         with tempfile.NamedTemporaryFile(prefix="quantized_tflite_model") as file:
             model_file_name = file.name
@@ -22,14 +24,22 @@ class TestLiteRTInference(unittest.TestCase):
             epochs = 1
 
             model = tensorflow_training.train_unquantized_model(
-                learning_rate=learning_rate, epochs=epochs,
-                train_images=train_images, train_labels=train_labels)
+                learning_rate=learning_rate,
+                epochs=epochs,
+                train_images=train_images,
+                train_labels=train_labels,
+            )
             model = tensorflow_training.quantize_model(
-                model=model, learning_rate=learning_rate / 10000, epochs=epochs,
-                train_images=train_images, train_labels=train_labels,
-                model_file_name=model_file_name)
+                model=model,
+                learning_rate=learning_rate / 10000,
+                epochs=epochs,
+                train_images=train_images,
+                train_labels=train_labels,
+                model_file_name=model_file_name,
+            )
             self.interpreter = litert_inference.load_tflite_model(
-                model_file_name=model_file_name)
+                model_file_name=model_file_name
+            )
 
     def test_litert_inference(self):
         """Run the LiteRT Interpreter on several images and check its accuracy."""
@@ -37,7 +47,8 @@ class TestLiteRTInference(unittest.TestCase):
         correct = 0
         for test_index in range(num_images):
             _, _, actual = litert_inference.run_tflite_model(
-                interpreter=self.interpreter, test_image=self.test_images[test_index])
+                interpreter=self.interpreter, test_image=self.test_images[test_index]
+            )
             expected = self.test_labels[test_index]
 
             if actual == expected:

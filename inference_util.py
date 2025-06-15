@@ -1,7 +1,6 @@
 import math
 
 import numpy as np
-import tensorflow as tf
 
 
 def set_fg(r: int, g: int, b: int):

@@ -19,5 +19,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: python3 -m pip install -r requirements.txt
-    - name: Test with pytest
+    - name: pytest
       run: pytest -n auto
+    - name: ruff check
+      run: ruff check --output-format=github
+    - name: ruff format
+      run: ruff format --diff

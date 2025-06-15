@@ -21,6 +21,7 @@ class WireMatrix2D:
     * `self[i][j]` accesses the `(i, j)`th element of the matrix.
 
     """
+
     def __init__(
         self,
         values,
@@ -124,8 +125,9 @@ class WireMatrix2D:
             outputs = self.memblock
         else:
             # Collect a 2D array of transposed outputs.
-            outputs = [[None for column in range(num_rows)]
-                       for row in range(num_columns)]
+            outputs = [
+                [None for column in range(num_rows)] for row in range(num_columns)
+            ]
 
             for row in range(num_rows):
                 for column in range(num_columns):

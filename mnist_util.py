@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 def _resize_images(images, new_size):
     """Resize images to `new_size`."""
     images = tf.constant(images)

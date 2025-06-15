@@ -8,6 +8,7 @@ import numpy_inference
 import tensorflow_training
 import pyrtl_inference
 
+
 class TestPyRTLInference(unittest.TestCase):
     def setUp(self):
         """Prepare NumPyInference and PyRTLInference for a comparison test.
@@ -18,7 +19,8 @@ class TestPyRTLInference(unittest.TestCase):
 
         """
         (train_images, train_labels), (self.test_images, self.test_labels) = (
-            mnist_util.load_mnist_images())
+            mnist_util.load_mnist_images()
+        )
 
         with tempfile.NamedTemporaryFile(prefix="quantized_tflite_model") as file:
             model_file_name = file.name
@@ -27,17 +29,24 @@ class TestPyRTLInference(unittest.TestCase):
             epochs = 1
 
             model = tensorflow_training.train_unquantized_model(
-                learning_rate=learning_rate, epochs=epochs,
-                train_images=train_images, train_labels=train_labels)
+                learning_rate=learning_rate,
+                epochs=epochs,
+                train_images=train_images,
+                train_labels=train_labels,
+            )
             model = tensorflow_training.quantize_model(
-                model=model, learning_rate=learning_rate / 10000, epochs=epochs,
-                train_images=train_images, train_labels=train_labels,
-                model_file_name=model_file_name)
+                model=model,
+                learning_rate=learning_rate / 10000,
+                epochs=epochs,
+                train_images=train_images,
+                train_labels=train_labels,
+                model_file_name=model_file_name,
+            )
             interpreter = Interpreter(model_path=model_file_name)
             self.numpy_inference = numpy_inference.NumPyInference(interpreter)
             self.pyrtl_inference = pyrtl_inference.PyRTLInference(
-                interpreter, input_bitwidth=8, accumulator_bitwidth=32)
-
+                interpreter, input_bitwidth=8, accumulator_bitwidth=32
+            )
 
     def test_pyrtl_inference(self):
         """Check that NumPyInference and PyRTLInference produce the same results.
@@ -49,10 +58,12 @@ class TestPyRTLInference(unittest.TestCase):
         test_image = self.test_images[0]
 
         numpy_layer0_output, numpy_layer1_output, numpy_actual = (
-            self.numpy_inference.run(test_image=test_image))
+            self.numpy_inference.run(test_image=test_image)
+        )
 
         pyrtl_layer0_output, pyrtl_layer1_output, pyrtl_actual = (
-            self.pyrtl_inference.run(test_image=test_image))
+            self.pyrtl_inference.run(test_image=test_image)
+        )
 
         # Check the first layer's outputs.
         self.assertTrue(np.array_equal(numpy_layer0_output, pyrtl_layer0_output))

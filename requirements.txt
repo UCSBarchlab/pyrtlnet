@@ -19,7 +19,7 @@ attrs==25.3.0
     # via dm-tree
 backports-strenum==1.2.8
     # via ai-edge-litert
-certifi==2025.4.26
+certifi==2025.6.15
     # via requests
 charset-normalizer==3.4.2
     # via requests
@@ -111,6 +111,8 @@ requests==2.32.4
     # via tensorflow
 rich==14.0.0
     # via keras
+ruff==0.11.13
+    # via -r requirements.in
 six==1.17.0
     # via
     #   astunparse

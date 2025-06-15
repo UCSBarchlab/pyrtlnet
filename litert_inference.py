@@ -23,7 +23,8 @@ def load_tflite_model(model_file_name: str) -> Interpreter:
     # Set preserve_all_tensors so we can inspect intermediate tensor values.
     # Intermediate values help when debugging other quantized inference implementations.
     interpreter = Interpreter(
-        model_path=model_file_name, experimental_preserve_all_tensors=True)
+        model_path=model_file_name, experimental_preserve_all_tensors=True
+    )
     interpreter.allocate_tensors()
     return interpreter
 
@@ -50,7 +51,8 @@ def normalize_input(interpreter: Interpreter, input: np.ndarray):
 
 
 def run_tflite_model(
-        interpreter: Interpreter, test_image: np.ndarray) -> (np.ndarray, np.ndarray, int):
+    interpreter: Interpreter, test_image: np.ndarray
+) -> (np.ndarray, np.ndarray, int):
     """Run inference on a single image with a TFLite model.
 
     Returns (layer0_output, layer1_output, predicted_digit), where:
@@ -109,12 +111,18 @@ def run_tflite_model(
 
     return layer0_output, layer1_output, output.argmax()
 
+
 def main():
     parser = argparse.ArgumentParser(prog="litert_inference.py")
-    parser.add_argument("--start_image", type=int, default=0,
-                        help="Starting image index in the MNIST test dataset")
-    parser.add_argument("--num_images", type=int, default=1,
-                        help="Number of images to run inference on")
+    parser.add_argument(
+        "--start_image",
+        type=int,
+        default=0,
+        help="Starting image index in the MNIST test dataset",
+    )
+    parser.add_argument(
+        "--num_images", type=int, default=1, help="Number of images to run inference on"
+    )
     args = parser.parse_args()
 
     terminal_columns = shutil.get_terminal_size((80, 24)).columns
@@ -133,7 +141,8 @@ def main():
         print("test_image", test_image.shape, test_image.dtype, "\n")
 
         layer0_output, layer1_output, actual = run_tflite_model(
-            interpreter=interpreter, test_image=test_image)
+            interpreter=interpreter, test_image=test_image
+        )
 
         print(f"LiteRT layer 0 output {layer0_output.shape} {layer0_output.dtype}")
         print(f"{layer0_output}\n")
@@ -154,6 +163,7 @@ def main():
             f"{correct}/{args.num_images} correct predictions, "
             f"{100.0 * correct / args.num_images:.0f}% accuracy"
         )
+
 
 if __name__ == "__main__":
     main()

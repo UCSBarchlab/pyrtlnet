@@ -22,7 +22,8 @@ from fxpmath import Fxp
 
 
 def normalization_constants(
-        s1: np.ndarray, s2: np.ndarray, s3: np.ndarray) -> (Fxp, np.ndarray):
+    s1: np.ndarray, s2: np.ndarray, s3: np.ndarray
+) -> (Fxp, np.ndarray):
     """Normalize multiplier `m` to a fixed-point multiplier `m0` and a bit-shift `n`.
 
     See Section 2.2 in the paper. The multiplier `m` (Equation 5) is computed from:
@@ -56,7 +57,7 @@ def normalization_constants(
     for m_in in m:
         for n_out in range(0, 32):
             # Equation 6.
-            m0_out = m_in * (2 ** n_out)
+            m0_out = m_in * (2**n_out)
             if m0_out >= 0.5 and m0_out < 1:
                 m0.append(m0_out)
                 n.append(n_out)
@@ -121,7 +122,8 @@ def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.nda
 
 
 def normalize(
-        product: np.ndarray, m0: Fxp, n: np.ndarray, z3: np.ndarray) -> np.ndarray:
+    product: np.ndarray, m0: Fxp, n: np.ndarray, z3: np.ndarray
+) -> np.ndarray:
     """Convert a 32-bit layer output to a normalized 8-bit output.
 
     This function effectively multiplies the layer's output by its scale factor `m` and
@@ -160,7 +162,7 @@ def normalize(
     # Fxp only supports shifting by a scalar integer. `n` is a tensor of shift amounts,
     # so we implement a bitwise right shift by `n` as division by the appropriate power
     # of two.
-    shift_powers = 2 ** n
+    shift_powers = 2**n
     if shift_powers.size == multiplied.size:
         shift_powers = np.reshape(shift_powers, multiplied.shape)
     else:
@@ -186,8 +188,9 @@ def normalize(
 
     # Add `z3` and convert to int8. overflow="wrap" makes values larger than 127 or
     # smaller than -128 wrap around (128 -> -128).
-    added = Fxp(
-        z3 + shifted, signed=True, n_word=8, n_frac=0, overflow="wrap").astype(np.int8)
+    added = Fxp(z3 + shifted, signed=True, n_word=8, n_frac=0, overflow="wrap").astype(
+        np.int8
+    )
 
     return added
 
@@ -213,16 +216,17 @@ class QuantizedLayer:
     QuantizedLayer also holds the layer's quantized weights and biases.
 
     """
+
     def __init__(
         self, interpreter, input_scale, weight_index, bias_index, output_index
     ):
-        tensors = interpreter.get_tensor_details()
-
         weight_scale, weight_zero = get_tensor_scale_zero(
-            interpreter=interpreter, tensor_index=weight_index)
+            interpreter=interpreter, tensor_index=weight_index
+        )
         assert (weight_zero == 0).all()
         self.scale, self.zero = get_tensor_scale_zero(
-            interpreter=interpreter, tensor_index=output_index)
+            interpreter=interpreter, tensor_index=output_index
+        )
         # Equation 6.
         self.m0, self.n = normalization_constants(weight_scale, input_scale, self.scale)
         self.weight = interpreter.get_tensor(weight_index)
@@ -231,12 +235,9 @@ class QuantizedLayer:
 
 class NumPyInference:
     """Run quantized inference on an input image with NumPy and fxpmath."""
+
     def __init__(self, interpreter: Interpreter):
-        """Collect weights, biases, and quantization metadata from a LiteRT Interpreter.
-
-        """
-        tensors = interpreter.get_tensor_details()
-
+        """Collect weights, biases, and quantization metadata from a LiteRT Interpreter."""
         # Tensor metadata, from the Model Explorer
         # (https://github.com/google-ai-edge/model-explorer):
         #
@@ -255,7 +256,8 @@ class NumPyInference:
 
         # Read model tensor quantization metadata.
         self.input_scale, self.input_zero = get_tensor_scale_zero(
-            interpreter=interpreter, tensor_index=2)
+            interpreter=interpreter, tensor_index=2
+        )
 
         layer0 = QuantizedLayer(
             interpreter=interpreter,
@@ -274,18 +276,25 @@ class NumPyInference:
         self.layer = [layer0, layer1]
 
     def _run_layer(
-            self, layer_num: int, layer_input: np.ndarray, layer_input_zero: np.ndarray,
-            run_relu: bool) -> np.ndarray:
+        self,
+        layer_num: int,
+        layer_input: np.ndarray,
+        layer_input_zero: np.ndarray,
+        run_relu: bool,
+    ) -> np.ndarray:
         layer_output = quantized_matmul(
-            self.layer[layer_num].weight, 0, layer_input, layer_input_zero)
+            self.layer[layer_num].weight, 0, layer_input, layer_input_zero
+        )
         layer_output = layer_output + self.layer[layer_num].bias
         if run_relu:
             layer_output = relu(layer_output)
         layer_output = normalize(
-            layer_output, self.layer[layer_num].m0, self.layer[layer_num].n,
-            self.layer[layer_num].zero)
+            layer_output,
+            self.layer[layer_num].m0,
+            self.layer[layer_num].n,
+            self.layer[layer_num].zero,
+        )
         return layer_output.astype(np.int8)
-
 
     def run(self, test_image: np.ndarray) -> (np.ndarray, np.ndarray, int):
         """Run quantized inference on a single image.
@@ -321,10 +330,10 @@ class NumPyInference:
             test_image / self.input_scale + self.input_zero, newshape=flat_shape
         ).astype(np.int8)
 
-        layer0_output = self._run_layer(
-            0, flat_image, self.input_zero, run_relu=True)
+        layer0_output = self._run_layer(0, flat_image, self.input_zero, run_relu=True)
         layer1_output = self._run_layer(
-            1, layer0_output, self.layer[0].zero, run_relu=False)
+            1, layer0_output, self.layer[0].zero, run_relu=False
+        )
 
         actual = layer1_output.argmax()
 
@@ -360,10 +369,14 @@ def main():
         print("test_image", test_image.shape, test_image.dtype, "\n")
 
         layer0_output, layer1_output, actual = numpy_inference.run(test_image)
-        print("NumPy layer0 output (transposed)", layer0_output.shape, layer0_output.dtype)
+        print(
+            "NumPy layer0 output (transposed)", layer0_output.shape, layer0_output.dtype
+        )
         print(layer0_output.T, "\n")
 
-        print("NumPy layer1 output (transposed)", layer1_output.shape, layer1_output.dtype)
+        print(
+            "NumPy layer1 output (transposed)", layer1_output.shape, layer1_output.dtype
+        )
         print(layer1_output.T, "\n")
 
         print(f"NumPy network output (#{test_index}):")

@@ -75,7 +75,7 @@ class State(enum.IntEnum):
 
 
 def _make_systolic_array_wire_inputs(
-        a: wire_matrix_2d.WireMatrix2D, reset: pyrtl.WireVector, input_bitwidth: int
+    a: wire_matrix_2d.WireMatrix2D, reset: pyrtl.WireVector, input_bitwidth: int
 ) -> list[pyrtl.WireVector]:
     """Generate left inputs for wire_matrix `a` from a WireMatrix2D of WireVectors.
 
@@ -110,9 +110,7 @@ def _make_systolic_array_wire_inputs(
     # 'left inputs' table above is implemented with a chain of registers. These
     # registers shift their values left each cycle, so the leftmost register will
     # have the correct value for the current cycle.
-    all_registers = [
-        [None for column in range(num_cycles)] for row in range(num_rows)
-    ]
+    all_registers = [[None for column in range(num_cycles)] for row in range(num_rows)]
     for cycle in reversed(range(num_cycles)):
         for row in range(num_rows):
             reg = pyrtl.Register(bitwidth=input_bitwidth)
@@ -140,8 +138,9 @@ def _make_systolic_array_wire_inputs(
     # Return the leftmost register for each row.
     return [all_registers[row][0] for row in range(num_rows)]
 
+
 def _make_systolic_array_memblock_inputs(
-        shape: tuple, addr: pyrtl.WireVector, mem: pyrtl.MemBlock, input_bitwidth: int
+    shape: tuple, addr: pyrtl.WireVector, mem: pyrtl.MemBlock, input_bitwidth: int
 ) -> list[pyrtl.WireVector]:
     """Generate left inputs for wire_matrix `a` from a WireMatrix2D with a MemBlock.
 
@@ -159,10 +158,9 @@ def _make_systolic_array_memblock_inputs(
     input_row.next <<= mem[addr]
     return [input_row[i] for i in range(num_rows)]
 
-def num_systolic_array_cycles(a_shape: (int, int), b_shape: (int, int)):
-    """Return the total number of cycles needed to multiply a and b, given their shapes.
 
-    """
+def num_systolic_array_cycles(a_shape: (int, int), b_shape: (int, int)):
+    """Return the total number of cycles needed to multiply a and b, given their shapes."""
     num_rows, num_inner = a_shape
     assert num_inner == b_shape[0]
     num_columns = b_shape[1]
@@ -286,6 +284,7 @@ def make_systolic_array(
     read from the pe_{row}_{col} registers.
 
     """
+
     @pyrtl.wire_struct
     class TileIn:
         """Collects a systolic array tile's left and top inputs.
@@ -308,8 +307,9 @@ def make_systolic_array(
         right: input_bitwidth
         bottom: input_bitwidth
 
-    def _make_systolic_array_pe(tile_out: TileOut, row: int, column: int,
-                                reset: pyrtl.WireVector):
+    def _make_systolic_array_pe(
+        tile_out: TileOut, row: int, column: int, reset: pyrtl.WireVector
+    ):
         """Make a multiply-and-accumulate processing element.
 
         Multiply the tile's outputs and accumulate their sum in a register.
@@ -366,7 +366,8 @@ def make_systolic_array(
         input_register.next <<= pyrtl.select(reset, 0, tile_in)
         tile_out = TileOut(bottom=input_register.top, right=input_register.left)
         accumulator = _make_systolic_array_pe(
-            tile_out=tile_out, row=row, column=column, reset=reset)
+            tile_out=tile_out, row=row, column=column, reset=reset
+        )
         return (tile_out, accumulator)
 
     # If b_zero is a length-1 vector, convert it to an integer.
@@ -389,7 +390,8 @@ def make_systolic_array(
     reset <<= counter == 0
 
     def process_input(
-            a: wire_matrix_2d.WireMatrix2D | np.ndarray) -> list[pyrtl.WireVector]:
+        a: wire_matrix_2d.WireMatrix2D | np.ndarray,
+    ) -> list[pyrtl.WireVector]:
         """Convert a left input matrix `a` into a list of `left` WireVector inputs.
 
         This can also be used to convert a right input matrix `b` into a list of `top`
@@ -401,12 +403,14 @@ def make_systolic_array(
                 a, input_bitwidth=input_bitwidth, addrwidth=counter_bitwidth
             )
             return _make_systolic_array_memblock_inputs(
-                a.shape, counter, left_romblock, input_bitwidth)
+                a.shape, counter, left_romblock, input_bitwidth
+            )
         else:
             assert isinstance(a, wire_matrix_2d.WireMatrix2D)
             if a.memblock is not None:
                 return _make_systolic_array_memblock_inputs(
-                    a.shape, counter, a.memblock, input_bitwidth)
+                    a.shape, counter, a.memblock, input_bitwidth
+                )
             else:
                 return _make_systolic_array_wire_inputs(a, reset, input_bitwidth)
 
@@ -424,7 +428,6 @@ def make_systolic_array(
 
     num_columns = len(top)
     num_rows = len(left)
-    num_cycles = num_inner + num_rows - 1
 
     # Collect a 2D array of tile outputs.
     tile_outs = [[None for column in range(num_columns)] for row in range(num_rows)]
@@ -516,7 +519,8 @@ def make_elementwise_add(
     for row in range(num_rows):
         for column in range(num_columns):
             sums[row][column] = pyrtl.signed_add(
-                a[row][column], b[row][column]).truncate(output_bitwidth)
+                a[row][column], b[row][column]
+            ).truncate(output_bitwidth)
 
     # Combinational adder is always ready for input.
     a.ready <<= True
@@ -613,8 +617,10 @@ def make_elementwise_normalize(
     # `m0` is always positive, so zero-extend it by one bit to ensure its high bit is
     # always zero. This ensures that the `signed_mult` below does not interpret `m0` as
     # a negative number.
-    m0 = [pyrtl.Const(multiplier.val.item(), bitwidth=input_bitwidth + 1)
-          for multiplier in m0]
+    m0 = [
+        pyrtl.Const(multiplier.val.item(), bitwidth=input_bitwidth + 1)
+        for multiplier in m0
+    ]
 
     # Collect a 2D array of normalized `outputs`. Intermediate results are collected in
     # these additional `multiplied`, `round_up`, and `shifted` arrays to make them
@@ -660,16 +666,18 @@ def make_elementwise_normalize(
             # https://github.com/tensorflow/tensorflow/issues/25087#issuecomment-634262762
             # for more details.
             shift_amount = input_bitwidth + n[row]
-            round_up[row][column] = (
-                multiplied[row][column][shift_amount - 1: shift_amount]
-                .zero_extended(2))
+            round_up[row][column] = multiplied[row][column][
+                shift_amount - 1 : shift_amount
+            ].zero_extended(2)
             shifted[row][column] = pyrtl.signed_add(
-                multiplied[row][column][shift_amount:], round_up[row][column])
+                multiplied[row][column][shift_amount:], round_up[row][column]
+            )
 
             # Elementwise add `z3`, then keep only the low 8 bits of the result. The
             # high bits may not all be zero, so this truncation may overflow.
-            outputs[row][column] = pyrtl.signed_add(
-                z3, shifted[row][column]).truncate(output_bitwidth)
+            outputs[row][column] = pyrtl.signed_add(z3, shifted[row][column]).truncate(
+                output_bitwidth
+            )
 
     # Combinational normalize is always ready for input.
     a.ready <<= True
@@ -709,8 +717,9 @@ def make_argmax(a: wire_matrix_2d.WireMatrix2D) -> pyrtl.WireVector:
         value: a.bitwidth
         index: index_bitwidth
 
-    indexed_values = [IndexedValue(value=a[index][0], index=index)
-                      for index in range(num_rows)]
+    indexed_values = [
+        IndexedValue(value=a[index][0], index=index) for index in range(num_rows)
+    ]
 
     def argmax2(a: IndexedValue, b: IndexedValue) -> IndexedValue:
         """Two-input argmax."""
@@ -729,15 +738,14 @@ def make_argmax(a: wire_matrix_2d.WireMatrix2D) -> pyrtl.WireVector:
 def inspect_matrix(
     sim: pyrtl.Simulation, prefix: str, shape: tuple, bitwidth: int, suffix=".output"
 ) -> np.ndarray:
-    """Collect output values from a PyRTL Simulation and return them as a numpy matrix.
-
-    """
+    """Collect output values from a PyRTL Simulation and return them as a numpy matrix."""
     num_rows, num_columns = shape
     array = [[None for _ in range(num_columns)] for _ in range(num_rows)]
     for row in range(num_rows):
         for column in range(num_columns):
             array[row][column] = pyrtl.val_to_signed_integer(
-                sim.inspect(f"{prefix}{suffix}[{row}][{column}]"), bitwidth=bitwidth)
+                sim.inspect(f"{prefix}{suffix}[{row}][{column}]"), bitwidth=bitwidth
+            )
     return np.array(array)
 
 
@@ -763,6 +771,7 @@ def verify_tensor(name: str, expected: np.ndarray, actual: np.ndarray):
         print(f"\nExpected {name} tensor is:\n{expected}")
         print(f"\nActual {name} tensor is:\n{actual}")
         return False
+
 
 def main():
     """Simulate matrix multiplication and elementwise addition (x ⋅ y + a).
@@ -799,9 +808,7 @@ def main():
     expected_xy = x @ (y - y_zero)
     assert expected_xy.shape == a.shape
 
-    input_bitwidth = max(
-        [minimum_bitwidth(a) for a in [x, y, expected_xy]]
-    )
+    input_bitwidth = max([minimum_bitwidth(a) for a in [x, y, expected_xy]])
     accumulator_bitwidth = 32
 
     num_rows, num_inner = x.shape

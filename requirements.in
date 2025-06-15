@@ -4,6 +4,7 @@ numpy
 pyrtl
 pytest
 pytest-xdist
+ruff
 tensorflow
 tensorflow-model-optimization
 tf-keras

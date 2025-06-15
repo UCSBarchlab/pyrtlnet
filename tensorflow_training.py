@@ -14,8 +14,8 @@ from tensorflow_model_optimization.python.core.keras.compat import keras
 
 
 def train_unquantized_model(
-        learning_rate: float, epochs: int,
-        train_images: tf.Tensor, train_labels: tf.Tensor) -> keras.Model:
+    learning_rate: float, epochs: int, train_images: tf.Tensor, train_labels: tf.Tensor
+) -> keras.Model:
     """Train an unquantized, two-layer, dense MNIST neural network model."""
     # Define the model architecture. This model is unoptimized, so higher accuracy
     # can be achieved by changing the architecture or its hyperparameters.
@@ -51,8 +51,8 @@ def train_unquantized_model(
 
 
 def evaluate_model(
-        model: keras.Model,
-        test_images: tf.Tensor, test_labels: tf.Tensor) -> (float, float):
+    model: keras.Model, test_images: tf.Tensor, test_labels: tf.Tensor
+) -> (float, float):
     """Evaluate a model on a test data set. Returns (loss, accuracy)."""
     assert len(model.metrics_names) == 2
     assert model.metrics_names[0] == "loss"
@@ -61,10 +61,13 @@ def evaluate_model(
 
 
 def quantize_model(
-        model: keras.Model,
-        learning_rate: float, epochs: int,
-        train_images: tf.Tensor, train_labels: tf.Tensor,
-        model_file_name: str) -> keras.Model:
+    model: keras.Model,
+    learning_rate: float,
+    epochs: int,
+    train_images: tf.Tensor,
+    train_labels: tf.Tensor,
+    model_file_name: str,
+) -> keras.Model:
     """Quantize, evaluate, and save a quantized model."""
     quantized_model = tfmot.quantization.keras.quantize_model(model)
 
@@ -76,7 +79,6 @@ def quantize_model(
     )
 
     quantized_model.fit(train_images, train_labels, epochs=epochs)
-
 
     def representative_dataset():
         for data in tf.data.Dataset.from_tensor_slices(train_images).batch(1).take(100):
@@ -100,30 +102,41 @@ def quantize_model(
 
     return quantized_model
 
+
 def main():
     # Load MNIST dataset.
     (train_images, train_labels), (test_images, test_labels) = (
-        mnist_util.load_mnist_images())
+        mnist_util.load_mnist_images()
+    )
 
     learning_rate = 0.001
     epochs = 10
 
     print("Training unquantized model.")
     model = train_unquantized_model(
-        learning_rate=learning_rate, epochs=epochs,
-        train_images=train_images, train_labels=train_labels)
+        learning_rate=learning_rate,
+        epochs=epochs,
+        train_images=train_images,
+        train_labels=train_labels,
+    )
     print("Evaluating unquantized model.")
     loss, accuracy = evaluate_model(
-        model=model, test_images=test_images, test_labels=test_labels)
+        model=model, test_images=test_images, test_labels=test_labels
+    )
 
     print("Training quantized model and writing ./quantized.tflite.")
     model = quantize_model(
-        model=model, learning_rate=learning_rate / 10000, epochs=int(epochs / 5),
-        train_images=train_images, train_labels=train_labels,
-        model_file_name="quantized.tflite")
+        model=model,
+        learning_rate=learning_rate / 10000,
+        epochs=int(epochs / 5),
+        train_images=train_images,
+        train_labels=train_labels,
+        model_file_name="quantized.tflite",
+    )
     print("Evaluating quantized model.")
     loss, accuracy = evaluate_model(
-        model=model, test_images=test_images, test_labels=test_labels)
+        model=model, test_images=test_images, test_labels=test_labels
+    )
 
 
 if __name__ == "__main__":
