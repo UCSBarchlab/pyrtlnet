@@ -11,150 +11,161 @@ import pyrtl
 import matrix
 import wire_matrix_2d
 
+class PyRTLInference:
+    """Run quantized inference with PyRTL."""
+    def __init__(self, interpreter: Interpreter,
+                 input_bitwidth: int, accumulator_bitwidth):
+        """Build the PyRTL inference hardware."""
 
-def make_outputs(m: wire_matrix_2d.WireMatrix2D):
-    num_rows, num_columns = m.shape
-    for i in range(num_rows):
-        for j in range(num_columns):
-            wire = m[i][j]
-            output = pyrtl.Output(name="output_" + wire.name, bitwidth=wire.bitwidth)
-            output <<= wire
+        # Extract weights, biases, and quantization metadata from the LiteRT
+        # Interpreter. The Interpreter is not actually used for inference.
+        self.interpreter = interpreter
+        self.input_bitwidth = input_bitwidth
+        self.accumulator_bitwidth = accumulator_bitwidth
 
+        # Tensor metadata, from the Model Explorer
+        # (https://github.com/google-ai-edge/model-explorer):
+        #
+        # tensor 0: input          int8[1, 12, 12]
+        #
+        # tensor 1: reshape shape  int32[2]
+        # tensor 2: reshape output int8[1, 144]
+        #
+        # tensor 3: layer 0 weight int8[18, 144]
+        # tensor 4: layer 0 bias   int32[18]
+        # tensor 5: layer 0 output int8[1, 18]
+        #
+        # tensor 6: layer 1 weight int8[10, 18]
+        # tensor 7: layer 1 bias   int32[10]
+        # tensor 8: layer 1 output int8[1, 10]
+        self.input_scale, self.input_zero = numpy_inference.get_tensor_scale_zero(
+            interpreter=interpreter, tensor_index=2)
 
-def make_layer(
-    layer_num,
-    input,
-    input_zero,
-    weight,
-    bias,
-    relu: bool,
-    output_m0,
-    output_n,
-    output_zero,
-    input_bitwidth,
-    accumulator_bitwidth,
-):
-    layer_name = f"layer{layer_num}"
-
-    # Matrix multiplication with 8-bit inputs and 32-bit outputs.
-    product = matrix.make_systolic_array(
-        name=layer_name + "_matmul",
-        a=weight,
-        b=input,
-        b_zero=input_zero,
-        input_bitwidth=input_bitwidth,
-        accumulator_bitwidth=accumulator_bitwidth,
-    )
-
-    # Add bias (32-bit).
-    bias_matrix = wire_matrix_2d.WireMatrix2D(
-        values=bias,
-        bitwidth=matrix.minimum_bitwidth(bias),
-        name=layer_name + "_bias",
-        valid=True,
-    )
-    sum = matrix.make_elementwise_add(
-        name=layer_name + "_add",
-        a=product,
-        b=bias_matrix,
-        output_bitwidth=accumulator_bitwidth,
-    )
-
-    # ReLU (32-bit).
-    if relu:
-        relu = matrix.make_elementwise_relu(
-            name=layer_name + "_relu", a=sum
+        # Extract weights, biases, and quantization metadata from the TFLite model.
+        layer0 = numpy_inference.QuantizedLayer(
+            interpreter=interpreter,
+            input_scale=self.input_scale,
+            weight_index=3,
+            bias_index=4,
+            output_index=5,
         )
-    else:
-        relu = sum
+        layer1 = numpy_inference.QuantizedLayer(
+            interpreter=interpreter,
+            input_scale=layer0.scale,
+            weight_index=6,
+            bias_index=7,
+            output_index=8,
+        )
+        self.layer = [layer0, layer1]
 
-    # Normalize from 32-bit to 8-bit.
-    output = matrix.make_elementwise_normalize(
-        name=layer_name,
-        a=relu,
-        m0=output_m0,
-        n=output_n,
-        z3=output_zero,
-        input_bitwidth=accumulator_bitwidth,
-        output_bitwidth=input_bitwidth,
-    )
-    make_outputs(output)
+        # Create the MemBlock for the input image data.
+        self._make_input_memblock()
 
-    valid = pyrtl.Output(name="output_" + layer_name + ".output.valid", bitwidth=1)
-    valid <<= output.valid
-
-    return output
+        # Create hardware that implements the neural network.
+        self._make_inference()
 
 
-def reset_registers(simulation: pyrtl.FastSimulation):
-    block = simulation.block
-    for reg in block.wirevector_subset(pyrtl.Register):
-        reset_value = reg.reset_value if reg.reset_value else 0
-        simulation.regs[reg.name] = reset_value
+    def _make_input_memblock(self):
+        """Build the MemBlock that will hold the input image data."""
+        weight_shape = self.layer[0].weight.shape
+        batch_size = 1
+        flat_image_shape = (weight_shape[1], batch_size)
+
+        done_cycle = (
+            matrix.num_systolic_array_cycles(weight_shape, flat_image_shape) - 1)
+        self.flat_image_addrwidth = pyrtl.infer_val_and_bitwidth(done_cycle).bitwidth
+
+        # Create a properly-sized empty MemBlock. The MemBlock's contents will be set
+        # at simulation time in `run()`.
+        _, num_columns = flat_image_shape
+        self.flat_image_memblock = pyrtl.MemBlock(
+            addrwidth=self.flat_image_addrwidth, bitwidth=self.input_bitwidth * num_columns
+        )
+
+        # Create a WireMatrix2D that wraps the empty MemBlock. This will be the first
+        # layer's input.
+        self.flat_image_matrix = wire_matrix_2d.WireMatrix2D(
+            values=self.flat_image_memblock,
+            shape=flat_image_shape,
+            bitwidth=self.input_bitwidth,
+            name="flat_image",
+            valid=True,
+        )
 
 
-def make_inference(
-    flat_image_matrix: wire_matrix_2d.WireMatrix2D,
-    make_outputs: bool,
-    input_bitwidth: int,
-    accumulator_bitwidth: int,
-):
-    # Load quantized model.
-    tflite_file = "quantized.tflite"
-    interpreter = Interpreter(model_path=tflite_file)
-    tensors = interpreter.get_tensor_details()
-    input_scale, input_zero = numpy_inference.get_tensor_scale_zero(
-        interpreter=interpreter, tensor_index=2)
+    def _make_layer(
+            self, layer_num: int, input: wire_matrix_2d.WireMatrix2D,
+            input_zero: np.ndarray, relu: bool) -> wire_matrix_2d.WireMatrix2D:
+        """Build one layer of the PyRTL inference hardware."""
+        layer_name = f"layer{layer_num}"
 
-    # Extract weights, biases, and quantization metadata from the TFLite model.
-    layer0 = numpy_inference.QuantizedLayer(
-        interpreter=interpreter,
-        input_scale=input_scale,
-        weight_index=3,
-        bias_index=4,
-        output_index=5,
-    )
-    layer1 = numpy_inference.QuantizedLayer(
-        interpreter=interpreter,
-        input_scale=layer0.scale,
-        weight_index=6,
-        bias_index=7,
-        output_index=8,
-    )
-    layer = [layer0, layer1]
+        # Matrix multiplication with 8-bit inputs and 32-bit output. This multiplies
+        # the layer's weight and the layer's input data.
+        product = matrix.make_systolic_array(
+            name=layer_name + "_matmul",
+            a=self.layer[layer_num].weight,
+            b=input,
+            b_zero=input_zero,
+            input_bitwidth=self.input_bitwidth,
+            accumulator_bitwidth=self.accumulator_bitwidth,
+        )
 
-    layer0 = make_layer(
-        layer_num=0,
-        input=flat_image_matrix,
-        input_zero=input_zero,
-        weight=layer[0].weight,
-        bias=layer[0].bias,
-        relu=True,
-        output_m0=layer[0].m0,
-        output_n=layer[0].n,
-        output_zero=layer[0].zero,
-        input_bitwidth=input_bitwidth,
-        accumulator_bitwidth=accumulator_bitwidth,
-    )
+        # Create a WireMatrix2D for the layer's bias.
+        bias_matrix = wire_matrix_2d.WireMatrix2D(
+            values=self.layer[layer_num].bias,
+            bitwidth=matrix.minimum_bitwidth(self.layer[layer_num].bias),
+            name=layer_name + "_bias",
+            valid=True,
+        )
+        # Add the bias. This is a 32-bit add.
+        sum = matrix.make_elementwise_add(
+            name=layer_name + "_add",
+            a=product,
+            b=bias_matrix,
+            output_bitwidth=self.accumulator_bitwidth,
+        )
 
-    layer1 = make_layer(
-        layer_num=1,
-        input=layer0,
-        input_zero=layer[0].zero,
-        weight=layer[1].weight,
-        bias=layer[1].bias,
-        relu=False,
-        output_m0=layer[1].m0,
-        output_n=layer[1].n,
-        output_zero=layer[1].zero,
-        input_bitwidth=input_bitwidth,
-        accumulator_bitwidth=accumulator_bitwidth,
-    )
+        # Perform ReLU, if the layer needs it. This is a 32-bit ReLU.
+        if relu:
+            relu = matrix.make_elementwise_relu(
+                name=layer_name + "_relu", a=sum
+            )
+        else:
+            relu = sum
 
-    argmax = matrix.make_argmax(a=layer1)
+        # Normalize from 32-bit to 8-bit. This effectively multiplies the layer's output
+        # by its scale factor `m` and adds its zero point `z3`. `m` is represented as
+        # a fixed-point multiplier `m0` and a right shift `n`.
+        output = matrix.make_elementwise_normalize(
+            name=layer_name,
+            a=relu,
+            m0=self.layer[layer_num].m0,
+            n=self.layer[layer_num].n,
+            z3=self.layer[layer_num].zero,
+            input_bitwidth=self.accumulator_bitwidth,
+            output_bitwidth=self.input_bitwidth,
+        )
 
-    if make_outputs:
-        wire_matrix_2d.make_outputs(layer1)
+        # Create a WireMatrix2D for this layer's output. This can be used as the next
+        # layer's input.
+        wire_matrix_2d.make_outputs(output)
+
+        return output
+
+
+    def _make_inference(self):
+        """Build the PyRTL inference hardware."""
+        # Build all layers.
+        layer0 = self._make_layer(
+            layer_num=0, input=self.flat_image_matrix, input_zero=self.input_zero,
+            relu=True)
+
+        layer1 = self._make_layer(
+            layer_num=1, input=layer0, input_zero=self.layer[0].zero,
+            relu=False)
+
+        # Compute argmax for the last layer's output.
+        argmax = matrix.make_argmax(a=layer1)
 
         num_rows, num_columns = layer1.shape
         assert num_columns == 1
@@ -164,66 +175,32 @@ def make_inference(
         )
         argmax_output <<= argmax
 
+        # Make a PyRTL Output for the second layer output's `valid` signal. When this
+        # signal goes high, inference is complete.
         valid = pyrtl.Output(name="valid", bitwidth=1)
         valid <<= layer1.valid
 
-    return input_scale, input_zero, layer, layer1.valid, argmax
 
+    def run(self, test_image: np.ndarray) -> (np.ndarray, np.ndarray, int):
+        """Run quantized inference on a single image.
 
-def main():
-    parser = argparse.ArgumentParser(prog="pyrtl_inference.py")
-    parser.add_argument("--start_image", type=int, default=0)
-    parser.add_argument("--num_images", type=int, default=1)
-    args = parser.parse_args()
+        All calculations are done in PyRTL Simulation.
 
-    terminal_columns = shutil.get_terminal_size((80, 24)).columns
-    np.set_printoptions(linewidth=terminal_columns)
+        Returns (layer0_output, layer1_output, predicted_digit), where:
 
-    # Load MNIST data set.
-    _, (test_images, test_labels) = mnist_util.load_mnist_images()
+        * `layer0_output` is the first layer's raw Tensor output (shape (18, 1)).
+        * `layer1_output` is the second layer's raw Tensor output (shape (10, 1)).
+        * `predicted_digit` is the actual predicted digit. It is equivalent to
+          `layer1_output.flatten().argmax()`.
 
-    flat_shape = (test_images[0].shape[0] * test_images[0].shape[1], 1)
-    num_rows, num_inner = (18, flat_shape[0])
-    _, num_columns = flat_shape
+        """
+        layer0_weight_shape = self.layer[0].weight.shape
+        batch_size = 1
+        input_shape = (layer0_weight_shape[1], batch_size)
+        layer0_output_shape = (layer0_weight_shape[0], batch_size)
 
-    done_cycle = num_rows + num_inner + num_columns - 1
-    counter_bitwidth = pyrtl.infer_val_and_bitwidth(done_cycle).bitwidth
-
-    input_bitwidth = 8
-    accumulator_bitwidth = 32
-    flat_image_memblock = pyrtl.MemBlock(
-        addrwidth=counter_bitwidth, bitwidth=input_bitwidth * num_columns
-    )
-    flat_image_matrix = wire_matrix_2d.WireMatrix2D(
-        values=flat_image_memblock,
-        shape=flat_shape,
-        bitwidth=input_bitwidth,
-        name="flat_image",
-        valid=True,
-    )
-
-    input_scale, input_zero, layer, _, _ = make_inference(
-        flat_image_matrix=flat_image_matrix,
-        make_outputs=True,
-        input_bitwidth=input_bitwidth,
-        accumulator_bitwidth=accumulator_bitwidth,
-    )
-
-    pyrtl.passes._remove_wire_nets(pyrtl.working_block())
-
-    def num_cycles(a, b) -> int:
-        """Return the number of cycles needed to multiply matrix a and matrix b."""
-        num_rows, a_num_inner = a.shape
-        b_num_inner, num_columns = b.shape
-        assert a_num_inner == b_num_inner
-        return num_rows + a_num_inner + num_columns + 2
-
-    correct = 0
-    for test_index in range(args.start_image, args.start_image + args.num_images):
-        # Run inference on test_index.
-        test_image = test_images[test_index]
-        print(f"network input (#{test_index}):")
-        inference_util.display_image(test_image)
+        layer1_weight_shape = self.layer[1].weight.shape
+        layer1_output_shape = (layer1_weight_shape[0], batch_size)
 
         # The MNIST image data contains pixel values in the range [0, 255]. The neural
         # network was trained by first converting these values to floating point, in the
@@ -239,84 +216,90 @@ def main():
         # Adding input_zero_point (-128) effectively converts the uint8 image data to
         # int8, by shifting the range [0, 255] to [-128, 127].
         flat_image = np.reshape(
-            test_image / input_scale + input_zero, newshape=flat_shape
+            test_image / self.input_scale + self.input_zero, newshape=input_shape
         ).astype(np.int8)
-        data_dict = {
+
+        # Convert the flattened image data to a dictionary for use in Simulation's
+        # `memory_value_map`. The `flat_image` is transposed because this data will be
+        # the second input to the first layer's systolic array (`top` inputs to the
+        # array).
+        image_data_dict = {
             i: d
             for i, d in enumerate(
                 matrix.make_input_romdata(
-                    flat_image.transpose(), input_bitwidth, counter_bitwidth
+                    flat_image.transpose(), self.input_bitwidth,
+                    self.flat_image_addrwidth
                 )
             )
         }
-        sim = pyrtl.FastSimulation(memory_value_map={flat_image_memblock: data_dict})
-        reset_registers(sim)
 
-        # Simulate layer 0.
+        # Run until the second layer's computations are done.
+        sim = pyrtl.FastSimulation(
+            memory_value_map={self.flat_image_memblock: image_data_dict})
         done = False
         while not done:
             sim.step()
-            done = sim.inspect("output_layer0.output.valid")
+            done = sim.inspect("valid")
 
-        # Check layer 0.
-        expected_product0 = numpy_inference.quantized_matmul(
-            layer[0].weight, 0, flat_image, input_zero
+        # Retrieve each layer's outputs.
+        layer0_output = matrix.inspect_matrix(
+            sim, "output_layer0", layer0_output_shape, bitwidth=self.input_bitwidth
         )
-        # actual_product0 = matrix.inspect_matrix(
-        #     sim, "layer0_matmul", expected_product0.shape, bitwidth=32, suffix=".pe"
-        # )
-        # matrix.verify_tensor(
-        #     name="layer0 product0",
-        #     expected=expected_product0.T,
-        #     actual=actual_product0.T,
-        # )
-        expected_sum0 = expected_product0 + layer[0].bias
-        expected_relu0 = numpy_inference.relu(expected_sum0)
-        expected_layer0_output = numpy_inference.normalize(
-            expected_relu0, layer[0].m0, layer[0].n, layer[0].zero
-        )
-        actual_layer0_output = matrix.inspect_matrix(
-            sim, "output_layer0", expected_layer0_output.shape, bitwidth=8
-        )
-        matrix.verify_tensor(
-            name="layer0",
-            expected=expected_layer0_output.T,
-            actual=actual_layer0_output.T,
+        layer1_output = matrix.inspect_matrix(
+            sim, "output_layer1", layer1_output_shape, bitwidth=self.input_bitwidth
         )
 
-        # Simulate layer 1.
-        print()
-        done = False
-        while not done:
-            sim.step()
-            done = sim.inspect("output_layer1.output.valid")
+        # Retrieve the predicted digit.
+        argmax = sim.inspect("argmax")
 
-        # Check layer 1.
-        expected_product1 = numpy_inference.quantized_matmul(
-            layer[1].weight, 0, expected_layer0_output, layer[0].zero
-        )
-        expected_sum1 = expected_product1 + layer[1].bias
-        expected_layer1_output = numpy_inference.normalize(
-            expected_sum1, layer[1].m0, layer[1].n, layer[1].zero
-        )
-        actual_layer1_output = matrix.inspect_matrix(
-            sim, "output_layer1", expected_layer1_output.shape, bitwidth=8
-        )
-        matrix.verify_tensor(
-            name="layer1",
-            expected=expected_layer1_output.T,
-            actual=actual_layer1_output.T,
-        )
+        return layer0_output, layer1_output, argmax
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="pyrtl_inference.py")
+    parser.add_argument("--start_image", type=int, default=0)
+    parser.add_argument("--num_images", type=int, default=1)
+    args = parser.parse_args()
+
+    terminal_columns = shutil.get_terminal_size((80, 24)).columns
+    np.set_printoptions(linewidth=terminal_columns)
+
+    # Load MNIST data set.
+    _, (test_images, test_labels) = mnist_util.load_mnist_images()
+
+    # Load quantized model.
+    tflite_file = "quantized.tflite"
+    interpreter = Interpreter(model_path=tflite_file)
+
+    # Create PyRTL inference hardware.
+    input_bitwidth = 8
+    accumulator_bitwidth = 32
+    pyrtl_inference = PyRTLInference(interpreter, input_bitwidth, accumulator_bitwidth)
+
+    correct = 0
+    for test_index in range(args.start_image, args.start_image + args.num_images):
+        # Print the test image.
+        test_image = test_images[test_index]
+        print(f"PyRTL network input (#{test_index}):")
+        inference_util.display_image(test_image)
+
+        # Run PyRTL inference on the test image.
+        layer0_output, layer1_output, actual = pyrtl_inference.run(test_image)
+
+        # Print results.
+        print("PyRTL layer0 output (transposed)",
+              layer0_output.shape, layer0_output.dtype)
+        print(layer0_output.T, "\n")
+
+        print("PyRTL layer1 output (transposed)",
+              layer1_output.shape, layer1_output.dtype)
+        print(layer1_output.T, "\n")
 
         print(f"\nPyRTL network output (#{test_index}):")
-        actual_argmax = sim.inspect("argmax")
-        inference_util.display_outputs(
-            actual_layer1_output.reshape((10,)),
-            expected=test_labels[test_index],
-            actual=actual_argmax,
-        )
+        expected = test_labels[test_index]
+        inference_util.display_outputs(layer1_output, expected=expected, actual=actual)
 
-        if actual_argmax == test_labels[test_index]:
+        if actual == expected:
             correct += 1
 
         if test_index < args.num_images - 1:

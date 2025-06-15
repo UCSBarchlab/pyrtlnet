@@ -157,10 +157,9 @@ def make_outputs(matrix):
 
     for row in range(num_rows):
         for column in range(num_columns):
-            output = pyrtl.Output(
-                name=f"output_{row}_{column}", bitwidth=matrix.bitwidth
-            )
-            output <<= matrix[row][column]
+            wire = matrix[row][column]
+            output = pyrtl.Output(name="output_" + wire.name, bitwidth=wire.bitwidth)
+            output <<= wire
 
 
 def main():

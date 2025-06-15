@@ -1,4 +1,4 @@
-"""Implement quantized inference with numpy and fxpmath.
+"""Implement quantized inference with NumPy and fxpmath.
 
 This does not invoke the LiteRT reference implementation, though it does instantiate an
 Interpreter to extract weights, biases, and quantization metadata.
@@ -229,8 +229,8 @@ class QuantizedLayer:
         self.bias = np.expand_dims(interpreter.get_tensor(bias_index), axis=1)
 
 
-class NumpyInference:
-    """Run quantized inference on an input image."""
+class NumPyInference:
+    """Run quantized inference on an input image with NumPy and fxpmath."""
     def __init__(self, interpreter: Interpreter):
         """Collect weights, biases, and quantization metadata from a LiteRT Interpreter.
 
@@ -273,22 +273,36 @@ class NumpyInference:
         )
         self.layer = [layer0, layer1]
 
+    def _run_layer(
+            self, layer_num: int, layer_input: np.ndarray, layer_input_zero: np.ndarray,
+            run_relu: bool) -> np.ndarray:
+        layer_output = quantized_matmul(
+            self.layer[layer_num].weight, 0, layer_input, layer_input_zero)
+        layer_output = layer_output + self.layer[layer_num].bias
+        if run_relu:
+            layer_output = relu(layer_output)
+        layer_output = normalize(
+            layer_output, self.layer[layer_num].m0, self.layer[layer_num].n,
+            self.layer[layer_num].zero)
+        return layer_output.astype(np.int8)
+
 
     def run(self, test_image: np.ndarray) -> (np.ndarray, np.ndarray, int):
         """Run quantized inference on a single image.
 
-        All calculations are done with numpy and fxpmath.
+        All calculations are done with NumPy and fxpmath.
 
         Returns (layer0_output, layer1_output, predicted_digit), where:
 
-        * `layer0_output` is the first layer's raw Tensor output (shape (1, 18)).
-        * `layer1_output` is the second layer's raw Tensor output (shape (1, 10)).
+        * `layer0_output` is the first layer's raw Tensor output (shape (18, 1)).
+        * `layer1_output` is the second layer's raw Tensor output (shape (10, 1)).
         * `predicted_digit` is the actual predicted digit. It is equivalent to
           `layer1_output.flatten().argmax()`.
 
         """
         # Flatten the image and add the batch dimension.
-        flat_shape = (test_image.shape[0] * test_image.shape[1], 1)
+        batch_size = 1
+        flat_shape = (test_image.shape[0] * test_image.shape[1], batch_size)
 
         # The MNIST image data contains pixel values in the range [0, 255]. The neural
         # network was trained by first converting these values to floating point, in the
@@ -307,20 +321,10 @@ class NumpyInference:
             test_image / self.input_scale + self.input_zero, newshape=flat_shape
         ).astype(np.int8)
 
-        layer0_output = quantized_matmul(
-            self.layer[0].weight, 0, flat_image, self.input_zero)
-        layer0_output = relu(layer0_output + self.layer[0].bias)
-        layer0_output = normalize(
-            layer0_output, self.layer[0].m0, self.layer[0].n, self.layer[0].zero)
-        layer0_output = layer0_output.astype(np.int8)
-
-        layer1_output = quantized_matmul(
-            self.layer[1].weight, 0, layer0_output, self.layer[0].zero)
-        layer1_output = layer1_output + self.layer[1].bias
-        layer1_output = normalize(
-            layer1_output, self.layer[1].m0, self.layer[1].n, self.layer[1].zero)
-
-        layer1_output = layer1_output.reshape((10,))
+        layer0_output = self._run_layer(
+            0, flat_image, self.input_zero, run_relu=True)
+        layer1_output = self._run_layer(
+            1, layer0_output, self.layer[0].zero, run_relu=False)
 
         actual = layer1_output.argmax()
 
@@ -341,7 +345,7 @@ def main():
     interpreter = Interpreter(model_path=tflite_file)
 
     # Colllect weights, biases, and quantization metadata.
-    numpy_inference = NumpyInference(interpreter)
+    numpy_inference = NumPyInference(interpreter)
 
     # Load MNIST data set.
     _, (test_images, test_labels) = mnist_util.load_mnist_images()
@@ -351,18 +355,18 @@ def main():
         # Run inference on test_index.
         test_image = test_images[test_index]
 
-        print(f"network input (#{test_index}):")
+        print(f"NumPy network input (#{test_index}):")
         inference_util.display_image(test_image)
         print("test_image", test_image.shape, test_image.dtype, "\n")
 
         layer0_output, layer1_output, actual = numpy_inference.run(test_image)
-        print("layer0 output (transposed)", layer0_output.shape, layer0_output.dtype)
+        print("NumPy layer0 output (transposed)", layer0_output.shape, layer0_output.dtype)
         print(layer0_output.T, "\n")
 
-        print("layer1 output (transposed)", layer1_output.shape, layer1_output.dtype)
+        print("NumPy layer1 output (transposed)", layer1_output.shape, layer1_output.dtype)
         print(layer1_output.T, "\n")
 
-        print(f"network output (#{test_index}):")
+        print(f"NumPy network output (#{test_index}):")
         expected = test_labels[test_index]
         inference_util.display_outputs(layer1_output, expected=expected, actual=actual)
 

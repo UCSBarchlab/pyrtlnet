@@ -159,6 +159,17 @@ def _make_systolic_array_memblock_inputs(
     input_row.next <<= mem[addr]
     return [input_row[i] for i in range(num_rows)]
 
+def num_systolic_array_cycles(a_shape: (int, int), b_shape: (int, int)):
+    """Return the total number of cycles needed to multiply a and b, given their shapes.
+
+    """
+    num_rows, num_inner = a_shape
+    assert num_inner == b_shape[0]
+    num_columns = b_shape[1]
+
+    return num_rows + num_inner + num_columns
+
+
 def make_systolic_array(
     name: str,
     a: wire_matrix_2d.WireMatrix2D | np.ndarray,
@@ -364,13 +375,9 @@ def make_systolic_array(
         b_zero = b_zero[0]
     b_zero_const = pyrtl.Const(b_zero, signed=True, bitwidth=input_bitwidth)
 
-    num_rows, num_inner = a.shape
-    assert num_inner == b.shape[0]
-    num_columns = b.shape[1]
-
     # 'done_next_cycle' is high when the matrix multiplication is one cycle away from
     # completion. We need to know one cycle ahead to update 'state'.
-    done_cycle = num_rows + num_inner + num_columns - 1
+    done_cycle = num_systolic_array_cycles(a.shape, b.shape) - 1
 
     # This counter determines when the matrix multiplication is complete. The counter is
     # also used as an address for reading input data from MemBlocks.
@@ -402,6 +409,10 @@ def make_systolic_array(
                     a.shape, counter, a.memblock, input_bitwidth)
             else:
                 return _make_systolic_array_wire_inputs(a, reset, input_bitwidth)
+
+    num_rows, num_inner = a.shape
+    assert num_inner == b.shape[0]
+    num_columns = b.shape[1]
 
     left = process_input(a)
     for row in range(num_rows):

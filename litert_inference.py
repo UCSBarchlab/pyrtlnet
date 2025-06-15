@@ -128,20 +128,20 @@ def main():
     correct = 0
     for test_index in range(args.start_image, args.start_image + args.num_images):
         test_image = test_images[test_index]
-        print(f"network input (#{test_index}):")
+        print(f"LiteRT network input (#{test_index}):")
         inference_util.display_image(test_image)
         print("test_image", test_image.shape, test_image.dtype, "\n")
 
         layer0_output, layer1_output, actual = run_tflite_model(
             interpreter=interpreter, test_image=test_image)
 
-        print(f"layer 0 output {layer0_output.shape} {layer0_output.dtype}")
+        print(f"LiteRT layer 0 output {layer0_output.shape} {layer0_output.dtype}")
         print(f"{layer0_output}\n")
-        print(f"layer 1 output {layer1_output.shape} {layer1_output.dtype}")
+        print(f"LiteRT layer 1 output {layer1_output.shape} {layer1_output.dtype}")
         print(f"{layer1_output}\n")
 
         expected = test_labels[test_index]
-        print(f"network output (#{test_index}):")
+        print(f"LiteRT network output (#{test_index}):")
         inference_util.display_outputs(layer1_output.flatten(), expected, actual)
         if actual == expected:
             correct += 1
