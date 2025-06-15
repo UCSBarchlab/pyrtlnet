@@ -6,9 +6,9 @@ import pyrtl
 from ai_edge_litert.interpreter import Interpreter
 
 import inference_util
-import matrix
 import mnist_util
 import numpy_inference
+import pyrtl_matrix
 import wire_matrix_2d
 
 
@@ -75,7 +75,7 @@ class PyRTLInference:
         flat_image_shape = (weight_shape[1], batch_size)
 
         done_cycle = (
-            matrix.num_systolic_array_cycles(weight_shape, flat_image_shape) - 1
+            pyrtl_matrix.num_systolic_array_cycles(weight_shape, flat_image_shape) - 1
         )
         self.flat_image_addrwidth = pyrtl.infer_val_and_bitwidth(done_cycle).bitwidth
 
@@ -109,7 +109,7 @@ class PyRTLInference:
 
         # Matrix multiplication with 8-bit inputs and 32-bit output. This multiplies
         # the layer's weight and the layer's input data.
-        product = matrix.make_systolic_array(
+        product = pyrtl_matrix.make_systolic_array(
             name=layer_name + "_matmul",
             a=self.layer[layer_num].weight,
             b=input,
@@ -121,12 +121,12 @@ class PyRTLInference:
         # Create a WireMatrix2D for the layer's bias.
         bias_matrix = wire_matrix_2d.WireMatrix2D(
             values=self.layer[layer_num].bias,
-            bitwidth=matrix.minimum_bitwidth(self.layer[layer_num].bias),
+            bitwidth=pyrtl_matrix.minimum_bitwidth(self.layer[layer_num].bias),
             name=layer_name + "_bias",
             valid=True,
         )
         # Add the bias. This is a 32-bit add.
-        sum = matrix.make_elementwise_add(
+        sum = pyrtl_matrix.make_elementwise_add(
             name=layer_name + "_add",
             a=product,
             b=bias_matrix,
@@ -135,14 +135,14 @@ class PyRTLInference:
 
         # Perform ReLU, if the layer needs it. This is a 32-bit ReLU.
         if relu:
-            relu = matrix.make_elementwise_relu(name=layer_name + "_relu", a=sum)
+            relu = pyrtl_matrix.make_elementwise_relu(name=layer_name + "_relu", a=sum)
         else:
             relu = sum
 
         # Normalize from 32-bit to 8-bit. This effectively multiplies the layer's output
         # by its scale factor `m` and adds its zero point `z3`. `m` is represented as
         # a fixed-point multiplier `m0` and a right shift `n`.
-        output = matrix.make_elementwise_normalize(
+        output = pyrtl_matrix.make_elementwise_normalize(
             name=layer_name,
             a=relu,
             m0=self.layer[layer_num].m0,
@@ -175,7 +175,7 @@ class PyRTLInference:
         self.layer_outputs = [layer0, layer1]
 
         # Compute argmax for the last layer's output.
-        argmax = matrix.make_argmax(a=layer1)
+        argmax = pyrtl_matrix.make_argmax(a=layer1)
 
         num_rows, num_columns = layer1.shape
         assert num_columns == 1
@@ -231,7 +231,7 @@ class PyRTLInference:
         image_data_dict = {
             i: d
             for i, d in enumerate(
-                matrix.make_input_romdata(
+                pyrtl_matrix.make_input_romdata(
                     flat_image.transpose(),
                     self.input_bitwidth,
                     self.flat_image_addrwidth,
