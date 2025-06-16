@@ -1,5 +1,6 @@
 import argparse
 import enum
+import warnings
 
 import numpy as np
 import pyrtl
@@ -12,9 +13,8 @@ import wire_matrix_2d
 The operations in this module all use ``WireMatrix2D`` as their input and output, so
 they can be composed. See ``main()`` below for an example that computes ``x ⋅ y + a``.
 
-WARNING: These implementations are not completely general. They have only been tested in
-the context of dense neural networks. For example, the systolic array currently assumes
-that its first input is always ready."""
+WARNING: These implementations may not be completely general. They have only been tested
+in the context of dense neural networks."""
 
 
 def make_input_romdata(a: np.ndarray, input_bitwidth: int, addrwidth: int) -> list[int]:
@@ -175,6 +175,13 @@ def make_systolic_array(
     accumulator_bitwidth: int,
 ) -> wire_matrix_2d.WireMatrix2D:
     """Generate an output-stationary systolic array, computing ``a ⋅ (b - b_zero)``.
+
+    ``a`` and ``b`` can be ``WireMatrix2D`` or NumPy ``ndarray``s. The types of ``a``
+    and ``b`` do not have to match.
+
+    Multiplying two NumPy arrays in hardware is unnecessary, because we could instead do
+    the multiplication offline and encode the result in hardware. But this use case is
+    still supported, which can be useful for testing and debugging.
 
     ``b_zero`` can be useful for quantized neural network computations. Set it to zero
     for standard matrix multiplication.
@@ -417,11 +424,6 @@ def make_systolic_array(
             else:
                 return _make_systolic_array_wire_inputs(a, reset, input_bitwidth)
 
-    # This implementation currently assumes that ``a`` is a NumPy array, which will be
-    # converted to a ``WireMatrix2D`` that's always ``valid``.
-    # TODO: relax this constraint.
-    assert isinstance(a, np.ndarray)
-
     num_rows, num_inner = a.shape
     assert num_inner == b.shape[0]
     num_columns = b.shape[1]
@@ -492,11 +494,40 @@ def make_systolic_array(
         with pyrtl.otherwise:
             counter.next |= counter + 1
 
+    a_is_wire_matrix_2d = isinstance(a, wire_matrix_2d.WireMatrix2D)
+    b_is_wire_matrix_2d = isinstance(b, wire_matrix_2d.WireMatrix2D)
+
+    # Determine if we need to check both or one input for validity.
+    if a_is_wire_matrix_2d and b_is_wire_matrix_2d:
+        valid = a.valid & b.valid
+    elif a_is_wire_matrix_2d:
+        valid = a.valid
+    elif b_is_wire_matrix_2d:
+        valid = b.valid
+    else:
+        # If neither input is a WireMatrix2D, then both inputs are NumPy arrays, and
+        # their contents are always valid.
+        assert isinstance(a, np.ndarray)
+        assert isinstance(b, np.ndarray)
+        warnings.warn(
+            "Both systolic array inputs are NumPy arrays, so this matrix multiplication"
+            " should not be computed in hardware",
+            stacklevel=2,
+        )
+        valid = pyrtl.Const(val=True, bitwidth=1)
+
     # Update current state.
     with pyrtl.conditional_assignment:
         with state == State.INIT:
-            b.ready |= True
-            with b.valid:
+            # We're using ordinary Python ``if`` statements within a
+            # ``pyrtl.conditional_assignment`` because we need to generate different
+            # logic depending on which inputs are constants.
+            if a_is_wire_matrix_2d:
+                a.ready |= True
+            if b_is_wire_matrix_2d:
+                b.ready |= True
+
+            with valid:
                 state.next |= State.READ
         with state == State.READ:
             state.next |= State.BUSY
@@ -593,9 +624,9 @@ def make_elementwise_normalize(
     and adds its zero point ``z3``.
 
     ``m`` is a floating-point number, which is represented by a 32-bit fixed-point
-    multiplier ``m0`` and bitwise right shift ``n``, see numpy_inference.py's
+    multiplier ``m0`` and bitwise rounding right shift ``n``, see numpy_inference.py's
     ``normalization_constants()``. So instead of doing a floating-point multiplication,
-    we do a fixed-point multiplication, followed by a bitwise right shift.
+    we do a fixed-point multiplication, followed by a bitwise rounding right shift.
 
     See https://arxiv.org/pdf/1712.05877.pdf for more details. This implements the part
     of equation 7 that's outside the parentheses (addition of ``z3`` and multiplication
@@ -615,21 +646,26 @@ def make_elementwise_normalize(
     assert input_bitwidth >= output_bitwidth
     num_rows, num_columns = a.shape
 
-    assert len(m0) == len(n)
-    if len(m0) == 1:
-        # Per-tensor quantization: There is only one (m0, n) for the whole tensor. The
-        # code below assumes per-axis quantization, so we copy the values.
-        m0 = [m0[0] for _ in range(num_rows)]
-        n = [n[0] for _ in range(num_rows)]
-    assert len(m0) == num_rows
+    # The code below assumes that ``a`` was quantized on axis 0 (see
+    # ``quantized_dimension`` in numpy_inference.py). Broadcast ``m0``, ``n``, and
+    # ``z3`` to appropriate size, if necessary.
+    #
+    # Broadcasting ``m0`` converts it from unsigned to signed, so we create a new Fxp
+    # instance with ``m0``'s Fxp parameters after broadcasting.
+    m0 = Fxp(
+        np.broadcast_to(m0, (num_rows,)),
+        signed=m0.signed,
+        n_word=m0.n_word,
+        n_frac=m0.n_frac,
+    )
+    n = np.broadcast_to(n, (num_rows,))
+    z3 = np.broadcast_to(z3, (num_rows,))
 
     # ``m0`` is always positive, so zero-extend it by one bit to ensure its high bit is
     # always zero. This ensures that the ``signed_mult`` below does not interpret ``m0``
     # as a negative number.
-    m0 = [
-        pyrtl.Const(multiplier.val.item(), bitwidth=input_bitwidth + 1)
-        for multiplier in m0
-    ]
+    m0 = [pyrtl.Const(multiplier.val, bitwidth=input_bitwidth + 1) for multiplier in m0]
+    z3 = [pyrtl.Const(zero, signed=True, bitwidth=input_bitwidth + 1) for zero in z3]
 
     # Collect a 2D array of normalized ``outputs``. Intermediate results are collected
     # in these additional ``multiplied``, ``round_up``, and ``shifted`` arrays to make
@@ -639,8 +675,6 @@ def make_elementwise_normalize(
     shifted = [[None for column in range(num_columns)] for row in range(num_rows)]
     outputs = [[None for column in range(num_columns)] for row in range(num_rows)]
 
-    assert len(z3) == 1
-    z3 = pyrtl.Const(z3[0], signed=True)
     for row in range(num_rows):
         for column in range(num_columns):
             # Elementwise fixed-point multiply the input tensor by its per-axis ``m0``
@@ -684,9 +718,9 @@ def make_elementwise_normalize(
 
             # Elementwise add ``z3``, then keep only the low 8 bits of the result. The
             # high bits may not all be zero, so this truncation may overflow.
-            outputs[row][column] = pyrtl.signed_add(z3, shifted[row][column]).truncate(
-                output_bitwidth
-            )
+            outputs[row][column] = pyrtl.signed_add(
+                z3[row], shifted[row][column]
+            ).truncate(output_bitwidth)
 
     # Combinational normalize is always ready for input.
     a.ready <<= True
@@ -778,9 +812,9 @@ def main():
     """
     parser = argparse.ArgumentParser(prog="systolic.py")
     parser.add_argument("--x_shape", type=int, nargs=2, default=(2, 3))
-    parser.add_argument("--x_start", type=int, default=-128)
+    parser.add_argument("--x_start", type=int, default=2)
     parser.add_argument("--y_shape", type=int, default=(3, 4))
-    parser.add_argument("--y_start", type=int, default=-64)
+    parser.add_argument("--y_start", type=int, default=10)
     parser.add_argument("--a_shape", type=int, nargs=2, default=(2, 4))
     parser.add_argument("--a_start", type=int, default=1)
     args = parser.parse_args()
@@ -808,11 +842,10 @@ def main():
     input_bitwidth = max([minimum_bitwidth(a) for a in [x, y, expected_xy]])
     accumulator_bitwidth = 32
 
-    num_rows, num_inner = x.shape
-    _, num_columns = y.shape
-    done_cycle = num_rows + num_inner + num_columns - 1
+    done_cycle = num_systolic_array_cycles(x.shape, y.shape) - 1
     counter_bitwidth = pyrtl.infer_val_and_bitwidth(done_cycle).bitwidth
 
+    _, num_columns = y.shape
     y_memblock = pyrtl.MemBlock(
         addrwidth=counter_bitwidth, bitwidth=input_bitwidth * num_columns
     )
@@ -844,13 +877,10 @@ def main():
     matrix_xya.ready <<= True
 
     # Simulate the systolic array by providing inputs for each cycle.
-    data_dict = {
-        i: d
-        for i, d in enumerate(
-            make_input_romdata(y.transpose(), input_bitwidth, counter_bitwidth)
-        )
-    }
-    sim = pyrtl.Simulation(memory_value_map={y_memblock: data_dict})
+    romdata = make_input_romdata(y.transpose(), input_bitwidth, counter_bitwidth)
+    memblock_data = {i: d for i, d in enumerate(romdata)}
+
+    sim = pyrtl.Simulation(memory_value_map={y_memblock: memblock_data})
     sim.step(provided_inputs={"y_valid": False})
     sim.step(provided_inputs={"y_valid": False})
     sim.step(provided_inputs={"y_valid": False})

@@ -145,17 +145,13 @@ def normalize(
     # Implement Equation 7, the part outside the parentheses. This function adds `z3`
     # and multiplies by `m`, using fixed-point arithmetic. `m` is decomposed into `(m0,
     # n)` by `normalization_constants()`, using Equation 6.
-    product = Fxp(product, signed=True, n_word=32, n_frac=0)
-    if m0.size == product.size:
-        # Per-axis quantization, so there is one value of `m0` for each dimension in the
-        # product. Make the shapes match so we can elementwise-multiply `m0` and
-        # `product`.
-        m0 = np.reshape(m0, product.shape)
-    else:
-        # Per-tensor quantization, so there is just one shared value of `m0` for the
-        # whole tensor. Broadcast to make copies of `m0` so we can elementwise-multiply
-        # `m0` and `product`.
-        m0 = np.broadcast_to(m0, product.shape)
+    #
+    # ``m0` and ``n`` may be quantized on axis 0 (see ``quantized_dimension``). All the
+    # operations in this function are elementwise, so we can make NumPy broadcasting
+    # work for us by transposing the input, performing all operations, then transposing
+    # the output.
+    product = Fxp(product.transpose(), signed=True, n_word=32, n_frac=0)
+
     # Multiply by `m0`. The `*` on the next line performs elementwise 32-bit fixed-point
     # multiplication.
     multiplied = m0 * product
@@ -164,10 +160,6 @@ def normalize(
     # so we implement a bitwise right shift by `n` as division by the appropriate power
     # of two.
     shift_powers = 2**n
-    if shift_powers.size == multiplied.size:
-        shift_powers = np.reshape(shift_powers, multiplied.shape)
-    else:
-        shift_powers = np.broadcast_to(shift_powers, multiplied.shape)
     shifted = multiplied / shift_powers
 
     # Rounding right shift to drop all fractional bits. Fractions are rounded to the
@@ -189,9 +181,10 @@ def normalize(
 
     # Add `z3` and convert to int8. overflow="wrap" makes values larger than 127 or
     # smaller than -128 wrap around (128 -> -128).
-    added = Fxp(z3 + shifted, signed=True, n_word=8, n_frac=0, overflow="wrap").astype(
-        np.int8
-    )
+    added = z3 + shifted
+    added = Fxp(
+        added.transpose(), signed=True, n_word=8, n_frac=0, overflow="wrap"
+    ).astype(np.int8)
 
     return added
 
@@ -204,7 +197,11 @@ def get_tensor_scale_zero(interpreter: Interpreter, tensor_index: int):
     """
     tensors = interpreter.get_tensor_details()
     quantization_parameters = tensors[tensor_index]["quantization_parameters"]
-    return quantization_parameters["scales"], quantization_parameters["zero_points"]
+    scales = quantization_parameters["scales"]
+    # TODO: Support other quantized dimensions.
+    if len(scales) > 1:
+        assert quantization_parameters["quantized_dimension"] == 0
+    return scales, quantization_parameters["zero_points"]
 
 
 class QuantizedLayer:
@@ -373,12 +370,12 @@ def main():
         print(
             "NumPy layer0 output (transposed)", layer0_output.shape, layer0_output.dtype
         )
-        print(layer0_output.T, "\n")
+        print(layer0_output.transpose(), "\n")
 
         print(
             "NumPy layer1 output (transposed)", layer1_output.shape, layer1_output.dtype
         )
-        print(layer1_output.T, "\n")
+        print(layer1_output.transpose(), "\n")
 
         print(f"NumPy network output (#{test_index}):")
         expected = test_labels[test_index]

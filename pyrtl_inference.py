@@ -297,12 +297,12 @@ def main():
         print(
             "PyRTL layer0 output (transposed)", layer0_output.shape, layer0_output.dtype
         )
-        print(layer0_output.T, "\n")
+        print(layer0_output.transpose(), "\n")
 
         print(
             "PyRTL layer1 output (transposed)", layer1_output.shape, layer1_output.dtype
         )
-        print(layer1_output.T, "\n")
+        print(layer1_output.transpose(), "\n")
 
         print(f"\nPyRTL network output (#{test_index}):")
         expected = test_labels[test_index]
