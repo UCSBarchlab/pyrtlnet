@@ -1,8 +1,51 @@
-"""Train a quantized two-layer dense neural network on the MNIST dataset.
+"""These functions train a quantized two-layer dense `MNIST`_ neural network.
 
-This code is based on the "Quantization aware training in Keras example" at
+.. _MNIST: https://en.wikipedia.org/wiki/MNIST_database
+
+This implementation is based on the "Quantization aware training in `Keras`_ example" at
 https://www.tensorflow.org/model_optimization/guide/quantization/training_example
 
+.. _Keras: https://keras.io/
+
+------------------
+Model Architecture
+------------------
+
+The model processes 12×12 8-bit images of hand-drawn digits from the MNIST data set. The
+image sizes are reduced from the data set's original size of 28×28 by
+:func:`.load_mnist_images`.
+
+The model consists of two dense layers::
+
+    One input image, shape: (12, 12)
+       │
+       │
+       ▼
+    ┌─────────┐
+    │ flatten │
+    └─────────┘
+       │
+       │ Tensor shape: (1, 144)
+       ▼
+    ┌──────────────────┐
+    │ layer0: 18 units │
+    └──────────────────┘
+       │
+       │ Tensor shape: (1, 18)
+       ▼
+    ┌──────┐
+    │ ReLU │
+    └──────┘
+       │
+       │ Tensor shape: (1, 18)
+       ▼
+    ┌──────────────────┐
+    │ layer1: 10 units │
+    └──────────────────┘
+       │
+       │
+       ▼
+    Output tensor, shape: (1, 10)
 """
 
 import pathlib
@@ -15,7 +58,15 @@ from tensorflow_model_optimization.python.core.keras.compat import keras
 def train_unquantized_model(
     learning_rate: float, epochs: int, train_images: tf.Tensor, train_labels: tf.Tensor
 ) -> keras.Model:
-    """Train an unquantized, two-layer, dense MNIST neural network model."""
+    """Train an unquantized, two-layer, dense MNIST neural network model.
+
+    :param learning_rate: Controls how quickly the neural network adjusts its weights.
+    :param epochs: Number of times the ``train_images`` are processed.
+    :param train_images: Training image data from :func:`.load_mnist_images`.
+    :param train_labels: Training labels from :func:`.load_mnist_images`.
+    :returns: A trained Keras ``Model``.
+
+    """
     # Define the model architecture. This model is unoptimized, so higher accuracy
     # can be achieved by changing the architecture or its hyperparameters.
     model = keras.Sequential(
@@ -42,17 +93,22 @@ def train_unquantized_model(
 
     model.fit(train_images, train_labels, epochs=epochs)
 
-    # Save the unquantized model. Inspecting it in the Model Explorer can help while
-    # debugging.
-    # model.save("unquantized.keras")
-
     return model
 
 
 def evaluate_model(
     model: keras.Model, test_images: tf.Tensor, test_labels: tf.Tensor
-) -> (float, float):
-    """Evaluate a model on a test data set. Returns (loss, accuracy)."""
+) -> tuple[float, float]:
+    """Evaluate a model on its test data set.
+
+    :param model: A trained Keras ``Model``
+    :param test_images: Test image data from :func:`.load_mnist_images`.
+    :param test_labels: Test image labels from :func:`.load_mnist_images`.
+    :returns: ``(loss, accuracy)``, where ``loss`` is the loss function's output (lower
+        is better) and ``accuracy`` is the model's accuracy on the test data set (higher
+        is better).
+
+    """
     assert len(model.metrics_names) == 2
     assert model.metrics_names[0] == "loss"
     assert model.metrics_names[1] == "accuracy"
@@ -67,7 +123,23 @@ def quantize_model(
     train_labels: tf.Tensor,
     model_file_name: str,
 ) -> keras.Model:
-    """Quantize, evaluate, and save a quantized model."""
+    """Quantize and save a ``model``.
+
+    The ``model`` should be trained with :func:`train_unquantized_model`.
+
+    The quantized model will be saved to a file named ``model_file_name``, and can be
+    loaded with the LiteRT ``Interpreter``, :func:`.load_tflite_model`,
+    :class:`.NumPyInference`, or :class:`.PyRTLInference`.
+
+    :param model: A trained Keras ``Model`` from :func:`train_unquantized_model`.
+    :param learning_rate: Controls how quickly the neural network adjusts its weights.
+    :param epochs: Number of times the ``train_images`` are processed.
+    :param train_images: Training image data from :func:`.load_mnist_images`.
+    :param train_labels: Training labels from :func:`.load_mnist_images`.
+    :param model_file_name: Name for the quantized model file.
+    :returns: A quantized Keras ``Model``.
+
+    """
     quantized_model = tfmot.quantization.keras.quantize_model(model)
 
     # `quantize_model` requires a recompile.

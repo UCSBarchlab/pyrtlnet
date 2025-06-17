@@ -23,10 +23,12 @@ def _preprocess_images(images):
     return _resize_images(images, new_size=(12, 12))
 
 
-def load_mnist_images() -> ((tf.Tensor, tf.Tensor), (tf.Tensor, tf.Tensor)):
-    """Load MNIST data set resize images from 28×28 to 12×12.
+def load_mnist_images() -> tuple[
+    tuple[tf.Tensor, tf.Tensor], tuple[tf.Tensor, tf.Tensor]
+]:
+    """Load the MNIST data set and resize images from 28×28 to 12×12.
 
-    Returns (train_images, train_labels), (test_images, test_labels).
+    :returns: ``(train_images, train_labels), (test_images, test_labels)``.
 
     """
     # Load MNIST dataset.

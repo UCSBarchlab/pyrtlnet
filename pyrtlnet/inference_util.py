@@ -3,37 +3,55 @@ import math
 import numpy as np
 
 
-def set_fg(r: int, g: int, b: int):
-    """Emit escape codes to set the foreground color to {r, g, b}.
+def _set_fg(r: int, g: int, b: int) -> str:
+    """Return terminal escape codes to set the foreground color to ``{r, g, b}``.
 
     Requires a terminal that supports 24-bit color.
+
+    :param r: Amount of red, in the range [0, 255].
+    :param g: Amount of green, in the range [0, 255].
+    :param b: Amount of blue, in the range [0, 255].
+
+    :returns: A terminal escape code to change the current foreground color to
+        ``{r, g b}``.
 
     """
     return f"\033[38;2;{r};{g};{b}m"
 
 
-def set_bg(r: int, g: int, b: int):
-    """Emit escape codes to set the background color to {r, g, b}.
+def _set_bg(r: int, g: int, b: int) -> str:
+    """Return terminal escape codes to set the background color to ``{r, g, b}``.
 
     Requires a terminal that supports 24-bit color.
+
+    :param r: Amount of red, in the range [0, 255].
+    :param g: Amount of green, in the range [0, 255].
+    :param b: Amount of blue, in the range [0, 255].
+
+    :returns: A terminal escape code to change the current background color to
+        ``{r, g b}``.
 
     """
     return f"\033[48;2;{r};{g};{b}m"
 
 
-def reset():
-    """Emit escape codes to reset the foreground and background colors."""
+def _reset() -> str:
+    """:returns: Terminal escape codes to reset the foreground and background colors."""
     return "\033[39m\033[49m"
 
 
 def display_image(image: np.ndarray):
-    """Render an image as ASCII art in a terminal.
+    """Print an image as ASCII art in a terminal.
+
+    Requires a terminal that supports 24-bit color.
 
     The image is a 2D array of grayscale pixel values. The pixel values will be
     normalized such that the largest value displays as white, and the smallest value
     displays as black.
 
-    One line of terminal output contains up to two rows of pixels.
+    One line of terminal output will contains up to two rows of pixels.
+
+    :param image: Image to display in the terminal.
 
     """
     num_rows, num_cols = image.shape
@@ -53,22 +71,24 @@ def display_image(image: np.ndarray):
             if row + 1 < num_rows:
                 # The next row's normalized intensity determines the background color.
                 bg = normalize(image[row + 1][col])
-            line += f"{set_fg(fg, fg, fg)}{set_bg(bg, bg, bg)}▀"
-        print(line + reset())
+            line += f"{_set_fg(fg, fg, fg)}{_set_bg(bg, bg, bg)}▀"
+        print(line + _reset())
 
 
-def bar(index, x, expected, actual, smallest):
-    """Draw a horizontal bar for a bar chart.
+def _bar(index, x, expected, actual, smallest) -> str:
+    """Return a string representing a horizontal bar in a bar chart.
 
-    `index` is the digit that the current bar represents.
-    `expected` is the expected digit.
-    `actual` is the highest-probability digit, according to the model.
-    `smallest` is the smallest x-value in the chart. Space will be reserved so it can be
-        displayed.
+    The bar corresponding to the ``expected`` digit is always colored green. If the
+    ``actual`` digit is not the same as the ``expected`` digit, the bar corresponding to
+    the ``actual`` digit will be colored red.
 
-    The bar corresponding to the `expected` digit is always colored green. If the
-    `actual` digit is not the same as the `expected` digit, the bar corresponding to the
-    `actual` digit will be colored red.
+    :param index: The digit that the current bar represents.
+    :param x: The probability that the input is an image of the digit ``index``.
+    :param expected: The expected digit.
+    :param actual: The highest-probability digit, according to the model.
+    :param smallest: The smallest ``x``-value in the chart. Space will be reserved so it
+        can be displayed.
+    :returns: A string representing a bar in a bar chart.
 
     """
     max_bar_length = 10
@@ -80,14 +100,14 @@ def bar(index, x, expected, actual, smallest):
         padding = negative_bar_length
 
     bar = " " * padding + "▄" * bar_length
-    green = set_fg(0x2C, 0xA0, 0x2C)
-    red = set_fg(0xD6, 0x27, 0x28)
+    green = _set_fg(0x2C, 0xA0, 0x2C)
+    red = _set_fg(0xD6, 0x27, 0x28)
     if expected == actual and actual == index:
-        return green + bar + reset() + " " + str(x) + " (expected, actual)"
+        return green + bar + _reset() + " " + str(x) + " (expected, actual)"
     elif expected != actual and actual == index:
-        return red + bar + reset() + " " + str(x) + " (actual)"
+        return red + bar + _reset() + " " + str(x) + " (actual)"
     elif expected != actual and expected == index:
-        return green + bar + reset() + " " + str(x) + " (expected)"
+        return green + bar + _reset() + " " + str(x) + " (expected)"
     return bar + " " + str(x)
 
 
@@ -97,27 +117,28 @@ def display_outputs(output: np.ndarray, expected: int, actual: int):
     Bars for higher probability digits are displayed before bars for lower probability
     digits.
 
-    The bar corresponding to the `expected` digit is always colored green. If the
-    `actual` digit is not the same as the `expected` digit, the bar corresponding to the
-    `actual` digit will be colored red. Colors are not shown in the sample below.
+    The bar corresponding to the ``expected`` digit is always colored green. If the
+    ``actual`` digit is not the same as the ``expected`` digit, the bar corresponding to
+    the ``actual`` digit will be colored red.
 
-    Sample output:
+    Sample output with colors omitted::
 
-    7▕           ▄▄▄▄▄▄▄▄▄▄▄ 106 (expected, actual)
-    3▕           ▄▄▄▄▄▄ 59
-    2▕           ▄▄▄▄▄ 44
-    9▕           ▄▄▄▄▄ 44
-    8▕           ▄▄▄ 27
-    0▕           ▄▄▄ 24
-    5▕           ▄ 4
-    4▕        ▄▄▄ -30
-    1▕       ▄▄▄▄ -31
-    6▕ ▄▄▄▄▄▄▄▄▄▄ -100
+        7▕           ▄▄▄▄▄▄▄▄▄▄▄ 106 (expected, actual)
+        3▕           ▄▄▄▄▄▄ 59
+        2▕           ▄▄▄▄▄ 44
+        9▕           ▄▄▄▄▄ 44
+        8▕           ▄▄▄ 27
+        0▕           ▄▄▄ 24
+        5▕           ▄ 4
+        4▕        ▄▄▄ -30
+        1▕       ▄▄▄▄ -31
+        6▕ ▄▄▄▄▄▄▄▄▄▄ -100
 
     In the sample output above, the digit corresponding to each bar is displayed on the
-    left, so the digit 7 has the highest probability, followed by the digit 3. The model
-    predicted the digit is a 7, and the digit actually was a 7, so the first bar is
-    annotated with "(expected, actual)".
+    left, so the digit ``7`` has the highest probability, followed by the digit ``3``.
+    The model predicted the digit is a ``7``, and the digit actually was a ``7``
+    according to the labeled test data, so the first bar is annotated with "(expected,
+    actual)".
 
     """
     # If all outputs are positive, start the x-axis at 0, otherwise start the x-axis at
@@ -130,4 +151,4 @@ def display_outputs(output: np.ndarray, expected: int, actual: int):
     # highest to lowest.
     chart_data = sorted(enumerate(output), reverse=True, key=lambda pair: pair[1])
     for index, value in chart_data:
-        print(f"{index}▕ {bar(index, value, expected, actual, smallest)}")
+        print(f"{index}▕ {_bar(index, value, expected, actual, smallest)}")

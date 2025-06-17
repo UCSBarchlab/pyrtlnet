@@ -1,13 +1,17 @@
-"""Implement quantized inference with NumPy and fxpmath.
+"""Implement quantized inference with `NumPy`_ and `fxpmath`_.
+
+.. _NumPy: https://numpy.org/
+.. _fxpmath: https://github.com/francof2a/fxpmath
 
 This does not invoke the LiteRT reference implementation, though it does instantiate an
-Interpreter to extract weights, biases, and quantization metadata.
+``Interpreter`` to extract weights, biases, and quantization metadata.
 
 This implements the equations in https://arxiv.org/pdf/1712.05877.pdf . All Equation
 references in code comments refer to equations in this paper.
 
 The first layer is quantized per-axis, which is not described in the paper above. See
-https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
+https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor for
+details about per-axis quantization.
 
 """
 
@@ -18,35 +22,43 @@ from fxpmath import Fxp
 
 def normalization_constants(
     s1: np.ndarray, s2: np.ndarray, s3: np.ndarray
-) -> (Fxp, np.ndarray):
-    """Normalize multiplier `m` to a fixed-point multiplier `m0` and a bit-shift `n`.
+) -> tuple[Fxp, np.ndarray]:
+    """Normalize multiplier ``m`` to fixed-point ``m0`` and bit-shift ``n``.
 
-    See Section 2.2 in the paper. The multiplier `m` (Equation 5) is computed from:
+    See Section 2.2 in https://arxiv.org/pdf/1712.05877.pdf . The multiplier ``m``
+    (Equation 5) is computed from three scale factors ``s1, s2, s3``.
 
-    `s1`, the scale factors for the matrix multiplication's left input, which is the
-        layer's weight matrix.
-    `s2`, the scale factors for the matrix multiplication's right input, which is the
-        layer's input matrix.
-    `s3`, the scale factors for the matrix multiplication's output, which is the layer's
-        output matrix.
+    This multiplier ``m`` can then be expressed as a pair of ``(m0, n)``, where ``m0``
+    is a fixed-point 32-bit multiplier and ``n`` is a bitwise right-shift amount. A
+    floating-point multiplication by ``m`` is equivalent to a fixed-point multiplication
+    by ``m0``, followed by a bitwise right-shift by ``n``. This fixed-point
+    multiplication and bitwise shift are done by :func:`normalize`.
 
-    This multiplier `m` can then be expressed as a pair of `(m0, n)`, where `m0` is a
-    fixed-point 32-bit multiplier. `m == (2 ** -n) * m0`, where `m0` must be in the
-    interval [0.5, 1). So a floating-point multiplication by `m` is equivalent to a
-    fixed-point multiplication by `m0`, followed by a bitwise right-shift by `n`. This
-    fixed-point multiplication and bitwise shift are done by `normalize()`.
+    In other words, ``m == (2 ** -n) * m0``, where ``m0`` must be in the interval
+    ``[0.5, 1)``.
 
     A layer can have per-axis scale factors, so `s1`, `s2`, and `s3` are vectors of
     scale factors. This function returns a vector of fixed-point `m0` values and a
     vector of integer `n` values. See
     https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
 
+    :param s1: Scale factors for the matrix multiplication's left input, which is the
+        layer's weight matrix.
+    :param s2: Scale factors for the matrix multiplication's right input, which is the
+        layer's input matrix.
+    :param s3: Scale factors for the matrix multiplication's output, which is the
+        layer's output matrix.
+
+    :returns: ``(m0, n)``, where ``m0`` is a fixed-point multiplier in the interval
+        ``[0.5, 1)``, ``n`` is a bitwise right-shift amount, and ``m == (2 ** -n) *
+        m0``.
+
     """
     # Equation 5.
     m = s1 * s2 / s3
 
-    # Find the smallest value of `n` such that `m0 == m * (2^n)`, where
-    # `m0 >= 0.5` and `m0 < 1`.
+    # Find the smallest value of ``n`` such that ``m0 == m * (2^n)``, where
+    # ``m0 >= 0.5`` and ``m0 < 1``.
     m0 = []
     n = []
     for m_in in m:
@@ -62,23 +74,37 @@ def normalization_constants(
     assert len(m0) == len(m)
     assert len(n) == len(m)
 
+    # ``m0`` must be in the interval ``[0.5, 1)`` so it can be unsigned and we only need
+    # fractional bits.
     m0 = Fxp(m0, signed=False, n_word=32, n_frac=32)
     return m0, n
 
 
-def relu(x: np.ndarray):
+def relu(x: np.ndarray) -> np.ndarray:
+    """ReLU activation function, which converts negative values to zero.
+
+    :param x: Input to the activation function.
+    :returns: Activation function's output, where each element will be non-negative.
+
+    """
     return np.maximum(0, x)
 
 
 def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.ndarray:
-    """Quantized matrix multiplication of `q1` and `q2`.
+    """Quantized matrix multiplication of ``q1`` and ``q2``.
 
-    `z1` is the zero point for `q1`, and `z2` is the zero point for `q2`.
+    This function returns the *un-normalized* matrix multiplication output, which has
+    ``dtype int32``. See Sections 2.3 and 2.4 in https://arxiv.org/pdf/1712.05877.pdf .
+    The layer's ``int32`` bias can be added to this function's output, and the
+    :func:`relu` activation function applied, if necessary. The output must then be
+    normalized back to ``int8`` with :func:`normalize` before proceeding to the next
+    layer.
 
-    This function returns the *un-normalized* matrix multiplication output, which is
-    int32. See Sections 2.3 and 2.4 in the paper. The layer's int32 bias can be added to
-    this function's output, and the activation function applied. The output must be
-    normalized back to int8 with `normalize()` before proceeding to the next layer.
+    :param q1: Left input to the matrix multiplication.
+    :param z1: Zero point for ``q1``.
+    :param q2: Right input to the matrix multiplication.
+    :param z2: Zero point for ``q2``.
+    :returns: Un-normalized matrix multiplication output, with ``dtype int32``.
 
     """
     # Equation 7 (the part in parentheses) and Equation 8. The part of equation 7 that's
@@ -183,10 +209,19 @@ def normalize(
     return added
 
 
-def get_tensor_scale_zero(interpreter: Interpreter, tensor_index: int):
-    """Retrieve a tensor's scales and zero points from the LiteRT interpreter.
+def get_tensor_scale_zero(
+    interpreter: Interpreter, tensor_index: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """Retrieve a tensor's scale and zero point from the LiteRT ``Interpreter``.
 
     These scales and zero points may be per-axis or per-tensor.
+
+    :param interpreter: LiteRT ``Interpreter`` to retrieve tensor metadata from.
+    :param tensor_index: Index of the tensor to retrieve. These indices can be extracted
+        from the Model Explorer.
+    :returns: ``(scale, zero_point)`` for the tensor. These are one-dimensional tensors
+        with length 1 for per-tensor quantization, and length > 1 for per-axis
+        quantization.
 
     """
     tensors = interpreter.get_tensor_details()
@@ -199,19 +234,45 @@ def get_tensor_scale_zero(interpreter: Interpreter, tensor_index: int):
 
 
 class QuantizedLayer:
-    """Retrieve and store a layer's quantization metadata.
+    """Retrieve and store a layer's quantization metadata from a LiteRT ``Interpreter``.
 
-    This retrieves quantization metadata from the LiteRT Interpreter, and performs some
-    additional computations. For example, the layer's floating-point scale factor `m` is
-    converted to a fixed-point scale factor `m0` and a bitwise right-shift `n`.
-
-    QuantizedLayer also holds the layer's quantized weights and biases.
+    This class retrieves weights, biases, and quantization metadata from a LiteRT
+    ``Interpreter``, and performs some additional pre-processing. For example, the
+    layer's floating-point scale factor ``m`` is converted to a fixed-point scale factor
+    ``m0`` and a bitwise right-shift ``n`` with :func:`normalization_constants`.
 
     """
 
     def __init__(
-        self, interpreter, input_scale, weight_index, bias_index, output_index
+        self,
+        interpreter: Interpreter,
+        input_scale: np.ndarray,
+        weight_index: int,
+        bias_index: int,
+        output_index: int,
     ):
+        """Retrieve weights, biases, and quantization metadata from an ``Interpreter``.
+
+        Tensor indices can be found by uploading the model to the Model Explorer
+        https://github.com/google-ai-edge/model-explorer
+
+        :param interpreter: LiteRT ``Interpreter`` to retrieve weights, biases, and
+            quantization metadata from.
+        :param input_scale: Scale factor for the layer's input. The first layer's input
+            comes from the model's input tensor, and that tensor's scale can be
+            retrieved with :func:`get_tensor_scale_zero`. The input for subsequent
+            layers comes from the preceding layer, and the preceding layer's scale
+            factor can be retrieved with ``QuantizedLayer.scale``.
+        :param weight_index: Index of this layer's weight tensor in the model. This
+            index can be found in the Model Explorer.
+        :param bias_index: Index of this layer's bias tensor in the model. This
+            index can be found in the Model Explorer.
+        :param output_index: Index of this layer's output tensor in the model. This
+            index can be found in the Model Explorer.
+
+        """
+        # TODO: Find a way to automatically determine these tensor indices, without
+        # having to run them through the Model Explorer.
         weight_scale, weight_zero = get_tensor_scale_zero(
             interpreter=interpreter, tensor_index=weight_index
         )
@@ -229,7 +290,13 @@ class NumPyInference:
     """Run quantized inference on an input image with NumPy and fxpmath."""
 
     def __init__(self, interpreter: Interpreter):
-        """Collect weights, biases, and quantization metadata from an Interpreter."""
+        """Collect weights, biases, and quantization metadata from an ``Interpreter``.
+
+        :param interpreter: LiteRT ``Interpreter`` to retrieve the neural network's
+            weights, biases, and quantization metadata from. The ``Interpreter`` can be
+            constructed with :func:`.load_tflite_model`.
+
+        """
         # Tensor metadata, from the Model Explorer
         # (https://github.com/google-ai-edge/model-explorer):
         #
@@ -288,17 +355,18 @@ class NumPyInference:
         )
         return layer_output.astype(np.int8)
 
-    def run(self, test_image: np.ndarray) -> (np.ndarray, np.ndarray, int):
+    def run(self, test_image: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
         """Run quantized inference on a single image.
 
         All calculations are done with NumPy and fxpmath.
 
-        Returns (layer0_output, layer1_output, predicted_digit), where:
-
-        * `layer0_output` is the first layer's raw Tensor output (shape (18, 1)).
-        * `layer1_output` is the second layer's raw Tensor output (shape (10, 1)).
-        * `predicted_digit` is the actual predicted digit. It is equivalent to
-          `layer1_output.flatten().argmax()`.
+        :param test_image: An image to run through the NumPy inference implementation.
+        :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
+            ``layer0_output`` is the first layer's raw tensor output, with shape
+            ``(18, 1)``. ``layer1_output`` is the second layer's raw tensor output, with
+            shape ``(10, 1)``. Note that these layer outputs are transposed compared to
+            :func:`run_tflite_model`. ``predicted_digit`` is the actual predicted digit.
+            ``predicted_digit`` is equivalent to ``layer1_output.flatten().argmax()``.
 
         """
         # Flatten the image and add the batch dimension.

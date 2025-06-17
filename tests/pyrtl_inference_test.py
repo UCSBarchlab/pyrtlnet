@@ -63,7 +63,7 @@ class TestPyRTLInference(unittest.TestCase):
         )
 
         pyrtl_layer0_output, pyrtl_layer1_output, pyrtl_actual = (
-            self.pyrtl_inference.run(test_image=test_image)
+            self.pyrtl_inference.simulate(test_image=test_image)
         )
 
         # Check the first layer's outputs.

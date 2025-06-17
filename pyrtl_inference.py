@@ -38,7 +38,7 @@ def main():
         display_image(test_image)
 
         # Run PyRTL inference on the test image.
-        layer0_output, layer1_output, actual = pyrtl_inference.run(test_image)
+        layer0_output, layer1_output, actual = pyrtl_inference.simulate(test_image)
 
         # Print results.
         print(

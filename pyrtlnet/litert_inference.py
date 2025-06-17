@@ -1,11 +1,15 @@
-"""Run quantized LiteRT inference on test images from the MNIST dataset.
+"""Run quantized `LiteRT`_ inference on test images from the `MNIST`_ dataset.
 
-This implementation uses the reference LiteRT inference implementation. It prints
-each layer's tensor output, which is useful for verifying correctness in
-numpy_inference.py
+.. _LiteRT: https://ai.google.dev/edge/litert
+.. _MNIST: https://en.wikipedia.org/wiki/MNIST_database
+
+This implementation uses the reference LiteRT ``Interpreter`` inference implementation.
+It prints each layer's tensor output, which is useful for verifying correctness in
+``numpy_inference.py`` and ``pyrtl_inference.py``.
 
 This is a simple implementation with batch size 1. Multiple images can be processed by
-setting num_images, but the images will run through the interpreter one at a time.
+setting ``--num_images``, but the images are passed to the ``Interpreter`` one at a
+time.
 
 """
 
@@ -14,7 +18,14 @@ from ai_edge_litert.interpreter import Interpreter
 
 
 def load_tflite_model(model_file_name: str) -> Interpreter:
-    """Load the quantized model and return an initialized LiteRT Interpreter."""
+    """Load the quantized model and return an initialized LiteRT ``Interpreter``.
+
+    The quantized model should be produced by :func:`quantize_model`.
+
+    :param model_file_name: Name of the file produced by :func:`.quantize_model`.
+    :returns: An initialized LiteRT ``Interpreter``.
+
+    """
     # Set preserve_all_tensors so we can inspect intermediate tensor values.
     # Intermediate values help when debugging other quantized inference implementations.
     interpreter = Interpreter(
@@ -24,8 +35,12 @@ def load_tflite_model(model_file_name: str) -> Interpreter:
     return interpreter
 
 
-def normalize_input(interpreter: Interpreter, input: np.ndarray):
-    """Normalize input data to int8."""
+def _normalize_input(interpreter: Interpreter, input: np.ndarray) -> np.ndarray:
+    """Normalize input data to ``int8``.
+
+    This effectively shifts the input data from ``[0, 255]`` to ``[-128, 127]``.
+
+    """
     input_details = interpreter.get_input_details()[0]
 
     input_scale, input_zero_point = input_details["quantization"]
@@ -47,15 +62,17 @@ def normalize_input(interpreter: Interpreter, input: np.ndarray):
 
 def run_tflite_model(
     interpreter: Interpreter, test_image: np.ndarray
-) -> (np.ndarray, np.ndarray, int):
-    """Run inference on a single image with a TFLite model.
+) -> tuple[np.ndarray, np.ndarray, int]:
+    """Run quantized inference on a single image with a TFLite ``Interpreter``.
 
-    Returns (layer0_output, layer1_output, predicted_digit), where:
-
-    * `layer0_output` is the first layer's raw Tensor output (shape (1, 18)).
-    * `layer1_output` is the second layer's raw Tensor output (shape (1, 10)).
-    * `predicted_digit` is the actual predicted digit. It is equivalent to
-      `layer1_output.flatten().argmax()`.
+    :param interpreter: An initialized TFLite ``Interpreter``, produced by
+        :func:`load_tflite_model`.
+    :param test_image: An image to run through the ``Interpreter``.
+    :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
+        ``layer0_output`` is the first layer's raw tensor output, with shape
+        ``(1, 18)``. ``layer1_output`` is the second layer's raw tensor output, with
+        shape ``(1, 10)``. ``predicted_digit`` is the actual predicted digit.
+        ``predicted_digit`` is equivalent to ``layer1_output.flatten().argmax()``.
 
     """
     input_details = interpreter.get_input_details()[0]
@@ -65,7 +82,7 @@ def run_tflite_model(
 
     # If the input type is quantized, rescale input data.
     if input_details["dtype"] == np.int8:
-        test_image = normalize_input(interpreter, test_image)
+        test_image = _normalize_input(interpreter, test_image)
 
     # Add the batch dimension and convert from float32 to the actual input type.
     test_image = np.expand_dims(test_image, axis=0).astype(input_details["dtype"])
