@@ -3,7 +3,6 @@ import pyrtl
 from ai_edge_litert.interpreter import Interpreter
 
 import pyrtlnet.pyrtl_matrix as pyrtl_matrix
-import pyrtlnet.wire_matrix_2d as wire_matrix_2d
 from pyrtlnet.numpy_inference import QuantizedLayer, get_tensor_scale_zero
 from pyrtlnet.wire_matrix_2d import WireMatrix2D
 

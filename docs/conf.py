@@ -47,9 +47,11 @@ exclude_patterns = ["_build"]
 
 primary_domain = "py"
 
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
-                       'pyrtl': ('https://pyrtl.readthedocs.io/en/latest/', None),
-                       'numpy': ('https://numpy.org/doc/stable/', None)}
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "pyrtl": ("https://pyrtl.readthedocs.io/en/latest/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+}
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -57,6 +59,3 @@ intersphinx_mapping = {'python': ('https://docs.python.org/3', None),
 # a list of builtin themes.
 #
 html_theme = "furo"
-html_theme_options = {
-#    "sidebar_hide_name": True,
-}

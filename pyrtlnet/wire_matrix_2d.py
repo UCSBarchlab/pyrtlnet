@@ -144,7 +144,7 @@ class WireMatrix2D:
         else:
             return self.matrix[key]
 
-    def transpose(self) -> 'WireMatrix2D':
+    def transpose(self) -> "WireMatrix2D":
         """Return a transposed version of ``self``, as another ``WireMatrix2D``.
 
         :returns: a transposed version of ``self``.
@@ -177,7 +177,6 @@ class WireMatrix2D:
         )
         return outputs_matrix
 
-
     def make_outputs(self):
         """Create :class:`~pyrtl.wire.Output` for ``self``.
 
@@ -192,7 +191,6 @@ class WireMatrix2D:
                     name=f"output_{self.name}[{row}][{column}]", bitwidth=self.bitwidth
                 )
                 output <<= self[row][column]
-
 
     def inspect(self, sim: pyrtl.Simulation) -> np.ndarray:
         """Collect ``Output`` values from a ``Simulation`` and return them as a ndarray.
@@ -231,7 +229,7 @@ class WireMatrix2D:
             :class:`~pyrtl.wire.Input` for the ``WireMatrix2D`` to ``values``.
 
         """
-        assert self.is_input == True
+        assert self.is_input
         assert len(values.shape) == 2
         assert self.shape == values.shape
         num_rows, num_columns = values.shape
@@ -241,6 +239,7 @@ class WireMatrix2D:
             for column in range(num_columns):
                 output[f"{self.name}[{row}][{column}]"] = values[row][column]
         return output
+
 
 def make_concatenated_value(values: np.ndarray, bitwidth: int) -> int:
     """Pack all elements of ``values`` into a large integer, in row-major order.

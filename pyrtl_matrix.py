@@ -4,7 +4,6 @@ import numpy as np
 import pyrtl
 
 import pyrtlnet.pyrtl_matrix as pyrtl_matrix
-import pyrtlnet.wire_matrix_2d as wire_matrix_2d
 from pyrtlnet.wire_matrix_2d import WireMatrix2D
 
 

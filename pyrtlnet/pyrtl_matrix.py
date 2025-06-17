@@ -21,7 +21,7 @@ from pyrtlnet.wire_matrix_2d import WireMatrix2D
 
 
 def make_input_memblock_data(
-        a: np.ndarray, input_bitwidth: int, addrwidth: int
+    a: np.ndarray, input_bitwidth: int, addrwidth: int
 ) -> list[int]:
     """Convert a ``ndarray`` to ``MemBlock`` data for use with the systolic array.
 
@@ -180,7 +180,7 @@ def _make_systolic_array_memblock_inputs(
 
 
 def num_systolic_array_cycles(
-        a_shape: tuple[int, int], b_shape: tuple[int, int]
+    a_shape: tuple[int, int], b_shape: tuple[int, int]
 ) -> int:
     """Return the number of cycles needed to multiply ``a`` and ``b``.
 
@@ -727,10 +727,13 @@ def make_elementwise_normalize(
     # ``m0`` is always positive, so zero-extend it by one bit to ensure its high bit is
     # always zero. This ensures that the ``signed_mult`` below does not interpret ``m0``
     # as a negative number.
-    m0 = [pyrtl.Const(multiplier.val, bitwidth=accumulator_bitwidth + 1)
-          for multiplier in m0]
-    z3 = [pyrtl.Const(zero, signed=True, bitwidth=accumulator_bitwidth + 1)
-          for zero in z3]
+    m0 = [
+        pyrtl.Const(multiplier.val, bitwidth=accumulator_bitwidth + 1)
+        for multiplier in m0
+    ]
+    z3 = [
+        pyrtl.Const(zero, signed=True, bitwidth=accumulator_bitwidth + 1) for zero in z3
+    ]
 
     # Collect a 2D array of normalized ``outputs``. Intermediate results are collected
     # in these additional ``multiplied``, ``round_up``, and ``shifted`` arrays to make
