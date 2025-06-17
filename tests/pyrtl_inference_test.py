@@ -4,10 +4,10 @@ import unittest
 import numpy as np
 from ai_edge_litert.interpreter import Interpreter
 
-import mnist_util
-import numpy_inference
-import pyrtl_inference
-import tensorflow_training
+from pyrtlnet.mnist_util import load_mnist_images
+from pyrtlnet.numpy_inference import NumPyInference
+from pyrtlnet.pyrtl_inference import PyRTLInference
+from pyrtlnet.tensorflow_training import quantize_model, train_unquantized_model
 
 
 class TestPyRTLInference(unittest.TestCase):
@@ -20,7 +20,7 @@ class TestPyRTLInference(unittest.TestCase):
 
         """
         (train_images, train_labels), (self.test_images, self.test_labels) = (
-            mnist_util.load_mnist_images()
+            load_mnist_images()
         )
 
         with tempfile.NamedTemporaryFile(prefix="quantized_tflite_model") as file:
@@ -29,13 +29,13 @@ class TestPyRTLInference(unittest.TestCase):
             learning_rate = 0.001
             epochs = 1
 
-            model = tensorflow_training.train_unquantized_model(
+            model = train_unquantized_model(
                 learning_rate=learning_rate,
                 epochs=epochs,
                 train_images=train_images,
                 train_labels=train_labels,
             )
-            model = tensorflow_training.quantize_model(
+            model = quantize_model(
                 model=model,
                 learning_rate=learning_rate / 10000,
                 epochs=epochs,
@@ -44,8 +44,8 @@ class TestPyRTLInference(unittest.TestCase):
                 model_file_name=model_file_name,
             )
             interpreter = Interpreter(model_path=model_file_name)
-            self.numpy_inference = numpy_inference.NumPyInference(interpreter)
-            self.pyrtl_inference = pyrtl_inference.PyRTLInference(
+            self.numpy_inference = NumPyInference(interpreter)
+            self.pyrtl_inference = PyRTLInference(
                 interpreter, input_bitwidth=8, accumulator_bitwidth=32
             )
 

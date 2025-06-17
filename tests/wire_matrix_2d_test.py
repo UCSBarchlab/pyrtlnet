@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 import pyrtl
 
-import wire_matrix_2d
+import pyrtlnet.wire_matrix_2d as wire_matrix_2d
+from pyrtlnet.wire_matrix_2d import WireMatrix2D
 
 
 class TestWireMatrix2D(unittest.TestCase):
@@ -15,22 +16,20 @@ class TestWireMatrix2D(unittest.TestCase):
         expected_values = np.array([[1, 2, 3], [4, 5, 6]])
         shape = expected_values.shape
         bitwidth = 8
-        matrix = wire_matrix_2d.WireMatrix2D(
+        matrix = WireMatrix2D(
             values=None, shape=shape, bitwidth=bitwidth, name="input", ready=True
         )
 
         # Create an Output for each matrix element.
-        wire_matrix_2d.make_outputs(matrix)
+        matrix.make_outputs()
 
         # Run simulation and verify that the correct matrix elements were retrieved.
         sim = pyrtl.Simulation()
 
-        provided_inputs = wire_matrix_2d.make_provided_inputs(
-            matrix.name, expected_values
-        )
+        provided_inputs = matrix.make_provided_inputs(expected_values)
         sim.step(provided_inputs=provided_inputs)
 
-        actual_values = wire_matrix_2d.inspect_matrix(sim=sim, matrix=matrix)
+        actual_values = matrix.inspect(sim=sim)
         self.assertTrue(np.array_equal(expected_values, actual_values))
 
     def test_lists(self):
@@ -39,7 +38,7 @@ class TestWireMatrix2D(unittest.TestCase):
         expected_values = np.array(lists)
         shape = expected_values.shape
         bitwidth = 8
-        matrix = wire_matrix_2d.WireMatrix2D(
+        matrix = WireMatrix2D(
             values=lists,
             shape=shape,
             bitwidth=bitwidth,
@@ -49,13 +48,13 @@ class TestWireMatrix2D(unittest.TestCase):
         )
 
         # Create an Output for each matrix element.
-        wire_matrix_2d.make_outputs(matrix)
+        matrix.make_outputs()
 
         # Run simulation and verify that the correct matrix elements were retrieved.
         sim = pyrtl.Simulation()
         sim.step()
 
-        actual_values = wire_matrix_2d.inspect_matrix(sim=sim, matrix=matrix)
+        actual_values = matrix.inspect(sim=sim)
         self.assertTrue(np.array_equal(expected_values, actual_values))
 
     def test_numpy_array(self):
@@ -63,7 +62,7 @@ class TestWireMatrix2D(unittest.TestCase):
         expected_values = np.array([[1, 2, 3], [4, 5, 6]])
         shape = expected_values.shape
         bitwidth = 8
-        matrix = wire_matrix_2d.WireMatrix2D(
+        matrix = WireMatrix2D(
             values=expected_values,
             shape=shape,
             bitwidth=bitwidth,
@@ -73,13 +72,13 @@ class TestWireMatrix2D(unittest.TestCase):
         )
 
         # Create an Output for each matrix element.
-        wire_matrix_2d.make_outputs(matrix)
+        matrix.make_outputs()
 
         # Run simulation and verify that the correct matrix elements were retrieved.
         sim = pyrtl.Simulation()
         sim.step()
 
-        actual_values = wire_matrix_2d.inspect_matrix(sim=sim, matrix=matrix)
+        actual_values = matrix.inspect(sim=sim)
         self.assertTrue(np.array_equal(expected_values, actual_values))
 
     def test_concatenated_input_wire_vector(self):
@@ -91,7 +90,7 @@ class TestWireMatrix2D(unittest.TestCase):
         concatenated_input = pyrtl.Input(
             name=input_name, bitwidth=bitwidth * expected_values.size
         )
-        matrix = wire_matrix_2d.WireMatrix2D(
+        matrix = WireMatrix2D(
             values=concatenated_input,
             shape=shape,
             bitwidth=bitwidth,
@@ -101,7 +100,7 @@ class TestWireMatrix2D(unittest.TestCase):
         )
 
         # Create an Output for each matrix element.
-        wire_matrix_2d.make_outputs(matrix)
+        matrix.make_outputs()
 
         # Run simulation and verify that the correct matrix elements were retrieved.
         sim = pyrtl.Simulation()
@@ -113,7 +112,7 @@ class TestWireMatrix2D(unittest.TestCase):
             }
         )
 
-        actual_values = wire_matrix_2d.inspect_matrix(sim=sim, matrix=matrix)
+        actual_values = matrix.inspect(sim=sim)
         self.assertTrue(np.array_equal(expected_values, actual_values))
 
     def test_transpose(self):
@@ -121,7 +120,7 @@ class TestWireMatrix2D(unittest.TestCase):
         expected_values = np.array([[1, 2, 3], [4, 5, 6]])
         shape = expected_values.shape
         bitwidth = 8
-        matrix = wire_matrix_2d.WireMatrix2D(
+        matrix = WireMatrix2D(
             values=expected_values,
             shape=shape,
             bitwidth=bitwidth,
@@ -132,15 +131,13 @@ class TestWireMatrix2D(unittest.TestCase):
         transposed = matrix.transpose()
 
         # Create an Output for each transposed matrix element.
-        wire_matrix_2d.make_outputs(transposed)
+        transposed.make_outputs()
 
         # Run simulation and verify that the correct matrix elements were retrieved.
         sim = pyrtl.Simulation()
         sim.step()
 
-        actual_transposed_values = wire_matrix_2d.inspect_matrix(
-            sim=sim, matrix=transposed
-        )
+        actual_transposed_values = transposed.inspect(sim=sim)
         self.assertTrue(np.array_equal(expected_values.T, actual_transposed_values))
 
 

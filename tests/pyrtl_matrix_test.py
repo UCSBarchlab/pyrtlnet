@@ -5,9 +5,9 @@ import pyrtl
 import pytest
 from fxpmath import Fxp
 
-import numpy_inference
-import pyrtl_matrix
-import wire_matrix_2d
+import pyrtlnet.numpy_inference as numpy_inference
+import pyrtlnet.pyrtl_matrix as pyrtl_matrix
+from pyrtlnet.wire_matrix_2d import WireMatrix2D
 
 
 class TestPyrtlMatrix(unittest.TestCase):
@@ -16,8 +16,8 @@ class TestPyrtlMatrix(unittest.TestCase):
 
     def make_wire_matrix_2d(
         self, name: str, array: np.ndarray, bitwidth: int
-    ) -> wire_matrix_2d.WireMatrix2D:
-        return wire_matrix_2d.WireMatrix2D(
+    ) -> WireMatrix2D:
+        return WireMatrix2D(
             values=array,
             shape=array.shape,
             bitwidth=8,
@@ -43,13 +43,13 @@ class TestPyrtlMatrix(unittest.TestCase):
             accumulator_bitwidth=accumulator_bitwidth,
         )
         ab_matrix.ready <<= True
-        wire_matrix_2d.make_outputs(matrix=ab_matrix)
+        ab_matrix.make_outputs()
 
         sim = pyrtl.Simulation()
         while not sim.inspect("matmul.output.valid"):
             sim.step()
 
-        ab_actual = wire_matrix_2d.inspect_matrix(sim, matrix=ab_matrix)
+        ab_actual = ab_matrix.inspect(sim=sim)
 
         ab_expected = a @ (b - b_zero)
         self.assertTrue(np.array_equal(ab_expected, ab_actual))
@@ -72,13 +72,13 @@ class TestPyrtlMatrix(unittest.TestCase):
             accumulator_bitwidth=accumulator_bitwidth,
         )
         ab_matrix.ready <<= True
-        wire_matrix_2d.make_outputs(matrix=ab_matrix)
+        ab_matrix.make_outputs()
 
         sim = pyrtl.Simulation()
         while not sim.inspect("matmul.output.valid"):
             sim.step()
 
-        ab_actual = wire_matrix_2d.inspect_matrix(sim, matrix=ab_matrix)
+        ab_actual = ab_matrix.inspect(sim=sim)
 
         ab_expected = a @ (b - b_zero)
         self.assertTrue(np.array_equal(ab_expected, ab_actual))
@@ -102,13 +102,13 @@ class TestPyrtlMatrix(unittest.TestCase):
             accumulator_bitwidth=accumulator_bitwidth,
         )
         ab_matrix.ready <<= True
-        wire_matrix_2d.make_outputs(matrix=ab_matrix)
+        ab_matrix.make_outputs()
 
         sim = pyrtl.Simulation()
         while not sim.inspect("matmul.output.valid"):
             sim.step()
 
-        ab_actual = wire_matrix_2d.inspect_matrix(sim, matrix=ab_matrix)
+        ab_actual = ab_matrix.inspect(sim=sim)
 
         ab_expected = a @ (b - b_zero)
         self.assertTrue(np.array_equal(ab_expected, ab_actual))
@@ -128,7 +128,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         memblock = pyrtl.MemBlock(
             addrwidth=counter_bitwidth, bitwidth=input_bitwidth * element_size
         )
-        matrix = wire_matrix_2d.WireMatrix2D(
+        matrix = WireMatrix2D(
             values=memblock,
             shape=array.shape,
             bitwidth=input_bitwidth,
@@ -138,10 +138,10 @@ class TestPyrtlMatrix(unittest.TestCase):
 
         if not left_input:
             array = array.transpose()
-        romdata = pyrtl_matrix.make_input_romdata(
+        memblock_data = pyrtl_matrix.make_input_memblock_data(
             array, input_bitwidth, counter_bitwidth
         )
-        memblock_data = {i: d for i, d in enumerate(romdata)}
+        memblock_data = {i: d for i, d in enumerate(memblock_data)}
 
         return matrix, memblock, memblock_data
 
@@ -180,7 +180,7 @@ class TestPyrtlMatrix(unittest.TestCase):
             accumulator_bitwidth=accumulator_bitwidth,
         )
         ab_matrix.ready <<= True
-        wire_matrix_2d.make_outputs(matrix=ab_matrix)
+        ab_matrix.make_outputs()
 
         sim = pyrtl.Simulation(
             memory_value_map={memblock_a: memblock_data_a, memblock_b: memblock_data_b}
@@ -188,7 +188,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         while not sim.inspect("matmul.output.valid"):
             sim.step()
 
-        ab_actual = wire_matrix_2d.inspect_matrix(sim, matrix=ab_matrix)
+        ab_actual = ab_matrix.inspect(sim=sim)
 
         ab_expected = a @ (b - b_zero)
         self.assertTrue(np.array_equal(ab_expected, ab_actual))
@@ -206,12 +206,12 @@ class TestPyrtlMatrix(unittest.TestCase):
             name="add", a=a_matrix, b=b_matrix, output_bitwidth=output_bitwidth
         )
         ab_matrix.ready <<= True
-        wire_matrix_2d.make_outputs(matrix=ab_matrix)
+        ab_matrix.make_outputs()
 
         sim = pyrtl.Simulation()
         sim.step()
 
-        ab_actual = wire_matrix_2d.inspect_matrix(sim, matrix=ab_matrix)
+        ab_actual = ab_matrix.inspect(sim=sim)
         ab_expected = a + b
 
         self.assertTrue(np.array_equal(ab_expected, ab_actual))
@@ -224,12 +224,12 @@ class TestPyrtlMatrix(unittest.TestCase):
 
         relu_matrix = pyrtl_matrix.make_elementwise_relu(name="relu", a=a_matrix)
         relu_matrix.ready <<= True
-        wire_matrix_2d.make_outputs(matrix=relu_matrix)
+        relu_matrix.make_outputs()
 
         sim = pyrtl.Simulation()
         sim.step()
 
-        relu_actual = wire_matrix_2d.inspect_matrix(sim, matrix=relu_matrix)
+        relu_actual = relu_matrix.inspect(sim=sim)
         relu_expected = np.maximum(0, a)
 
         self.assertTrue(np.array_equal(relu_expected, relu_actual))
@@ -251,16 +251,16 @@ class TestPyrtlMatrix(unittest.TestCase):
             m0=m0,
             n=n,
             z3=z3,
-            input_bitwidth=input_bitwidth,
+            accumulator_bitwidth=input_bitwidth,
             output_bitwidth=input_bitwidth,
         )
         normal_matrix.ready <<= True
-        wire_matrix_2d.make_outputs(matrix=normal_matrix)
+        normal_matrix.make_outputs()
 
         sim = pyrtl.Simulation()
         sim.step()
 
-        normal_actual = wire_matrix_2d.inspect_matrix(sim, matrix=normal_matrix)
+        normal_actual = normal_matrix.inspect(sim=sim)
         normal_expected = numpy_inference.normalize(product=a, m0=m0, n=n, z3=z3)
 
         self.assertTrue(np.array_equal(normal_expected, normal_actual))

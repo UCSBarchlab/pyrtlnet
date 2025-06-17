@@ -1,14 +1,18 @@
 import unittest
 
-import mnist_util
-import tensorflow_training
+from pyrtlnet.mnist_util import load_mnist_images
+from pyrtlnet.tensorflow_training import (
+    evaluate_model,
+    quantize_model,
+    train_unquantized_model,
+)
 
 
 class TestTensorFlowTraining(unittest.TestCase):
     def setUp(self):
         """Load MNIST training and test data sets."""
         (self.train_images, self.train_labels), (self.test_images, self.test_labels) = (
-            mnist_util.load_mnist_images()
+            load_mnist_images()
         )
 
     def test_unquantized_tensorflow_training(self):
@@ -20,15 +24,13 @@ class TestTensorFlowTraining(unittest.TestCase):
         learning_rate = 0.001
         epochs = 1
 
-        model = tensorflow_training.train_unquantized_model(
+        model = train_unquantized_model(
             learning_rate=learning_rate,
             epochs=epochs,
             train_images=self.train_images,
             train_labels=self.train_labels,
         )
-        loss, accuracy = tensorflow_training.evaluate_model(
-            model, self.test_images, self.test_labels
-        )
+        loss, accuracy = evaluate_model(model, self.test_images, self.test_labels)
         # Accuracy should be over 75% after one epoch of training. MNIST has ten
         # possible outputs, so randomly guesses will have an accuracy around 10%
         self.assertTrue(accuracy > 0.75)
@@ -42,13 +44,13 @@ class TestTensorFlowTraining(unittest.TestCase):
         learning_rate = 0.001
         epochs = 1
 
-        model = tensorflow_training.train_unquantized_model(
+        model = train_unquantized_model(
             learning_rate=learning_rate,
             epochs=epochs,
             train_images=self.train_images,
             train_labels=self.train_labels,
         )
-        model = tensorflow_training.quantize_model(
+        model = quantize_model(
             model=model,
             learning_rate=learning_rate / 10000,
             epochs=epochs,
@@ -56,9 +58,7 @@ class TestTensorFlowTraining(unittest.TestCase):
             train_labels=self.train_labels,
             model_file_name=None,
         )
-        loss, accuracy = tensorflow_training.evaluate_model(
-            model, self.test_images, self.test_labels
-        )
+        loss, accuracy = evaluate_model(model, self.test_images, self.test_labels)
         # Accuracy should be over 75% after one epoch of training. MNIST has ten
         # possible outputs, so randomly guesses will have an accuracy around 10%
         self.assertTrue(accuracy > 0.75)

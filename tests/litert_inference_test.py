@@ -1,9 +1,9 @@
 import tempfile
 import unittest
 
-import litert_inference
-import mnist_util
-import tensorflow_training
+from pyrtlnet.litert_inference import load_tflite_model, run_tflite_model
+from pyrtlnet.mnist_util import load_mnist_images
+from pyrtlnet.tensorflow_training import quantize_model, train_unquantized_model
 
 
 class TestLiteRTInference(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestLiteRTInference(unittest.TestCase):
 
         """
         (train_images, train_labels), (self.test_images, self.test_labels) = (
-            mnist_util.load_mnist_images()
+            load_mnist_images()
         )
 
         with tempfile.NamedTemporaryFile(prefix="quantized_tflite_model") as file:
@@ -23,13 +23,13 @@ class TestLiteRTInference(unittest.TestCase):
             learning_rate = 0.001
             epochs = 1
 
-            model = tensorflow_training.train_unquantized_model(
+            model = train_unquantized_model(
                 learning_rate=learning_rate,
                 epochs=epochs,
                 train_images=train_images,
                 train_labels=train_labels,
             )
-            model = tensorflow_training.quantize_model(
+            model = quantize_model(
                 model=model,
                 learning_rate=learning_rate / 10000,
                 epochs=epochs,
@@ -37,16 +37,14 @@ class TestLiteRTInference(unittest.TestCase):
                 train_labels=train_labels,
                 model_file_name=model_file_name,
             )
-            self.interpreter = litert_inference.load_tflite_model(
-                model_file_name=model_file_name
-            )
+            self.interpreter = load_tflite_model(model_file_name=model_file_name)
 
     def test_litert_inference(self):
         """Run the LiteRT Interpreter on several images and check its accuracy."""
         num_images = 10
         correct = 0
         for test_index in range(num_images):
-            _, _, actual = litert_inference.run_tflite_model(
+            _, _, actual = run_tflite_model(
                 interpreter=self.interpreter, test_image=self.test_images[test_index]
             )
             expected = self.test_labels[test_index]
