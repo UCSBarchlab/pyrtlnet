@@ -1,20 +1,15 @@
 pyrtlnet
 ========
 
-`pyrtlnet` implements a basic hardware neural network inference accelerator.
+Train it. Quantize it. Synthesize and Simulate it—in hardware. All in Python.
 
-The neural network is a quantized, dense, two-layer network. The hardware is defined in
-the [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware description language, with
-readability as its primary goal. The code is intentionally kept simple and
-understandable. Performance is a non-goal.
+`pyrtlnet` is a fully self-contained example of a quantized neural network (NN) that runs end-to-end in Python.  From model training, to software inference, to hardware generation, all the way to simulating that custom inference hardware at the logic-gate level -- you can do it all right from the Python REPL if you really want.  We hope you will find pyrtlnet (rhymes with turtle-net) a complete and understandable walkthrough of how to go from TensorFlow training to bit-accurate hardware simulation, using the [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware description language. Main features include:
 
-Main features include:
-
-* Quantized neural network training with [TensorFlow](https://www.tensorflow.org/). The
+* Quantized neural network training with [TensorFlow](https://www.tensorflow.org/). The resulting inference
   network is fully quantized, so all inference calculations are done with integers.
 
-* Three quantized inference implementations. All three implementations produce the same
-  output:
+* Three different quantized inference implementations operating at different levels of abstraction. All three implementations produce the same
+  output in the same format and, in doing so, provide a useful framework to extend either from the top-down or the bottom-up.
 
   * A reference quantized inference implementation, using the standard
     [LiteRT](https://ai.google.dev/edge/litert) `Interpreter`.
@@ -24,17 +19,18 @@ Main features include:
     the reference implementation.
 
   * A [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware implementation of quantized
-    inference.
+    inference that is simulated right at the logic gate level.
 
-* A [PyRTL](https://github.com/UCSBarchlab/PyRTL) linear algebra library, including a
+* A new [PyRTL](https://github.com/UCSBarchlab/PyRTL) linear algebra library, including a
   composable `WireVector2D` matrix abstraction and a output-stationary [systolic
   array](https://en.wikipedia.org/wiki/Systolic_array) for matrix multiplication.
 
-* A [suite of unit tests](https://github.com/UCSBarchlab/pyrtlnet/tree/main/tests), and
+* An extensive [suite of unit tests](https://github.com/UCSBarchlab/pyrtlnet/tree/main/tests), and
   [continuous integration testing](https://github.com/UCSBarchlab/pyrtlnet/actions).
 
-* Reference documentation extracted from Python docstrings with
-  [Sphinx](https://www.sphinx-doc.org/en/master/index.html).
+* Understandable and documented code! `pyrtlnet` is designed to be, first and foremost, understandable and readable
+  (even when that comes at the expense of performance).  Reference documentation is extracted from docstrings with
+  [Sphinx](https://www.sphinx-doc.org/en/master/index.html) and .
 
 ### Installation
 
