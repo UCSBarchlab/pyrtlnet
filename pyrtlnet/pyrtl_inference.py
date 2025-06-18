@@ -265,8 +265,8 @@ class PyRTLInference:
             done = sim.inspect("valid")
 
         # Retrieve each layer's outputs.
-        layer0_output = self.layer_outputs[0].inspect(sim=sim)
-        layer1_output = self.layer_outputs[1].inspect(sim=sim)
+        layer0_output = self.layer_outputs[0].inspect(sim=sim).astype(np.int8)
+        layer1_output = self.layer_outputs[1].inspect(sim=sim).astype(np.int8)
 
         # Retrieve the predicted digit.
         argmax = sim.inspect("argmax")
