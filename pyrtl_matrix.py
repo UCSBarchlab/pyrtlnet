@@ -98,12 +98,8 @@ def main():
     memblock_data = {i: d for i, d in enumerate(memblock_data)}
 
     sim = pyrtl.Simulation(memory_value_map={y_memblock: memblock_data})
-    sim.step(provided_inputs={"y_valid": False})
-    sim.step(provided_inputs={"y_valid": False})
-    sim.step(provided_inputs={"y_valid": False})
     while not sim.inspect("add0.output.valid"):
         sim.step(provided_inputs={"y_valid": True})
-    sim.step(provided_inputs={"y_valid": True})
 
     # Simulation complete, print the waveform.
     def render_trace(prefixes):

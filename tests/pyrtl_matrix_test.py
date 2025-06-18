@@ -193,6 +193,107 @@ class TestPyrtlMatrix(unittest.TestCase):
         ab_expected = a @ (b - b_zero)
         self.assertTrue(np.array_equal(ab_expected, ab_actual))
 
+    def test_systolic_array_idle(self):
+        """Test that the systolic array remain idle before and after processing.
+
+        The systolic array should remain idle before its inputs are ``valid`` and after
+        its output is ``valid``.
+
+        """
+        a = np.array([[1, -2, 3], [-4, 5, -6]])
+        b = np.array([[11, 12, 13, 14], [15, 16, 17, 18], [19, 20, 21, 22]])
+        input_bitwidth = max([pyrtl_matrix.minimum_bitwidth(m) for m in [a, b]])
+        accumulator_bitwidth = input_bitwidth * 2
+        a_valid = pyrtl.Input(name="a_valid", bitwidth=1)
+        a_matrix = WireMatrix2D(
+            values=None, shape=a.shape, bitwidth=input_bitwidth, name="a", valid=a_valid
+        )
+
+        ab_matrix = pyrtl_matrix.make_systolic_array(
+            name="matmul",
+            a=a_matrix,
+            b=b,
+            b_zero=0,
+            input_bitwidth=input_bitwidth,
+            accumulator_bitwidth=accumulator_bitwidth,
+        )
+        ab_matrix.ready <<= True
+        ab_matrix.make_outputs()
+
+        sim = pyrtl.Simulation()
+        provided_inputs = a_matrix.make_provided_inputs(a)
+        provided_inputs[a_valid.name] = False
+        # Check that the systolic array remains in ``State.INIT`` before its input is
+        # valid.
+        for _ in range(10):
+            sim.step(provided_inputs=provided_inputs)
+            state = sim.inspect("matmul.state")
+            self.assertEqual(state, pyrtl_matrix.State.INIT)
+
+        # Mark the input as valid and run the systolic array.
+        provided_inputs[a_valid.name] = True
+        while not sim.inspect("matmul.output.valid"):
+            sim.step(provided_inputs=provided_inputs)
+
+        # The systolic array should be in ``State.DONE``.
+        state = sim.inspect("matmul.state")
+        self.assertEqual(state, pyrtl_matrix.State.DONE)
+
+        # Check that the systolic array remains in ``State.DONE``.
+        for _ in range(10):
+            sim.step(provided_inputs=provided_inputs)
+            state = sim.inspect("matmul.state")
+            self.assertEqual(state, pyrtl_matrix.State.DONE)
+
+        ab_actual = ab_matrix.inspect(sim=sim)
+
+        ab_expected = a @ b
+        self.assertTrue(np.array_equal(ab_expected, ab_actual))
+
+    def test_chained_systolic_arrays(self):
+        """Test using the output of one systolic array as the input to another."""
+        # Matrix a has shape (2, 3).
+        a = np.array([[1, -2, 3], [-4, 5, -6]])
+        # Matrix b has shape (3, 4).
+        b = np.array([[11, 12, 13, 14], [15, 16, 17, 18], [19, 20, 21, 22]])
+        # Matrix c has shape (4, 3).
+        c = np.array([[31, 32, 33], [34, 35, 36], [37, 38, 39], [40, 41, 42]])
+        input_bitwidth = max(
+            [pyrtl_matrix.minimum_bitwidth(m) for m in [a, b, a @ b, c]]
+        )
+        accumulator_bitwidth = input_bitwidth * 2
+        a_matrix = self.make_wire_matrix_2d(name="a", array=a, bitwidth=input_bitwidth)
+
+        ab_matrix = pyrtl_matrix.make_systolic_array(
+            name="matmul0",
+            a=a_matrix,
+            b=b,
+            b_zero=0,
+            input_bitwidth=input_bitwidth,
+            accumulator_bitwidth=accumulator_bitwidth,
+        )
+        abc_matrix = pyrtl_matrix.make_systolic_array(
+            name="matmul1",
+            a=ab_matrix,
+            b=c,
+            b_zero=0,
+            input_bitwidth=input_bitwidth,
+            accumulator_bitwidth=accumulator_bitwidth,
+        )
+        abc_matrix.ready <<= True
+        abc_matrix.make_outputs()
+
+        sim = pyrtl.Simulation()
+        while not sim.inspect("matmul1.output.valid"):
+            sim.step()
+
+        abc_actual = abc_matrix.inspect(sim=sim)
+
+        abc_expected = a @ b @ c
+        print("expected", abc_expected)
+        print("actual", abc_actual)
+        self.assertTrue(np.array_equal(abc_expected, abc_actual))
+
     def test_elementwise_add(self):
         a = np.array([[1, -2, 3], [-4, 5, -6]])
         b = np.array([[10, 11, 12], [13, 14, 15]])

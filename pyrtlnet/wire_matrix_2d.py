@@ -91,8 +91,6 @@ class WireMatrix2D:
                     row[column].name = f"{name}[{row_index}][{column}]"
                 rows.append(row)
             self.matrix = self.Matrix(values=rows)
-            # Inputs are always valid.
-            valid = True
         elif isinstance(values, pyrtl.WireVector):
             # Create a Matrix from a concatenated WireVector containing all matrix
             # values.

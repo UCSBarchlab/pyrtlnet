@@ -17,7 +17,12 @@ class TestWireMatrix2D(unittest.TestCase):
         shape = expected_values.shape
         bitwidth = 8
         matrix = WireMatrix2D(
-            values=None, shape=shape, bitwidth=bitwidth, name="input", ready=True
+            values=None,
+            shape=shape,
+            bitwidth=bitwidth,
+            name="input",
+            ready=True,
+            valid=True,
         )
 
         # Create an Output for each matrix element.

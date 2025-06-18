@@ -332,8 +332,54 @@ def make_systolic_array(
     result can be read from the ``pe_{row}_{col}`` registers.
 
     The demo script in the parent directory's ``pyrtl_matrix.py`` runs this example
-    through the systolic array, and these parallelogram-shaped inputs can be seen
-    propagating through the array's `left` and `top` inputs in the rendered trace.
+    through the systolic array named ``mm0``, and these parallelogram-shaped inputs can
+    be seen propagating through the array's ``mm0.left`` and ``mm0.top`` inputs in the
+    output from :meth:`~pyrtl.simulation.SimulationTrace.render_trace`::
+
+
+                        │0   │1   │2   │3   │4   │5   │6   │7   │8   │9   │10  │11
+
+             mm0.left[0] ────┤1             │2   │3   ├─────────────────────────────
+
+             mm0.left[1] ───────────────────┤4   │5   │6   ├────────────────────────
+
+              mm0.top[0] ────┤7             │11  │15  ├─────────────────────────────
+
+              mm0.top[1] ───────────────────┤8   │12  │16  ├────────────────────────
+
+              mm0.top[2] ────────────────────────┤9   │13  │17  ├───────────────────
+
+              mm0.top[3] ─────────────────────────────┤10  │14  │18  ├──────────────
+
+        mm0.output[0][0] ────────────────────────┤7   │29  │74
+
+        mm0.output[0][1] ─────────────────────────────┤8   │32  │80
+
+        mm0.output[0][2] ──────────────────────────────────┤9   │35  │86
+
+        mm0.output[0][3] ───────────────────────────────────────┤10  │38  │92
+
+        mm0.output[1][0] ─────────────────────────────┤28  │83  │173
+
+        mm0.output[1][1] ──────────────────────────────────┤32  │92  │188
+
+        mm0.output[1][2] ───────────────────────────────────────┤36  │101 │203
+
+        mm0.output[1][3] ────────────────────────────────────────────┤40  │110 │218
+
+               mm0.state INIT│READ│BUSY                                        │DONE
+                                                                               ┌────
+        mm0.output.valid ──────────────────────────────────────────────────────┘
+
+    The systolic array's outputs can be seen on the ``mm0.output`` signals. For example,
+    ``mm0.output[0][0]`` shows the output matrix's final top left value is ``74``, which
+    is ``1 * 7 + 2 * 11 + 3 * 15``. The result of multiplying matrices ``a` and ``b``
+    is::
+
+                 ┌                 ┐
+        output = │  74  80  86  92 │
+                 │ 173 188 203 218 │
+                 └                 ┘
 
     """
 
