@@ -9,16 +9,22 @@ it can be more easily understood. High performance is a non-goal.
 Main features include:
 
 * [TensorFlow](https://www.tensorflow.org/) quantized training code.
+
 * Three quantized inference implementations. All three implementations produce the same
   output:
 
-* A reference quantized inference implementation, using the standard
-  [LiteRT](https://ai.google.dev/edge/litert) `Interpreter`.
-* A software [NumPy](https://numpy.org) implementation of quantized inference, to verify
-  the math performed by the reference implementation.
-* A PyRTL hardware implementation of quantized inference.
+  * A reference quantized inference implementation, using the standard
+    [LiteRT](https://ai.google.dev/edge/litert) `Interpreter`.
+
+  * A software [NumPy](https://numpy.org) implementation of quantized inference, to
+    verify the math performed by the reference implementation.
+
+  * A PyRTL hardware implementation of quantized inference.
+
 * A PyRTL linear algebra library.
+
 * A suite of unit tests, and continuous integration testing.
+
 * Reference documentation extracted from docstrings.
 
 ### Installation
@@ -31,9 +37,10 @@ Main features include:
    Python 3.12.8
    ```
 
-2. Create a `venv` for `pyrtlnet`. `pyrtlnet` depends on many `pip` packages, pinned to
-   specific versions for reproducible behavior. Installation of these packages should be
-   done in a clean `venv` to separate these dependencies from system packages.
+2. Create a [venv](https://docs.python.org/3/library/venv.html) for `pyrtlnet`.
+   `pyrtlnet` depends on many `pip` packages, pinned to specific versions for
+   reproducible behavior. Installation of these packages should be done in a clean
+   `venv` to separate these dependencies from system packages.
 
    ```shell
    $ python -m venv pyrtlnet-venv
@@ -109,12 +116,17 @@ Main features include:
    ![litert_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/litert_inference.png?raw=true)
 
    The script outputs many useful pieces of information:
+
    1. A display of the input image, in this case a picture of the digit `7`.
+
    2. The input shape, `(12, 12)`.
+
    3. The output from the first layer of the network, with shape `(1, 18)` and `dtype
        int8`.
+
    4. The output from the second layer of the network, with shape `(1, 10)` and `dtype
        int8`.
+
    5. A bar chart displaying the inferred likelihood that the image contains each digit.
       In this case, the digit `7` is the most likely, with a score of `95`, followed by
       the digit `3` with a score of `51`. The digit `7` is labeled as `actual` because
@@ -159,18 +171,26 @@ that shows how the PyRTL systolic array works.
 
 * Many TODOs are scattered throughout this code base. If one speaks to you, try
   addressing it. Some notable TODOs:
+
   * Support input batching, so the various inference systems can process more than one
     image at a time.
+
   * Extend `WireMatrix2D` to support an arbitrary number of dimensions, not just two.
+
   * Add support for tiled matrix multiplications, so we can use a smaller systolic array
     that processes part of the input at a time. Currently, each matrix multiplication
     creates a systolic array large enough to process all the input data.
+
 * Add an `inference_util` to collect image input data directly from the user. It would
   be cool to draw a digit with a mouse or touch screen, and see the prediction generated
   by one of the inference implementations.
+
 * Add FPGA suppport:
+
   * Export the PyRTL design to Verilog, and run it with Verilator.
+
   * Synthesize the exported design and run it on a FPGA.
+
 * Support for more advanced neural network architectures, like ResNet or Transformers.
 
 ### Contributing
