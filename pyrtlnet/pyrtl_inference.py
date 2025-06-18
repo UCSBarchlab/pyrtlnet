@@ -22,12 +22,12 @@ class PyRTLInference:
         This builds the necessary hardware for each layer's matrix operations:
 
         * Matrix multiplication of the layer's weights and inputs, with
-            :func:`.make_systolic_array`.
+          :func:`.make_systolic_array`.
         * Elementwise addition of the layer's bias, with :func:`.make_elementwise_add`.
         * ReLU, if necessary, with :func:`.make_elementwise_relu`.
         * Normalization to convert from intermediate values with bitwidth
-            ``accumulator_bitwidth`` to the layer's output values with bitwidth
-            ``input_bitwidth``, with :func:`.make_elementwise_normalize`.
+          ``accumulator_bitwidth`` to the layer's output values with bitwidth
+          ``input_bitwidth``, with :func:`.make_elementwise_normalize`.
 
         :param interpreter: LiteRT ``Interpreter`` to retrieve weights, biases, and
             quantization metadata from.
