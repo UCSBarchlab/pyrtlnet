@@ -1,27 +1,40 @@
 pyrtlnet
 ========
 
-`pyrtlnet` implements quantized, dense, two-layer neural network inference in the [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware description language, with readability as its  primary goal. We try to keep the code simple and understandable, so it can be more easily understood. High performance is a non-goal.
+`pyrtlnet` implements quantized, dense, two-layer neural network inference in the
+[PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware description language, with
+readability as its primary goal. We try to keep the code simple and understandable, so
+it can be more easily understood. High performance is a non-goal.
 
 Main features include:
 
 * [TensorFlow](https://www.tensorflow.org/) quantized training code.
-* Three quantized inference implementations. All three implementations produce the same output:
-  * A reference quantized inference implementation, using the standard [LiteRT](https://ai.google.dev/edge/litert) `Interpreter`.
-  * A software [NumPy](https://numpy.org) implementation of quantized inference, to verify the math performed by the reference implementation.
-  * A PyRTL hardware implementation of quantized inference.
+* Three quantized inference implementations. All three implementations produce the same
+  output:
+
+* A reference quantized inference implementation, using the standard
+  [LiteRT](https://ai.google.dev/edge/litert) `Interpreter`.
+* A software [NumPy](https://numpy.org) implementation of quantized inference, to verify
+  the math performed by the reference implementation.
+* A PyRTL hardware implementation of quantized inference.
 * A PyRTL linear algebra library.
 * A suite of unit tests, and continuous integration testing.
 * Reference documentation extracted from docstrings.
 
 ### Installation
 
-1. Install Python 3.12. `pyrtlnet` is only tested with Python 3.12. Note that TensorFlow currently does not support Python 3.13.
+1. Install Python 3.12. `pyrtlnet` is only tested with Python 3.12. Note that TensorFlow
+   currently does not support Python 3.13.
+
    ```shell
    $ python --version
    Python 3.12.8
    ```
-3. Create a `venv` for `pyrtlnet`. `pyrtlnet` depends on many `pip` packages, pinned to specific versions for reproducible behavior. Installation of these packages should be done in a clean `venv` to separate these dependencies from system packages.
+
+2. Create a `venv` for `pyrtlnet`. `pyrtlnet` depends on many `pip` packages, pinned to
+   specific versions for reproducible behavior. Installation of these packages should be
+   done in a clean `venv` to separate these dependencies from system packages.
+
    ```shell
    $ python -m venv pyrtlnet-venv
    $ . pyrtlnet-venv/bin/activate
@@ -31,18 +44,22 @@ Main features include:
    pip     24.3.1
    (pyrtlnet-venv) $
    ```
-5. Install `pip` packages.
+
+3. Install `pip` packages.
+
    ```shell
    (pyrtlnet-venv) $ pip install --upgrade -r requirements.txt
    ...
    Successfully installed absl-py-1.4.0 ai-edge-litert-1.3.0 astunparse-1.6.3 attrs-25.3.0 backports-strenum-1.2.8 certifi-2025.6.15 charset-normalizer-3.4.2 dm-tree-0.1.9 execnet-2.1.1 flatbuffers-25.2.10 fxpmath-0.4.9 gast-0.6.0 google-pasta-0.2.0 grpcio-1.73.0 h5py-3.14.0 idna-3.10 iniconfig-2.1.0 keras-3.10.0 libclang-18.1.1 markdown-3.8 markdown-it-py-3.0.0 markupsafe-3.0.2 mdurl-0.1.2 ml-dtypes-0.5.1 namex-0.1.0 numpy-1.26.4 opt-einsum-3.4.0 optree-0.16.0 packaging-25.0 pluggy-1.6.0 protobuf-5.29.5 pygments-2.19.1 pyrtl-0.11.3 pytest-8.4.0 pytest-xdist-3.7.0 requests-2.32.4 rich-14.0.0 ruff-0.11.13 setuptools-80.9.0 six-1.17.0 tensorboard-2.19.0 tensorboard-data-server-0.7.2 tensorflow-2.19.0 tensorflow-model-optimization-0.8.0 termcolor-3.1.0 tf-keras-2.19.0 tqdm-4.67.1 typing-extensions-4.14.0 urllib3-2.4.0 werkzeug-3.1.3 wheel-0.45.1 wrapt-1.17.2
-
    (pyrtlnet-venv) $
    ```
 
 ### Usage
-   
-1. Run `tensorflow_training.py`. This trains a quantized neural network with TensorFlow, on the MNIST data set, and produces a quantized `tflite` saved model file, named `quantized.tflite`.
+
+1. Run `tensorflow_training.py`. This trains a quantized neural network with TensorFlow,
+   on the MNIST data set, and produces a quantized `tflite` saved model file, named
+   `quantized.tflite`.
+
    ```shell
    (pyrtlnet-venv) $ python tensorflow_training.py
    Training unquantized model.
@@ -75,10 +92,51 @@ Main features include:
    1875/1875 [==============================] - 1s 463us/step - loss: 0.2118 - accuracy: 0.9359
    Evaluating quantized model.
    313/313 [==============================] - 0s 361us/step - loss: 0.2141 - accuracy: 0.9364
-   (pyrtlnet-venv) $ ls -l quantized.tflite 
+   (pyrtlnet-venv) $ ls -l quantized.tflite
    -rw-rw-r-- 1 lauj lauj 5568 Jun 17 19:58 quantized.tflite
    ```
-   The script's output shows that the unquantized model achieved `0.9373` accuracy on the test data set, while the quantized model achieved `0.9364` accuracy on the test data set. `quantized.tflite` includes all the model's weights, biases, and quantization parameters. This file will be read by all the inference implementations.
-2. Run `litert_inference.py`. This runs one test image through the reference LiteRT inference implementation.
-3. Run `numpy_inference.py`. This runs one test image through the software NumPy and fxpmath inference implementation. The tensor output should exactly match the LiteRT implementation. This implements the quantized neural network as a series of NumPy calls, using the fxpmath fixed-point math library.
-4. Run `pyrtl_inference.py`. This runs one test image through the hardware PyRTL inference implementation. The tensor output should exactly match the LiteRT implementation. This implementation converts the quantized neural network into hardware logic, and runs the logic through a PyRTL [Simulation](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.simulation.Simulation).
+
+   The script's output shows that the unquantized model achieved `0.9373` accuracy on
+   the test data set, while the quantized model achieved `0.9364` accuracy on the test
+   data set. `quantized.tflite` includes all the model's weights, biases, and
+   quantization parameters. This file will be read by all the inference implementations.
+
+2. Run `litert_inference.py`. This runs one test image through the reference LiteRT
+   inference implementation.
+
+   ![litert_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/litert_inference.png?raw=true)
+
+   The script output provides many useful pieces of information:
+   1. A display of the input image, in this case a picture of the digit `7`.
+   2. The input shape, `(12, 12)`.
+   3. The output from the first layer of the network, with shape `(1, 18)` and `dtype
+       int8`.
+   4. The output from the second layer of the network, with shape `(1, 10)` and `dtype
+       int8`.
+   5. A bar chart displaying the inferred likelihood that the image contains each digit.
+      In this case, the digit `7` is the most likely, with a score of `95`, followed by
+      the digit `3` with a score of `51`. The digit `7` is labeled as `actual` because
+      it is the actual prediction generated by the neural network. It is also labeled as
+      `expected` because the labled test data confirms that the image actually depicts
+      the digit `7`.
+
+3. Run `numpy_inference.py`. This runs one test image through the software NumPy and
+   fxpmath inference implementation. The tensor output should exactly match the LiteRT
+   implementation. This implements the quantized neural network as a series of NumPy
+   calls, using the fxpmath fixed-point math library.
+
+   ![numpy_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/numpy_inference.png?raw=true)
+
+   The tensors output by this script should exactly match the tensors output by
+   `litert_inference.py`, except that the outputs are transposed.
+
+4. Run `pyrtl_inference.py`. This runs one test image through the hardware PyRTL
+   inference implementation. The tensor output should exactly match the LiteRT
+   implementation. This implementation converts the quantized neural network into
+   hardware logic, and runs the logic through a PyRTL
+   [Simulation](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.simulation.Simulation).
+
+   ![pyrtl_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/pyrtl_inference.png?raw=true)
+
+   The tensors output by this script should exactly match the tensors output by
+   `numpy_inference.py`.
