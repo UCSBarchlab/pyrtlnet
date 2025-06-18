@@ -1,9 +1,9 @@
-pyrtlnet
-========
+`pyrtlnet`
+==========
 
-Train it. Quantize it. Synthesize and Simulate it—in hardware. All in Python.
+Train it. Quantize it. Synthesize and simulate it — in hardware. All in Python.
 
-`pyrtlnet` is a fully self-contained example of a quantized neural network (NN) that runs end-to-end in Python.  From model training, to software inference, to hardware generation, all the way to simulating that custom inference hardware at the logic-gate level -- you can do it all right from the Python REPL if you really want.  We hope you will find pyrtlnet (rhymes with turtle-net) a complete and understandable walkthrough of how to go from TensorFlow training to bit-accurate hardware simulation, using the [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware description language. Main features include:
+`pyrtlnet` is a self-contained example of a quantized neural network (NN) that runs end-to-end in Python.  From model training, to software inference, to hardware generation, all the way to simulating that custom inference hardware at the logic-gate level — you can do it all right from the Python REPL.  We hope you will find `pyrtlnet` (rhymes with turtle-net) a complete and understandable walkthrough that goes from [TensorFlow](https://www.tensorflow.org/) training to bit-accurate hardware simulation, with the [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware description language. Main features include:
 
 * Quantized neural network training with [TensorFlow](https://www.tensorflow.org/). The resulting inference
   network is fully quantized, so all inference calculations are done with integers.
@@ -11,15 +11,15 @@ Train it. Quantize it. Synthesize and Simulate it—in hardware. All in Python.
 * Three different quantized inference implementations operating at different levels of abstraction. All three implementations produce the same
   output in the same format and, in doing so, provide a useful framework to extend either from the top-down or the bottom-up.
 
-  * A reference quantized inference implementation, using the standard
-    [LiteRT](https://ai.google.dev/edge/litert) `Interpreter`.
+  1. A reference quantized inference implementation, using the standard
+     [LiteRT](https://ai.google.dev/edge/litert) `Interpreter`.
 
-  * A software implementation of quantized inference, using [NumPy](https://numpy.org)
-    and [fxpmath](https://github.com/francof2a/fxpmath), to verify the math performed by
-    the reference implementation.
+  2. A software implementation of quantized inference, using [NumPy](https://numpy.org)
+     and [fxpmath](https://github.com/francof2a/fxpmath), to verify the math performed by
+     the reference implementation.
 
-  * A [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware implementation of quantized
-    inference that is simulated right at the logic gate level.
+  3. A [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware implementation of quantized
+     inference that is simulated right at the logic gate level.
 
 * A new [PyRTL](https://github.com/UCSBarchlab/PyRTL) linear algebra library, including a
   composable `WireVector2D` matrix abstraction and a output-stationary [systolic
@@ -30,7 +30,7 @@ Train it. Quantize it. Synthesize and Simulate it—in hardware. All in Python.
 
 * Understandable and documented code! `pyrtlnet` is designed to be, first and foremost, understandable and readable
   (even when that comes at the expense of performance).  Reference documentation is extracted from docstrings with
-  [Sphinx](https://www.sphinx-doc.org/en/master/index.html) and .
+  [Sphinx](https://www.sphinx-doc.org/en/master/index.html).
 
 ### Installation
 
