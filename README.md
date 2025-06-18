@@ -248,7 +248,7 @@ Contributions are welcome! Please check a few things before sending a pull reque
    [`pytest-xdist`](https://github.com/pytest-dev/pytest-xdist) is also installed, so
    testing can be accelerated by running the tests in parallel with `pytest -n auto`.
 
-Z2. Ensure that [`ruff`](https://docs.astral.sh/ruff/) lint checks pass. `ruff` is
+2. Ensure that [`ruff`](https://docs.astral.sh/ruff/) lint checks pass. `ruff` is
    installed by `requirements.txt`:
 
    ```shell
@@ -262,3 +262,13 @@ Z2. Ensure that [`ruff`](https://docs.astral.sh/ruff/) lint checks pass. `ruff` 
    (pyrtlnet-venv) $ ruff format
    22 files left unchanged
    ```
+
+### Maintenance
+
+Periodically update the pinned dependencies in
+[`requirements.txt`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/requirements.txt)
+with `make requirements.txt`.
+
+When a new version of Python is released, update the [GitHub testing
+workflow](https://github.com/UCSBarchlab/pyrtlnet/blob/main/.github/workflows/python-test.yml)
+and the installation instructions in `README.md`.
