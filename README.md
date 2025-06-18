@@ -56,9 +56,10 @@ Main features include:
 
 ### Usage
 
-1. Run `tensorflow_training.py`. This trains a quantized neural network with TensorFlow,
-   on the MNIST data set, and produces a quantized `tflite` saved model file, named
-   `quantized.tflite`.
+1. Run
+   [tensorflow_training.py](https://github.com/UCSBarchlab/pyrtlnet/blob/main/tensorflow_training.py).
+   This trains a quantized neural network with TensorFlow, on the MNIST data set, and
+   produces a quantized `tflite` saved model file, named `quantized.tflite`.
 
    ```shell
    (pyrtlnet-venv) $ python tensorflow_training.py
@@ -101,12 +102,13 @@ Main features include:
    data set. `quantized.tflite` includes all the model's weights, biases, and
    quantization parameters. This file will be read by all the inference implementations.
 
-2. Run `litert_inference.py`. This runs one test image through the reference LiteRT
-   inference implementation.
+2. Run
+   [litert_inference.py](https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py).
+   This runs one test image through the reference LiteRT inference implementation.
 
    ![litert_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/litert_inference.png?raw=true)
 
-   The script output provides many useful pieces of information:
+   The script outputs many useful pieces of information:
    1. A display of the input image, in this case a picture of the digit `7`.
    2. The input shape, `(12, 12)`.
    3. The output from the first layer of the network, with shape `(1, 18)` and `dtype
@@ -120,23 +122,92 @@ Main features include:
       `expected` because the labled test data confirms that the image actually depicts
       the digit `7`.
 
-3. Run `numpy_inference.py`. This runs one test image through the software NumPy and
-   fxpmath inference implementation. The tensor output should exactly match the LiteRT
-   implementation. This implements the quantized neural network as a series of NumPy
-   calls, using the fxpmath fixed-point math library.
+3. Run
+   [numpy_inference.py](https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py).
+   This runs one test image through the software NumPy and fxpmath inference
+   implementation. The tensor output should exactly match the LiteRT implementation.
+   This implements the quantized neural network as a series of NumPy calls, using the
+   fxpmath fixed-point math library.
 
    ![numpy_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/numpy_inference.png?raw=true)
 
    The tensors output by this script should exactly match the tensors output by
    `litert_inference.py`, except that the outputs are transposed.
 
-4. Run `pyrtl_inference.py`. This runs one test image through the hardware PyRTL
-   inference implementation. The tensor output should exactly match the LiteRT
-   implementation. This implementation converts the quantized neural network into
-   hardware logic, and runs the logic through a PyRTL
+4. Run
+   [pyrtl_inference.py](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py).
+   This runs one test image through the hardware PyRTL inference implementation. The
+   tensor output should exactly match the LiteRT implementation. This implementation
+   converts the quantized neural network into hardware logic, and runs the logic through
+   a PyRTL
    [Simulation](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.simulation.Simulation).
 
    ![pyrtl_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/pyrtl_inference.png?raw=true)
 
    The tensors output by this script should exactly match the tensors output by
    `numpy_inference.py`.
+
+### Next Steps
+
+Take a look at the reference documentation for more details on how these scripts work.
+
+Also see the demo script
+[pyrtl_matrix.py](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_matrix.py)
+that shows how the PyRTL systolic array works.
+
+### Project Ideas:
+
+* Many TODOs are scattered throughout this code base. If one speaks to you, try
+  addressing it. Some notable TODOs:
+  * Support input batching, so the various inference systems can process more than one
+    image at a time.
+  * Extend `WireMatrix2D` to support an arbitrary number of dimensions, not just two.
+  * Add support for tiled matrix multiplications, so we can use a smaller systolic array
+    that processes part of the input at a time. Currently, each matrix multiplication
+    creates a systolic array large enough to process all the input data.
+* Add an `inference_util` to collect image input data directly from the user. It would
+  be cool to draw a digit with a mouse or touch screen, and see the prediction generated
+  by one of the inference implementations.
+* Add FPGA suppport:
+  * Export the PyRTL design to Verilog, and run it with Verilator.
+  * Synthesize the exported design and run it on a FPGA.
+* Support for more advanced neural network architectures, like ResNet or Transformers.
+
+### Contributing
+
+Contributions are welcome! A few things to check before sending a pull request:
+
+1. Ensure that all tests pass, and that new features are tested. Tests are run with
+   `pytest`, which is installed by `requirements.txt`:
+
+   ```shell
+   (pyrtlnet-venv) $ pytest
+   ============================ test session starts ============================
+   ...
+   collected 20 items
+
+   tests/litert_inference_test.py .                                      [  5%]
+   tests/numpy_inference_test.py .                                       [ 10%]
+   tests/pyrtl_inference_test.py .                                       [ 15%]
+   tests/pyrtl_matrix_test.py ..........                                 [ 65%]
+   tests/tensorflow_training_test.py ..                                  [ 75%]
+   tests/wire_matrix_2d_test.py .....                                    [100%]
+
+   ============================ 20 passed in 15.75s ============================
+   ```
+
+   `pytest-xdist` is also installed, so testing can be accelerated by running them in
+   parallel with `pytest -n auto`.
+
+2. Ensure that `ruff` lint checks pass. `ruff` is installed by `requirements.txt`:
+
+   ```shell
+   (pyrtlnet-venv) $ ruff check
+   All checks passed!
+   ```
+3. Apply `ruff` automatic code formatting:
+
+   ```shell
+   (pyrtlnet-venv) $ ruff format
+   22 files left unchanged
+   ```

@@ -533,6 +533,9 @@ def make_systolic_array(
     # Collect a 2D array of accumulator registers.
     accumulators = [[None for column in range(num_columns)] for row in range(num_rows)]
 
+    # TODO: This always creates a systolic array large enough to process all the input
+    # data. Implement tiled matrix multiplication, so large inputs can be processed with
+    # smaller systolic arrays.
     for row in range(num_rows):
         for column in range(num_columns):
             # If we are on the left edge, this tile's left input comes from the systolic
