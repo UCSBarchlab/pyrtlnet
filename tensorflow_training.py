@@ -1,3 +1,4 @@
+from pyrtlnet.inference_util import tflite_file_name
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.tensorflow_training import (
     evaluate_model,
@@ -25,14 +26,14 @@ def main():
         model=model, test_images=test_images, test_labels=test_labels
     )
 
-    print("Training quantized model and writing ./quantized.tflite.")
+    print(f"Training quantized model and writing {tflite_file_name}.")
     model = quantize_model(
         model=model,
         learning_rate=learning_rate / 10000,
         epochs=int(epochs / 5),
         train_images=train_images,
         train_labels=train_labels,
-        model_file_name="quantized.tflite",
+        model_file_name=tflite_file_name,
     )
     print("Evaluating quantized model.")
     loss, accuracy = evaluate_model(

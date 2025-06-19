@@ -4,7 +4,7 @@ import shutil
 import numpy as np
 from ai_edge_litert.interpreter import Interpreter
 
-from pyrtlnet.inference_util import display_image, display_outputs
+from pyrtlnet.inference_util import display_image, display_outputs, tflite_file_name
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.pyrtl_inference import PyRTLInference
 
@@ -22,8 +22,7 @@ def main():
     _, (test_images, test_labels) = load_mnist_images()
 
     # Load quantized model.
-    tflite_file = "quantized.tflite"
-    interpreter = Interpreter(model_path=tflite_file)
+    interpreter = Interpreter(model_path=tflite_file_name)
 
     # Create PyRTL inference hardware.
     input_bitwidth = 8

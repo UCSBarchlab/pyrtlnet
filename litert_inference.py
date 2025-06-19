@@ -3,7 +3,7 @@ import shutil
 
 import numpy as np
 
-from pyrtlnet.inference_util import display_image, display_outputs
+from pyrtlnet.inference_util import display_image, display_outputs, tflite_file_name
 from pyrtlnet.litert_inference import load_tflite_model, run_tflite_model
 from pyrtlnet.mnist_util import load_mnist_images
 
@@ -27,7 +27,7 @@ def main():
     # Load MNIST dataset.
     _, (test_images, test_labels) = load_mnist_images()
 
-    interpreter = load_tflite_model(model_file_name="quantized.tflite")
+    interpreter = load_tflite_model(model_file_name=tflite_file_name)
 
     correct = 0
     for test_index in range(args.start_image, args.start_image + args.num_images):

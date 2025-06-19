@@ -110,7 +110,7 @@ Main features include:
    1875/1875 [==============================] - 1s 396us/step - loss: 0.2157 - accuracy: 0.9356
    Evaluating unquantized model.
    313/313 [==============================] - 0s 288us/step - loss: 0.2131 - accuracy: 0.9373
-   Training quantized model and writing ./quantized.tflite.
+   Training quantized model and writing quantized.tflite.
    Epoch 1/2
    1875/1875 [==============================] - 1s 457us/step - loss: 0.2135 - accuracy: 0.9359
    Epoch 2/2
