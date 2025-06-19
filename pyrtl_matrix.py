@@ -95,7 +95,7 @@ def main():
     memblock_data = pyrtl_matrix.make_input_memblock_data(
         y.transpose(), input_bitwidth, counter_bitwidth
     )
-    memblock_data = {i: d for i, d in enumerate(memblock_data)}
+    memblock_data = dict(enumerate(memblock_data))
 
     sim = pyrtl.Simulation(memory_value_map={y_memblock: memblock_data})
     while not sim.inspect("add0.output.valid"):
@@ -113,7 +113,7 @@ def main():
 
         trace_counts = [
             (strip_brackets(name), count_brackets(name))
-            for name in list(sorted(sim.tracer.trace.keys()))
+            for name in sorted(sim.tracer.trace.keys())
         ]
         max_brackets = {}
         for name, count in trace_counts:

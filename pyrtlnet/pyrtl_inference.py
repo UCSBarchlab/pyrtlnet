@@ -253,7 +253,7 @@ class PyRTLInference:
             self.input_bitwidth,
             self.flat_image_addrwidth,
         )
-        memblock_data_dict = {i: d for i, d in enumerate(memblock_data)}
+        memblock_data_dict = dict(enumerate(memblock_data))
 
         # Run until the second layer's computations are done.
         sim = pyrtl.FastSimulation(

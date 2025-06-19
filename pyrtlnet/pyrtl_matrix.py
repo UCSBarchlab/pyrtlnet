@@ -38,7 +38,7 @@ def make_input_memblock_data(
     :meth:`pyrtl.simulation.Simulation.__init__`::
 
         memblock_data = pyrtl_matrix.make_input_memblock_data(...)
-        memblock_dict = {i: d for i, d in enumerate(memblock_data)}
+        memblock_dict = dict(enumerate(memblock_data))
         sim = pyrtl.Simulation(memory_value_map={memblock: memblock_dict})
 
     :param a: Input data to convert to ``MemBlock`` data.

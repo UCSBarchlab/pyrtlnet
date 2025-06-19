@@ -20,7 +20,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         return WireMatrix2D(
             values=array,
             shape=array.shape,
-            bitwidth=8,
+            bitwidth=bitwidth,
             name=name,
             valid=True,
         )
@@ -141,7 +141,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         memblock_data = pyrtl_matrix.make_input_memblock_data(
             array, input_bitwidth, counter_bitwidth
         )
-        memblock_data = {i: d for i, d in enumerate(memblock_data)}
+        memblock_data = dict(enumerate(memblock_data))
 
         return matrix, memblock, memblock_data
 

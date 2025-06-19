@@ -105,8 +105,9 @@ class WireMatrix2D:
             for row in values:
                 assert len(row) == num_columns
                 if isinstance(row, np.ndarray):
-                    row = [value.item() for value in row]
-                rows.append(self.Row(values=row))
+                    rows.append(self.Row(values=[value.item() for value in row]))
+                else:
+                    rows.append(self.Row(values=row))
             self.matrix = self.Matrix(name=name, values=rows)
 
         def create_ready_valid(value, suffix: str) -> pyrtl.WireVector:
