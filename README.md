@@ -195,7 +195,9 @@ their main interfaces.
 
 Try the demo script
 [`pyrtl_matrix.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_matrix.py)
-to see how the PyRTL systolic array multiplies matrices.
+to see how the PyRTL systolic array multiplies matrices:
+
+![pyrtl_matrix.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/pyrtl_matrix.png?raw=true)
 
 ### Project Ideas
 
