@@ -52,7 +52,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         ab_actual = ab_matrix.inspect(sim=sim)
 
         ab_expected = a @ (b - b_zero)
-        self.assertTrue(np.array_equal(ab_expected, ab_actual))
+        np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
     def test_systolic_array_one_wire_matrix_2d(self):
         """Test matrix multiplication with one WireMatrix2D."""
@@ -81,7 +81,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         ab_actual = ab_matrix.inspect(sim=sim)
 
         ab_expected = a @ (b - b_zero)
-        self.assertTrue(np.array_equal(ab_expected, ab_actual))
+        np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
     def test_systolic_array_two_wire_matrix_2d(self):
         """Test matrix multiplication with two WireMatrix2Ds."""
@@ -111,7 +111,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         ab_actual = ab_matrix.inspect(sim=sim)
 
         ab_expected = a @ (b - b_zero)
-        self.assertTrue(np.array_equal(ab_expected, ab_actual))
+        np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
     def make_memblock(
         self,
@@ -191,7 +191,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         ab_actual = ab_matrix.inspect(sim=sim)
 
         ab_expected = a @ (b - b_zero)
-        self.assertTrue(np.array_equal(ab_expected, ab_actual))
+        np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
     def test_systolic_array_idle(self):
         """Test that the systolic array remain idle before and after processing.
@@ -248,7 +248,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         ab_actual = ab_matrix.inspect(sim=sim)
 
         ab_expected = a @ b
-        self.assertTrue(np.array_equal(ab_expected, ab_actual))
+        np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
     def test_chained_systolic_arrays(self):
         """Test using the output of one systolic array as the input to another."""
@@ -292,7 +292,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         abc_expected = a @ b @ c
         print("expected", abc_expected)
         print("actual", abc_actual)
-        self.assertTrue(np.array_equal(abc_expected, abc_actual))
+        np.testing.assert_array_equal(abc_actual, abc_expected, strict=True)
 
     def test_elementwise_add(self):
         a = np.array([[1, -2, 3], [-4, 5, -6]])
@@ -315,7 +315,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         ab_actual = ab_matrix.inspect(sim=sim)
         ab_expected = a + b
 
-        self.assertTrue(np.array_equal(ab_expected, ab_actual))
+        np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
     def test_elementwise_relu(self):
         a = np.array([[1, -2, 3], [-4, 5, -6]])
@@ -333,7 +333,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         relu_actual = relu_matrix.inspect(sim=sim)
         relu_expected = np.maximum(0, a)
 
-        self.assertTrue(np.array_equal(relu_expected, relu_actual))
+        np.testing.assert_array_equal(relu_actual, relu_expected, strict=True)
 
     def test_normalize(self):
         a = np.array([[1, -2, 3], [-4, 5, -6]])
@@ -364,7 +364,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         normal_actual = normal_matrix.inspect(sim=sim)
         normal_expected = numpy_inference.normalize(product=a, m0=m0, n=n, z3=z3)
 
-        self.assertTrue(np.array_equal(normal_expected, normal_actual))
+        np.testing.assert_array_equal(normal_actual, normal_expected, strict=True)
 
     def test_argmax(self):
         a = np.array([[1, -2, 3, -4, 5, -6]]).transpose()

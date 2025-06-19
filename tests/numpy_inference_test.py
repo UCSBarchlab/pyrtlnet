@@ -64,11 +64,18 @@ class TestNumPyInference(unittest.TestCase):
         )
 
         # Check the first layer's outputs.
-        self.assertTrue(np.array_equal(litert_layer0_output.T, numpy_layer0_output))
+        np.testing.assert_array_equal(
+            numpy_layer0_output,
+            litert_layer0_output.transpose(),
+            strict=True,
+        )
 
         # Check the second layer's outputs.
-        self.assertTrue(np.array_equal(litert_layer1_output.T, numpy_layer1_output))
-
+        np.testing.assert_array_equal(
+            numpy_layer1_output,
+            litert_layer1_output.transpose(),
+            strict=True,
+        )
         # Also verify that the actual predicted digits match.
         self.assertEqual(litert_actual, numpy_actual)
 

@@ -35,7 +35,7 @@ class TestWireMatrix2D(unittest.TestCase):
         sim.step(provided_inputs=provided_inputs)
 
         actual_values = matrix.inspect(sim=sim)
-        self.assertTrue(np.array_equal(expected_values, actual_values))
+        np.testing.assert_array_equal(actual_values, expected_values, strict=True)
 
     def test_lists(self):
         """Test a WireMatrix2D created from a list of lists."""
@@ -60,7 +60,7 @@ class TestWireMatrix2D(unittest.TestCase):
         sim.step()
 
         actual_values = matrix.inspect(sim=sim)
-        self.assertTrue(np.array_equal(expected_values, actual_values))
+        np.testing.assert_array_equal(actual_values, expected_values, strict=True)
 
     def test_numpy_array(self):
         """Test a WireMatrix2D created from a NumPy array."""
@@ -84,7 +84,7 @@ class TestWireMatrix2D(unittest.TestCase):
         sim.step()
 
         actual_values = matrix.inspect(sim=sim)
-        self.assertTrue(np.array_equal(expected_values, actual_values))
+        np.testing.assert_array_equal(actual_values, expected_values, strict=True)
 
     def test_concatenated_input_wire_vector(self):
         """Test a WireMatrix2D created from a concatenated Input WireVector."""
@@ -118,7 +118,7 @@ class TestWireMatrix2D(unittest.TestCase):
         )
 
         actual_values = matrix.inspect(sim=sim)
-        self.assertTrue(np.array_equal(expected_values, actual_values))
+        np.testing.assert_array_equal(actual_values, expected_values, strict=True)
 
     def test_transpose(self):
         """Test transposing a WireMatrix2D created from a NumPy array."""
@@ -143,7 +143,11 @@ class TestWireMatrix2D(unittest.TestCase):
         sim.step()
 
         actual_transposed_values = transposed.inspect(sim=sim)
-        self.assertTrue(np.array_equal(expected_values.T, actual_transposed_values))
+        np.testing.assert_array_equal(
+            actual_transposed_values,
+            expected_values.transpose(),
+            strict=True,
+        )
 
 
 if __name__ == "__main__":

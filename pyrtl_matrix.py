@@ -7,9 +7,11 @@ import pyrtlnet.pyrtl_matrix as pyrtl_matrix
 from pyrtlnet.wire_matrix_2d import WireMatrix2D
 
 
-def _verify_tensor(name: str, expected: np.ndarray, actual: np.ndarray):
+def _verify_tensor(name: str, expected: np.ndarray, actual: np.ndarray) -> bool:
     """Compare ``expected`` to ``actual`` and print a report."""
-    if np.logical_and.reduce(expected == actual, axis=None):
+    if expected.shape == actual.shape and np.logical_and.reduce(
+        expected == actual, axis=None
+    ):
         print(f"Correct result for {name} tensor:\n{actual}")
         return True
     else:
@@ -34,7 +36,7 @@ def main():
     parser.add_argument("--a_start", type=int, default=1)
     args = parser.parse_args()
 
-    def make_np_matrix(shape: tuple[int, int], start: int):
+    def make_np_matrix(shape: tuple[int, int], start: int) -> np.ndarray:
         """Return an integer matrix with the specified shape.
 
         The matrix will be filled with increasing integers starting from ``start``.
@@ -102,7 +104,7 @@ def main():
         sim.step(provided_inputs={"y_valid": True})
 
     # Simulation complete, print the waveform.
-    def render_trace(prefixes):
+    def render_trace(prefixes: str):
         # Only show traces with the maximum number of brackets. This will display
         # ``output[1][2]``, and skip ``output[1]`` and ``output``.
         def count_brackets(name):
@@ -161,16 +163,7 @@ def main():
     _verify_tensor("x ⋅ y", expected_xy, actual_xy)
 
     print("\nComputing x ⋅ y + a")
-    print(f"a shape={a.shape}:\n{a}")
-    render_trace(
-        prefixes=[
-            "mm0.output[",
-            "a[",
-            "add0.output[",
-            "mm0.output.valid",
-            "add0.output.valid",
-        ]
-    )
+    print(f"a shape={a.shape}:\n{a}\n")
 
     expected_xya = expected_xy + a
     actual_xya = matrix_xya.inspect(sim=sim)
