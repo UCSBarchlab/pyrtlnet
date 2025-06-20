@@ -32,7 +32,7 @@ Main features include:
      quantized inference that is simulated right at the logic gate level.
 
 * A new [PyRTL](https://github.com/UCSBarchlab/PyRTL) linear algebra library, including
-  a composable `WireVector2D` matrix abstraction and a output-stationary [systolic
+  a composable `WireVector2D` matrix abstraction and an output-stationary [systolic
   array](https://en.wikipedia.org/wiki/Systolic_array) for matrix multiplication.
 
 * An extensive [suite of unit
@@ -81,7 +81,7 @@ Main features include:
 ### Usage
 
 1. Run
-   [`tensorflow_training.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/tensorflow_training.py).
+   [`tensorflow_training.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/tensorflow_training.py) in this repository's root directory.
    This trains a quantized neural network with TensorFlow, on the MNIST data set, and
    produces a quantized `tflite` saved model file, named `quantized.tflite`.
 
@@ -123,11 +123,12 @@ Main features include:
 
    The script's output shows that the unquantized model achieved `0.9373` accuracy on
    the test data set, while the quantized model achieved `0.9364` accuracy on the test
-   data set. `quantized.tflite` includes all the model's weights, biases, and
-   quantization parameters. This file will be read by all the inference implementations.
+   data set. Your accuracy numbers may differ slightly. `quantized.tflite` includes all
+   the model's weights, biases, and quantization parameters. This file will be read by
+   all the inference implementations.
 
 2. Run
-   [`litert_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py).
+   [`litert_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py) in this repository's root directory.
    This runs one test image through the reference LiteRT inference implementation.
 
    ![litert_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/litert_inference.png?raw=true)
@@ -166,7 +167,7 @@ Main features include:
    command line flags.
 
 3. Run
-   [`numpy_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py).
+   [`numpy_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py) in this repository's root directory.
    This runs one test image through the software NumPy and fxpmath inference
    implementation. This implements inference for the quantized neural network as a
    series of NumPy calls, using the fxpmath fixed-point math library.
@@ -177,7 +178,7 @@ Main features include:
    `litert_inference.py`, except that each layer's outputs are transposed.
 
 4. Run
-   [`pyrtl_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py).
+   [`pyrtl_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py) in this repository's root directory.
    This runs one test image through the hardware PyRTL inference
    implementation. This implementation converts the quantized neural network
    into hardware logic, and simulates the hardware with a PyRTL
@@ -195,7 +196,8 @@ their main interfaces.
 
 Try the demo script
 [`pyrtl_matrix.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_matrix.py)
-to see how the PyRTL systolic array multiplies matrices:
+in this repository's root directory to see how the PyRTL systolic array multiplies
+matrices:
 
 ![pyrtl_matrix.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/pyrtl_matrix.png?raw=true)
 
@@ -209,11 +211,14 @@ to see how the PyRTL systolic array multiplies matrices:
 
   * Extend `WireMatrix2D` to support an arbitrary number of dimensions, not just two.
     Extend the systolic array to support multiplying matrices with more dimensions. This
-    is needed to support convolutional neural networks, for example.
+    is needed to support [convolutional neural
+    networks](https://en.wikipedia.org/wiki/Convolutional_neural_network), for example.
 
-  * Add support for tiled matrix multiplications, so we can use a smaller systolic array
-    that processes part of the input at a time. Currently, each matrix multiplication
-    creates a systolic array large enough to process all the input data.
+  * Add support for [block matrix](https://en.wikipedia.org/wiki/Block_matrix)
+    multiplications, so all neural network layers can share one systolic array that
+    processes uniformly-sized blocks of inputs at a time. Currently, each layer creates
+    its own systolic array that's large enough to process all of its input data, which
+    is not very realistic.
 
 * Add an `inference_util` to collect image input data directly from the user. It would
   be cool to draw a digit with a mouse or touch screen, and see the prediction generated
@@ -229,7 +234,9 @@ to see how the PyRTL systolic array multiplies matrices:
 
   * Synthesize the exported design and run it on a FPGA.
 
-* Support more advanced neural network architectures, like ResNet or Transformers.
+* Support more advanced neural network architectures, like [convolutional neural
+  networks](https://en.wikipedia.org/wiki/Convolutional_neural_network) or
+  [transformers](https://en.wikipedia.org/wiki/Transformer_(deep_learning_architecture)).
 
 ### Contributing
 
@@ -279,6 +286,7 @@ Periodically update the pinned dependencies in
 [`requirements.txt`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/requirements.txt)
 with `make requirements.txt`.
 
-When a new version of Python is released, update the [GitHub testing
+When a new [minor version version of Python](https://devguide.python.org/versions/) is
+released, update the [GitHub testing
 workflow](https://github.com/UCSBarchlab/pyrtlnet/blob/main/.github/workflows/python-test.yml)
 and the installation instructions in `README.md`.

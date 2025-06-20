@@ -32,51 +32,25 @@ def _make_np_matrix(shape: tuple[int, int], start: int) -> np.ndarray:
     return np.reshape(array, newshape=shape)
 
 
-def _render_trace(sim: pyrtl.Simulation, prefixes: str):
-    """Only display traces with the maximum number of brackets.
+def _render_trace(sim: pyrtl.Simulation, prefixes: list[str]):
+    """Display traces that start with a prefix in ``prefixes``.
 
-    For example, this will display ``output[1][2]``, and skip ``output[1]`` and
-    ``output``.
+    This also displays signed integers instead of the default ``hex``, and displays
+    state names.
 
     """
-
-    def count_brackets(name: str) -> int:
-        """Return the number of opening brackets in ``name``."""
-        return name.count("[")
-
-    def get_prefix(name: str) -> str:
-        """Return the part of ``name`` before the first opening bracket."""
-        return name.split("[")[0]
-
-    # Map from ``prefix`` to its maximum bracket count. If ``prefix`` is a matrix, this
-    # effectively returns the number of dimensions in the matrix.
-    max_bracket_count = {}
-    for full_name in sorted(sim.tracer.trace.keys()):
-        current_prefix = get_prefix(full_name)
-        current_count = count_brackets(full_name)
-
-        last_count = max_bracket_count.get(current_prefix, 0)
-        max_bracket_count[current_prefix] = max(current_count, last_count)
-
-    # Collect trace names that start with one of the desired ``prefixes``, and have the
-    # maximum number of opening brackets for that prefix.
+    # Collect trace names that start with one of the desired ``prefixes``.
     trace_list = []
+    # Iterate over ``prefixes`` first so the display order matches the prefix order.
     for prefix in prefixes:
-        for name in sorted(sim.tracer.trace.keys()):
-            if (
-                name.startswith(prefix)
-                and count_brackets(name) == max_bracket_count[get_prefix(name)]
-            ):
-                trace_list.append(name)
+        for trace_name in sorted(sim.tracer.trace.keys()):
+            if trace_name.startswith(prefix):
+                trace_list.append(trace_name)
 
     sim.tracer.render_trace(
         trace_list=trace_list,
-        symbol_len=4,
         repr_func=pyrtl.val_to_signed_integer,
-        repr_per_name={
-            "mm0.state": pyrtl.enum_name(pyrtl_matrix.State),
-            "mm0.counter": int,
-        },
+        repr_per_name={"mm0.state": pyrtl.enum_name(pyrtl_matrix.State)},
     )
 
 
