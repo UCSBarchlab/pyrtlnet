@@ -2,7 +2,7 @@
 
 The operations in this module all use :class:`.WireMatrix2D` as their input and output,
 so they can be composed. See the parent directory's ``pyrtl_matrix.py`` for an example
-that computes ``x ⋅ y + a``.
+that computes ``x · (y - y_zero) + a``.
 
 WARNING: These implementations may not be completely general. They have only been tested
 in the context of dense neural networks.
@@ -371,15 +371,29 @@ def make_systolic_array(
                                                                                ┌────
         mm0.output.valid ──────────────────────────────────────────────────────┘
 
-    The systolic array's outputs can be seen on the ``mm0.output`` signals. For example,
+    The ``mm0.output`` signals show the systolic array's output matrix. For example,
     ``mm0.output[0][0]`` shows the output matrix's final top left value is ``74``, which
-    is ``1 * 7 + 2 * 11 + 3 * 15``. The result of multiplying matrices ``a` and ``b``
-    is::
+    is ``1 * 7 + 2 * 11 + 3 * 15``.
+
+    The trace shows how the systolic array multiplies and accumulates to execute this
+    matrix multiplication over time. For example, the trace for ``mm0.output[0][0]``
+    shows::
+
+         7 in cycle 5, which is 1 * 7.
+        29 in cycle 6, which is 1 * 7 + 2 * 11.
+        74 in cycle 7, which is 1 * 7 + 2 * 11 + 3 * 15.
+
+    The inputs for computing ``mm0.output[0][0]`` can be found in the ``mm0.left[0]``
+    and ``mm0.top[0]`` traces.
+
+    The expected result of multiplying matrices ``a` and ``b`` is::
 
                  ┌                 ┐
         output = │  74  80  86  92 │
                  │ 173 188 203 218 │
                  └                 ┘
+
+    And these values can be found on the right side of the ``mm0.output`` traces.
 
     """
 
