@@ -9,8 +9,8 @@ build:
   # Use the latest Ubuntu LTS version available on Read the Docs.
   os: ubuntu-lts-latest
   tools:
-    # Use the latest 3.x version available on Read the Docs.
-    python: "3"
+    # TensorFlow currently does not support Python 3.13.
+    python: "3.12"
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
