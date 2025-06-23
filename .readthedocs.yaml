@@ -1,0 +1,22 @@
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+# Set the version of Python and other tools you might need
+build:
+  # Use the latest Ubuntu LTS version available on Read the Docs.
+  os: ubuntu-lts-latest
+  tools:
+    # Use the latest 3.x version available on Read the Docs.
+    python: "3"
+
+# Build documentation in the docs/ directory with Sphinx
+sphinx:
+   configuration: docs/conf.py
+
+# Optionally set the requirements required to build your docs
+python:
+   install:
+     - requirements: docs/requirements.txt
