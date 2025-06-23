@@ -6,12 +6,11 @@ Inference Implementations
 Three inference implementations are included:
 
 * :ref:`litert_inference`, a reference implementation based on the `LiteRT`_
-  ``Interpreter``, in ``litert_inference.py``.
-* :ref:`numpy_inference`, a software re-implementation in `NumPy`_ and `fxpmath`_, in
-  ``numpy_inference.py``. This implementation is useful for understanding quantization
-  math before moving on to a hardware implementation.
-* :ref:`pyrtl_inference`, a hardware implementation in `PyRTL`_, in
-  ``pyrtl_inference.py``.
+  ``Interpreter``.
+* :ref:`numpy_inference`, a software re-implementation in `NumPy`_ and
+  `fxpmath`_. This implementation is useful for understanding quantization math
+  before moving on to a hardware implementation.
+* :ref:`pyrtl_inference`, a hardware implementation in `PyRTL`_.
 
 .. _LiteRT: https://ai.google.dev/edge/litert
 .. _NumPy: https://numpy.org/

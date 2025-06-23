@@ -5,18 +5,23 @@ This does not invoke the :ref:`litert_inference` reference implementation, thoug
 does instantiate an ``Interpreter`` to extract weights, biases, and quantization
 metadata.
 
-This implements the equations in https://arxiv.org/pdf/1712.05877.pdf . All Equation
-references in code comments refer to equations in this paper.
+This implements the equations in
+`Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference`_.
+All `Equation` references in documentation and code comments refer to equations in this
+paper.
+
+.. _Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference: https://arxiv.org/pdf/1712.05877.pdf
 
 The first layer is quantized per-axis, which is not described in the paper above. See
-https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor for
-details about per-axis quantization.
+`per-axis quantization`_ for details.
+
+.. _per-axis quantization: https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
 
 The `numpy_inference demo`_ uses :class:`NumPyInference` to implement quantized
 inference with `NumPy`_.
 
 .. _numpy_inference demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py
-"""
+"""  # noqa: E501
 
 import numpy as np
 from ai_edge_litert.interpreter import Interpreter
@@ -28,8 +33,10 @@ def normalization_constants(
 ) -> tuple[Fxp, np.ndarray]:
     """Normalize multiplier ``m`` to fixed-point ``m0`` and bit-shift ``n``.
 
-    See Section 2.2 in https://arxiv.org/pdf/1712.05877.pdf . The multiplier ``m``
-    (Equation 5) is computed from three scale factors ``s1, s2, s3``.
+    See Section 2.2 in
+    `Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference`_.
+    The multiplier ``m`` (`Equation 5`) is computed from three scale factors
+    ``s1, s2, s3``.
 
     This multiplier ``m`` can then be expressed as a pair of ``(m0, n)``, where ``m0``
     is a fixed-point 32-bit multiplier and ``n`` is a bitwise right-shift amount. A
@@ -42,8 +49,7 @@ def normalization_constants(
 
     A layer can have per-axis scale factors, so ``s1``, ``s2``, and ``s3`` are vectors
     of scale factors. This function returns a vector of fixed-point ``m0`` values and a
-    vector of integer ``n`` values. See
-    https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
+    vector of integer ``n`` values. See `per-axis quantization`_ for details.
 
     :param s1: Scale factors for the matrix multiplication's left input, which is the
         layer's weight matrix.
@@ -55,7 +61,7 @@ def normalization_constants(
     :returns: ``(m0, n)``, where ``m0`` is a fixed-point multiplier in the interval
               ``[0.5, 1)``, ``n`` is a bitwise right-shift amount, and ``m == (2 ** -n)
               * m0``.
-    """
+    """  # noqa: E501
     # Equation 5.
     m = s1 * s2 / s3
 
@@ -96,7 +102,8 @@ def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.nda
     """Quantized matrix multiplication of ``q1`` and ``q2``.
 
     This function returns the *un-normalized* matrix multiplication output, which has
-    ``dtype int32``. See Sections 2.3 and 2.4 in https://arxiv.org/pdf/1712.05877.pdf .
+    ``dtype int32``. See Sections 2.3 and 2.4 in
+    `Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference`_.
     The layer's ``int32`` bias can be added to this function's output, and the
     :func:`relu` activation function applied, if necessary. The output must then be
     normalized back to ``int8`` with :func:`normalize` before proceeding to the next
@@ -108,7 +115,7 @@ def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.nda
     :param z2: Zero point for ``q2``.
     :returns: Un-normalized matrix multiplication output, with ``dtype int32``.
 
-    """
+    """  # noqa: E501
     # Equation 7 (the part in parentheses) and Equation 8. The part of equation 7 that's
     # outside the parentheses (addition of z3 and multiplication by m) are done by
     # normalize(), after adding the bias.
@@ -160,8 +167,7 @@ def normalize(
     outputs, utilizing the 8-bit output range as effectively as possible.
 
     Layers can have per-axis scale factors, so ``m0`` and ``n`` will be vectors of scale
-    factors and shift amounts. See
-    https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
+    factors and shift amounts. See `per-axis quantization`_ for details.
     """
     # Implement Equation 7, the part outside the parentheses. This function adds `z3`
     # and multiplies by `m`, using fixed-point arithmetic. `m` is decomposed into `(m0,

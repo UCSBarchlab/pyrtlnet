@@ -1,8 +1,8 @@
 """PyRTL implementations of common linear algebra operations.
 
 The operations in this module all use :class:`.WireMatrix2D` as their input and output,
-so they can be composed. See the `pyrtl_matrix demo`_ for an example
-that computes ``x · (y - y_zero) + a``.
+so they can be composed to implement arbitrary matrix calculations. See the
+`pyrtl_matrix demo`_ for an example that computes ``x · (y - y_zero) + a``.
 
 .. _pyrtl_matrix demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_matrix.py
 
@@ -38,7 +38,7 @@ def make_input_memblock_data(
     The returned ``memblock_data`` can be directly used as the ``romdata`` for a
     :class:`~pyrtl.memory.RomBlock`, or enumerated and converted to a :class:`dict` and
     used with a :class:`~pyrtl.memory.MemBlock`, via ``memory_value_map`` in
-    :meth:`pyrtl.simulation.Simulation.__init__`::
+    :class:`~pyrtl.simulation.Simulation`::
 
         memblock_data = pyrtl_matrix.make_input_memblock_data(...)
         memblock_dict = dict(enumerate(memblock_data))
@@ -388,7 +388,7 @@ def make_systolic_array(
     The inputs for computing ``mm0.output[0][0]`` can be found in the ``mm0.left[0]``
     and ``mm0.top[0]`` traces.
 
-    The expected result of multiplying matrices ``a` and ``b`` is::
+    The expected result of multiplying matrices ``a`` and ``b`` is::
 
                  ┌                 ┐
         output = │  74  80  86  92 │
@@ -743,13 +743,17 @@ def make_elementwise_normalize(
     multiplication by ``m``, we do a fixed-point multiplication by ``m0``, followed by a
     bitwise rounding right shift by ``n``.
 
-    See https://arxiv.org/pdf/1712.05877.pdf for more details. This implements the part
-    of Equation 7 that's outside the parentheses (addition of ``z3`` and multiplication
-    by ``m``).
+    See
+    `Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference`_
+    for more details. This implements the part of `Equation 7` that's outside the
+    parentheses (addition of ``z3`` and multiplication by ``m``).
+
+    .. _Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference: https://arxiv.org/pdf/1712.05877.pdf
 
     Layers can have per-axis scale factors, so ``m0`` and ``n`` will be vectors of
-    per-row scale factors and shift amounts. See
-    https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
+    per-row scale factors and shift amounts. See `per-axis quantization`_ for details.
+
+    .. _per-axis quantization: https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
 
     For example, if ``accumulator_bitwidth`` is 32, and ``output_bitwidth`` is 8, this
     function can multiply and shift 32-bit ``a`` values into 8-bit output values to
@@ -769,7 +773,7 @@ def make_elementwise_normalize(
     :returns: ``z3 + (a * m0) >> n``, where ``*`` is elementwise fixed-point
         multiplication, and ``>>`` is a rounding right shift.
 
-    """
+    """  # noqa: E501 W505
     assert accumulator_bitwidth >= output_bitwidth
     num_rows, num_columns = a.shape
 
@@ -915,7 +919,7 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.WireVector:
 
 
 def minimum_bitwidth(a: np.ndarray) -> int:
-    """Return the minimum number of bits needed to represent all elements in ``a``.
+    """Return the minimum number of bits needed to represent each element in ``a``.
 
     :param a: Array to process. ``a`` may contain negative numbers, so this ensures
         there are enough bits to represent both the largest and smallest values.

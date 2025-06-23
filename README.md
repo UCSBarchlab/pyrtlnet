@@ -32,7 +32,7 @@ Main features include:
      quantized inference that is simulated right at the logic gate level.
 
 * A new [PyRTL](https://github.com/UCSBarchlab/PyRTL) linear algebra library, including
-  a composable `WireVector2D` matrix abstraction and an output-stationary [systolic
+  a composable `WireMatrix2D` matrix abstraction and an output-stationary [systolic
   array](https://en.wikipedia.org/wiki/Systolic_array) for matrix multiplication.
 
 * An extensive [suite of unit
@@ -224,6 +224,10 @@ multiplies matrices. Also see the documentation for
     processes uniformly-sized blocks of inputs at a time. Currently, each layer creates
     its own systolic array that's large enough to process all of its input data, which
     is not very realistic.
+
+  * Support arbitrary neural network architectures. The current implementation
+    assumes a model with exactly two layers. Instead, we should discover the
+    number of layers, and how they are connected, by analyzing the saved model.
 
 * Add an `inference_util` to collect image input data directly from the user. It would
   be cool to draw a digit with a mouse or touch screen, and see the prediction generated

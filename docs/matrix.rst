@@ -16,8 +16,8 @@ PyRTL Matrix Operations
     :exclude-members: State
 
 
-WireMatrix
-----------
+WireMatrix2D
+------------
 
 .. automodule:: pyrtlnet.wire_matrix_2d
     :members:

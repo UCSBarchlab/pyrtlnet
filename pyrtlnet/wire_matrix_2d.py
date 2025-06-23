@@ -5,11 +5,12 @@ import pyrtl
 class WireMatrix2D:
     """``WireMatrix2D`` represents a 2D matrix of :class:`~pyrtl.wire.WireVector`.
 
-    It functions like a 2D :func:`~pyrtl.helperfuncs.wire_matrix` and serves as the
-    input and output type for all operations in ``matrix.py``. These matrix operations
-    can be composed. For example, when computing x ⋅ y + a, there is an intermediate
-    ``WireMatrix2D`` that serves as both the output of the multiplication, and the input
-    to the addition.
+    It functions like a 2D :func:`~pyrtl.helperfuncs.wire_matrix`, with a NumPy style
+    :func:`~numpy.shape` tuple, and ``ready``/``valid`` signals. It serves as the input
+    and output type for all operations in the :ref:`matrix`. These matrix operations
+    can be composed. For example, when computing ``x ⋅ y + a``, there is an intermediate
+    ``WireMatrix2D`` that serves as both the output of the multiplication ``x ⋅ y``, and
+    the input to the addition ``_ + a``.
 
     ``WireMatrix2D`` provides several useful fields and methods:
 
@@ -23,9 +24,9 @@ class WireMatrix2D:
 
     ``WireMatrix2D`` supports two underlying representations:
 
-    1. ``self.Matrix``, which is a 2D ``wire_matrix``. ``wire_matrix`` supports any
-       PyRTL ``WireVector`` type, so you could have a ``self.Matrix`` of
-       :class:`~pyrtl.wire.Register` for example.
+    1. ``self.Matrix``, which is a 2D :func:`~pyrtl.helperfuncs.wire_matrix`.
+       ``wire_matrix`` supports any PyRTL :class:`~pyrtl.wire.WireVector` type, so you
+       could have a ``self.Matrix`` of :class:`~pyrtl.wire.Register` for example.
     2. ``MemBlock``, where the matrix data is stored in a
        :class:`~pyrtl.memory.MemBlock` or :class:`~pyrtl.memory.RomBlock`. This
        representation is currently experimental and not completely supported.
@@ -155,7 +156,7 @@ class WireMatrix2D:
     def transpose(self) -> "WireMatrix2D":
         """Return a transposed version of ``self``, as another ``WireMatrix2D``.
 
-        :returns: a transposed version of ``self``.
+        :returns: A transposed version of ``self``.
 
         WARNING: If ``self.memblock`` is not ``None``, this does not reformat the
         MemBlock data. It only changes the shape; the MemBlock is assumed to already
@@ -186,7 +187,7 @@ class WireMatrix2D:
         return outputs_matrix
 
     def make_outputs(self):
-        """Create :class:`~pyrtl.wire.Output` for ``self``.
+        """Create :class:`~pyrtl.wire.Output` ``WireVectors`` for ``self``.
 
         Use :meth:`.inspect` to retrieve these ``Output`` values.
 
@@ -224,7 +225,7 @@ class WireMatrix2D:
         return np.array(array)
 
     def make_provided_inputs(self, values: np.ndarray) -> dict[str, int]:
-        """Create a ``provided_inputs`` ``dict`` for use in ``Simulation``.
+        """Create ``provided_inputs`` for :class:`~pyrtl.simulation.Simulation`.
 
         This should only be used with a ``WireMatrix2D`` of :class:`~pyrtl.wire.Input`.
         This ``WireMatrix2D`` should have been constructed with ``values=None``.

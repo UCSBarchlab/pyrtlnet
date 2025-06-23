@@ -4,12 +4,8 @@ Run quantized `LiteRT`_ inference on test images from the `MNIST`_ dataset.
 .. _MNIST: https://en.wikipedia.org/wiki/MNIST_database
 
 This implementation uses the reference LiteRT ``Interpreter`` inference implementation.
-It prints each layer's tensor output, which is useful for verifying correctness in
-``numpy_inference.py`` and ``pyrtl_inference.py``.
-
-This is a simple implementation with batch size 1. Multiple images can be processed by
-setting ``--num_images``, but the images are passed to the ``Interpreter`` one at a
-time.
+It returns each layer's tensor output, which is useful for verifying the correctness of
+:ref:`numpy_inference` and :ref:`pyrtl_inference`.
 
 The `litert_inference demo`_ uses :func:`load_tflite_model` and :func:`run_tflite_model`
 to implement quantized inference with `LiteRT`_.

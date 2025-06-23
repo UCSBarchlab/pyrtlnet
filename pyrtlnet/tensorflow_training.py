@@ -2,14 +2,14 @@
 
 .. _MNIST: https://en.wikipedia.org/wiki/MNIST_database
 
-This implementation is based on the "Quantization aware training in `Keras`_ example" at
-https://www.tensorflow.org/model_optimization/guide/quantization/training_example
+This implementation is based on "`Quantization aware training in Keras`_".
 
-.. _Keras: https://keras.io/
+.. _Quantization aware training in Keras: https://www.tensorflow.org/model_optimization/guide/quantization/training_example
 
 The `tensorflow_training demo`_ uses :func:`train_unquantized_model` and
-:func:`quantize_model` to implement quantized training with `TensorFlow`_.
+:func:`quantize_model` to implement quantized training with `TensorFlow`_ `Keras`_.
 
+.. _Keras: https://keras.io/
 .. _tensorflow_training demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/tensorflow_training.py
 
 ------------------
