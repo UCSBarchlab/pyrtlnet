@@ -126,9 +126,11 @@ Main features include:
 
    The script's output shows that the unquantized model achieved `0.9373` accuracy on
    the test data set, while the quantized model achieved `0.9364` accuracy on the test
-   data set. Your accuracy numbers may differ slightly. `quantized.tflite` includes all
-   the model's weights, biases, and quantization parameters. This file will be read by
-   all the inference implementations.
+   data set. Your accuracy numbers may differ.
+
+   This script produces a `quantized.tflite` file which includes all the
+   model's weights, biases, and quantization parameters. This file will be read
+   by all the inference implementations.
 
 2. Run
    [`litert_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py) in this repository's root directory.
@@ -167,7 +169,13 @@ Main features include:
    to run inference on other images from the test data set. There is also a
    `--num_images` flag, which will run several images from the test data set, one at a
    time, and print an accuracy score. All of the provided inference scripts accept these
-   command line flags.
+   command line flags. For example:
+
+   ```shell
+   (pyrtlnet-venv) $ python litert_inference.py --start_image=7 --num_images=10
+   ...
+   9/10 correct predictions, 90% accuracy
+   ```
 
 3. Run
    [`numpy_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py) in this repository's root directory.
@@ -241,7 +249,9 @@ multiplies matrices. Also see the documentation for
     Simulate the exported design with a standard Verilog simulator like
     [Verilator](https://github.com/verilator/verilator).
 
-  * Synthesize the exported design and run it on a FPGA.
+  * Synthesize the exported design and run it on a FPGA. This could involve
+    tools like [icestorm](https://github.com/YosysHQ/icestorm) or
+    [Vivado](https://www.amd.com/en/products/software/adaptive-socs-and-fpgas/vivado.html), depending on the type of FPGA.
 
 * Support more advanced neural network architectures, like [convolutional neural
   networks](https://en.wikipedia.org/wiki/Convolutional_neural_network) or
