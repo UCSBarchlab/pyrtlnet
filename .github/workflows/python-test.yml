@@ -15,7 +15,9 @@ jobs:
     - uses: actions/checkout@v4
     - uses: actions/cache@v4
       with:
-        path: ~/.cache/pip
+        path: |
+          ~/.cache/pip
+          ~/.keras/datasets
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
@@ -26,7 +28,7 @@ jobs:
     - name: Install dependencies
       run: python3 -m pip install -r requirements.txt
     - name: pytest
-      run: pytest -n auto
+      run: pytest
     - name: ruff check
       run: ruff check --output-format=github
     - name: ruff format
