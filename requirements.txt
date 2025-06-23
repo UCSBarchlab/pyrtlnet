@@ -95,7 +95,7 @@ protobuf==5.29.5
     # via
     #   tensorboard
     #   tensorflow
-pygments==2.19.1
+pygments==2.19.2
     # via
     #   pytest
     #   rich
