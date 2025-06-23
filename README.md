@@ -39,9 +39,12 @@ Main features include:
   tests](https://github.com/UCSBarchlab/pyrtlnet/tree/main/tests), and [continuous
   integration testing](https://github.com/UCSBarchlab/pyrtlnet/actions).
 
-* Understandable and documented code! `pyrtlnet` is designed to be, first and foremost,
-  understandable and readable (even when that comes at the expense of performance).
-  Reference documentation is extracted from docstrings with
+* Understandable and
+  [documented](https://pyrtlnet.readthedocs.io/en/latest/index.html) code!
+  `pyrtlnet` is designed to be, first and foremost, understandable and readable
+  (even when that comes at the expense of performance). [Reference
+  documentation](https://pyrtlnet.readthedocs.io/en/latest/index.html) is
+  extracted from docstrings with
   [Sphinx](https://www.sphinx-doc.org/en/master/index.html).
 
 ### Installation
@@ -191,13 +194,15 @@ Main features include:
 
 ### Next Steps
 
-The reference documentation has more information on how these scripts work and
-their main interfaces.
+The [reference
+documentation](https://pyrtlnet.readthedocs.io/en/latest/index.html) has more
+information on how these scripts work and their main interfaces.
 
 Try the demo script
 [`pyrtl_matrix.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_matrix.py)
-in this repository's root directory to see how the PyRTL systolic array multiplies
-matrices:
+in this repository's root directory to see how the PyRTL systolic array
+multiplies matrices. Also see the documentation for
+[`make_systolic_array`](https://pyrtlnet.readthedocs.io/en/latest/matrix.html#pyrtlnet.pyrtl_matrix.make_systolic_array):
 
 ![pyrtl_matrix.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/pyrtl_matrix.png?raw=true)
 
