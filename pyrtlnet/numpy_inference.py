@@ -1,10 +1,9 @@
-"""Implement quantized inference with `NumPy`_ and `fxpmath`_.
+"""
+Implement quantized inference with `NumPy`_ and `fxpmath`_.
 
-.. _NumPy: https://numpy.org/
-.. _fxpmath: https://github.com/francof2a/fxpmath
-
-This does not invoke the LiteRT reference implementation, though it does instantiate an
-``Interpreter`` to extract weights, biases, and quantization metadata.
+This does not invoke the :ref:`litert_inference` reference implementation, though it
+does instantiate an ``Interpreter`` to extract weights, biases, and quantization
+metadata.
 
 This implements the equations in https://arxiv.org/pdf/1712.05877.pdf . All Equation
 references in code comments refer to equations in this paper.
@@ -13,6 +12,10 @@ The first layer is quantized per-axis, which is not described in the paper above
 https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor for
 details about per-axis quantization.
 
+The `numpy_inference demo`_ uses :class:`NumPyInference` to implement quantized
+inference with `NumPy`_.
+
+.. _numpy_inference demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py
 """
 
 import numpy as np
@@ -37,9 +40,9 @@ def normalization_constants(
     In other words, ``m == (2 ** -n) * m0``, where ``m0`` must be in the interval
     ``[0.5, 1)``.
 
-    A layer can have per-axis scale factors, so `s1`, `s2`, and `s3` are vectors of
-    scale factors. This function returns a vector of fixed-point `m0` values and a
-    vector of integer `n` values. See
+    A layer can have per-axis scale factors, so ``s1``, ``s2``, and ``s3`` are vectors
+    of scale factors. This function returns a vector of fixed-point ``m0`` values and a
+    vector of integer ``n`` values. See
     https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
 
     :param s1: Scale factors for the matrix multiplication's left input, which is the
@@ -50,9 +53,8 @@ def normalization_constants(
         layer's output matrix.
 
     :returns: ``(m0, n)``, where ``m0`` is a fixed-point multiplier in the interval
-        ``[0.5, 1)``, ``n`` is a bitwise right-shift amount, and ``m == (2 ** -n) *
-        m0``.
-
+              ``[0.5, 1)``, ``n`` is a bitwise right-shift amount, and ``m == (2 ** -n)
+              * m0``.
     """
     # Equation 5.
     m = s1 * s2 / s3
@@ -147,20 +149,19 @@ def normalize(
 ) -> np.ndarray:
     """Convert a 32-bit layer output to a normalized 8-bit output.
 
-    This function effectively multiplies the layer's output by its scale factor `m` and
-    adds its zero point `z3`.
+    This function effectively multiplies the layer's output by its scale factor ``m``
+    and adds its zero point ``z3``.
 
-    `m` is a floating-point number, which can also be represented by a 32-bit
-    fixed-point multiplier `m0` and bitwise right shift `n`, see
-    `normalization_constants()`. So instead of doing a floating-point multiplication, we
-    do a fixed-point multiplication, followed by a bitwise right shift. This
-    multiplication and shift reduces 32-bit `product` values into 8-bit outputs,
-    utilizing the 8-bit output range as effectively as possible.
+    ``m`` is a floating-point number, which can also be represented by a 32-bit
+    fixed-point multiplier ``m0`` and bitwise right shift ``n``, see
+    :func:`normalization_constants`. So instead of doing a floating-point
+    multiplication, we do a fixed-point multiplication, followed by a bitwise right
+    shift. This multiplication and shift reduces 32-bit ``product`` values into 8-bit
+    outputs, utilizing the 8-bit output range as effectively as possible.
 
-    Layers can have per-axis scale factors, so `m0` and `n` will be vectors of scale
+    Layers can have per-axis scale factors, so ``m0`` and ``n`` will be vectors of scale
     factors and shift amounts. See
     https://ai.google.dev/edge/litert/models/quantization_spec#per-axis_vs_per-tensor
-
     """
     # Implement Equation 7, the part outside the parentheses. This function adds `z3`
     # and multiplies by `m`, using fixed-point arithmetic. `m` is decomposed into `(m0,
@@ -218,10 +219,13 @@ def get_tensor_scale_zero(
 
     :param interpreter: LiteRT ``Interpreter`` to retrieve tensor metadata from.
     :param tensor_index: Index of the tensor to retrieve. These indices can be extracted
-        from the Model Explorer.
+        from the `Model Explorer`_.
     :returns: ``(scale, zero_point)`` for the tensor. These are one-dimensional tensors
         with length 1 for per-tensor quantization, and length > 1 for per-axis
         quantization.
+
+    .. _Model Explorer: https://github.com/google-ai-edge/model-explorer
+
 
     """
     tensors = interpreter.get_tensor_details()
@@ -253,8 +257,7 @@ class QuantizedLayer:
     ):
         """Retrieve weights, biases, and quantization metadata from an ``Interpreter``.
 
-        Tensor indices can be found by uploading the model to the Model Explorer
-        https://github.com/google-ai-edge/model-explorer
+        Tensor indices can be found by uploading the model to the `Model Explorer`_.
 
         :param interpreter: LiteRT ``Interpreter`` to retrieve weights, biases, and
             quantization metadata from.
@@ -264,12 +267,11 @@ class QuantizedLayer:
             layers comes from the preceding layer, and the preceding layer's scale
             factor can be retrieved with ``QuantizedLayer.scale``.
         :param weight_index: Index of this layer's weight tensor in the model. This
-            index can be found in the Model Explorer.
-        :param bias_index: Index of this layer's bias tensor in the model. This
-            index can be found in the Model Explorer.
+            index can be found in the `Model Explorer`_.
+        :param bias_index: Index of this layer's bias tensor in the model. This index
+            can be found in the `Model Explorer`_.
         :param output_index: Index of this layer's output tensor in the model. This
-            index can be found in the Model Explorer.
-
+            index can be found in the `Model Explorer`_.
         """
         # TODO: Find a way to automatically determine these tensor indices, without
         # having to run them through the Model Explorer.

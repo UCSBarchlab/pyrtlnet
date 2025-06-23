@@ -149,6 +149,9 @@ def display_outputs(output: np.ndarray, expected: int, actual: int):
     according to the labeled test data, so the first bar is annotated with "(expected,
     actual)".
 
+    :param output: Neural network's output tensor.
+    :param expected: Expected prediction from labeled training data.
+    :param actual: Actual prediction from the neural network.
     """
     # If all outputs are positive, start the x-axis at 0, otherwise start the x-axis at
     # the smallest negative number.

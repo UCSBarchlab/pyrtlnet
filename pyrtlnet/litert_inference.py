@@ -1,6 +1,6 @@
-"""Run quantized `LiteRT`_ inference on test images from the `MNIST`_ dataset.
+"""
+Run quantized `LiteRT`_ inference on test images from the `MNIST`_ dataset.
 
-.. _LiteRT: https://ai.google.dev/edge/litert
 .. _MNIST: https://en.wikipedia.org/wiki/MNIST_database
 
 This implementation uses the reference LiteRT ``Interpreter`` inference implementation.
@@ -11,6 +11,10 @@ This is a simple implementation with batch size 1. Multiple images can be proces
 setting ``--num_images``, but the images are passed to the ``Interpreter`` one at a
 time.
 
+The `litert_inference demo`_ uses :func:`load_tflite_model` and :func:`run_tflite_model`
+to implement quantized inference with `LiteRT`_.
+
+.. _litert_inference demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py
 """
 
 import numpy as np

@@ -1,12 +1,15 @@
 """PyRTL implementations of common linear algebra operations.
 
 The operations in this module all use :class:`.WireMatrix2D` as their input and output,
-so they can be composed. See the parent directory's ``pyrtl_matrix.py`` for an example
+so they can be composed. See the `pyrtl_matrix demo`_ for an example
 that computes ``x · (y - y_zero) + a``.
 
-WARNING: These implementations may not be completely general. They have only been tested
-in the context of dense neural networks.
+.. _pyrtl_matrix demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_matrix.py
 
+.. WARNING::
+
+    These implementations may not be completely general. They have only been tested
+    in the context of dense neural networks.
 """
 
 import enum
@@ -331,11 +334,10 @@ def make_systolic_array(
     ``(num_rows + num_inner + num_columns)`` cycles, and the matrix multiplication
     result can be read from the ``pe_{row}_{col}`` registers.
 
-    The demo script in the parent directory's ``pyrtl_matrix.py`` runs this example
-    through the systolic array named ``mm0``, and these parallelogram-shaped inputs can
-    be seen propagating through the array's ``mm0.left`` and ``mm0.top`` inputs in the
-    output from :meth:`~pyrtl.simulation.SimulationTrace.render_trace`::
-
+    The `pyrtl_matrix demo`_ runs this example through the systolic array named ``mm0``,
+    and these parallelogram-shaped inputs can be seen propagating through the array's
+    ``mm0.left`` and ``mm0.top`` inputs in the output from
+    :meth:`~pyrtl.simulation.SimulationTrace.render_trace`::
 
                         │0   │1   │2   │3   │4   │5   │6   │7   │8   │9   │10  │11
 
@@ -394,7 +396,6 @@ def make_systolic_array(
                  └                 ┘
 
     And these values can be found on the right side of the ``mm0.output`` traces.
-
     """
 
     @pyrtl.wire_struct

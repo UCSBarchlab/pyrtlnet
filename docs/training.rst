@@ -3,8 +3,7 @@
 Training Implementation
 =======================
 
-Training uses `TensorFlow`_ to produce a quantized ``tflite`` file, which can be loaded by
-any of the three provided inference implementations.
+Training uses `TensorFlow`_ to produce a quantized ``tflite`` file, which can be loaded by :ref:`litert_inference`, :ref:`numpy_inference`, or :ref:`pyrtl_inference`.
 
 .. _TensorFlow: https://www.tensorflow.org/
 

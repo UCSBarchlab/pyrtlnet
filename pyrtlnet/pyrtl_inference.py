@@ -1,3 +1,19 @@
+"""
+Implement quantized inference with `PyRTL`_.
+
+This does not invoke the :ref:`litert_inference` or :ref:`numpy_inference`
+implementations, though it does use some of their utilities to retrieve weights and
+biases, and calculate quantization parameters offline.
+
+This effectively reimplements :ref:`numpy_inference` in hardware, running in a `PyRTL`_
+:class:`~pyrtl.simulation.Simulation`.
+
+The `pyrtl_inference demo`_ uses :class:`PyRTLInference` to implement quantized
+inference with `PyRTL`_.
+
+.. _pyrtl_inference demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py
+"""
+
 import numpy as np
 import pyrtl
 from ai_edge_litert.interpreter import Interpreter
@@ -8,14 +24,13 @@ from pyrtlnet.wire_matrix_2d import WireMatrix2D
 
 
 class PyRTLInference:
-    """Convert a quantized model to hardware, and simulate the hardware with `PyRTL`_.
-
-    .. _PyRTL: https://github.com/UCSBarchlab/PyRTL
-
+    """
+    Convert a quantized model to hardware, and simulate the hardware with a `PyRTL`_
+    :class:`~pyrtl.simulation.Simulation`.
     """
 
     def __init__(
-        self, interpreter: Interpreter, input_bitwidth: int, accumulator_bitwidth
+        self, interpreter: Interpreter, input_bitwidth: int, accumulator_bitwidth: int
     ):
         """Convert the quantized model to PyRTL inference hardware.
 

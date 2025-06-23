@@ -31,7 +31,7 @@ LiteRT Inference
 
 .. _numpy_inference:
 
-NumPY Inference
+NumPy Inference
 ---------------
 
 .. automodule:: pyrtlnet.numpy_inference

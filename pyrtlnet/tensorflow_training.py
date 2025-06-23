@@ -7,6 +7,11 @@ https://www.tensorflow.org/model_optimization/guide/quantization/training_exampl
 
 .. _Keras: https://keras.io/
 
+The `tensorflow_training demo`_ uses :func:`train_unquantized_model` and
+:func:`quantize_model` to implement quantized training with `TensorFlow`_.
+
+.. _tensorflow_training demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/tensorflow_training.py
+
 ------------------
 Model Architecture
 ------------------
