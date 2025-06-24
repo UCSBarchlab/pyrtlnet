@@ -28,7 +28,7 @@ def make_input_memblock_data(
 ) -> list[int]:
     """Convert a ``ndarray`` to ``MemBlock`` data for use with the systolic array.
 
-    When a systolic array uses a :class:`.WireMatrix2D` with a
+    When :func:`make_systolic_array` uses a :class:`.WireMatrix2D` with a
     :class:`~pyrtl.memory.MemBlock` as input, the systolic array will read consecutive
     addresses of the :class:`~pyrtl.memory.MemBlock` each cycle. The data at each
     address must contain all the values in ``a`` that will be consumed by the systolic
@@ -185,13 +185,16 @@ def _make_systolic_array_memblock_inputs(
 def num_systolic_array_cycles(
     a_shape: tuple[int, int], b_shape: tuple[int, int]
 ) -> int:
-    """Return the number of cycles needed to multiply ``a`` and ``b``.
+    """Return the cycles needed to multiply ``a`` and ``b`` with the systolic array.
+
+    When using :func:`make_systolic_array` with a :class:`~pyrtl.memory.MemBlock` as
+    input, this function is useful for calculating the ``MemBlock``'s ``addrwidth``.
 
     :param a_shape: Shape of matrix ``a``.
     :param b_shape: Shape of matrix ``b``.
-    :returns: The number of cycles needed to multiply ``a`` and ``b`` with the systolic
-        array. See :func:`.make_systolic_array`.
 
+    :returns: The number of cycles needed to multiply ``a`` and ``b`` with the systolic
+              array. See :func:`.make_systolic_array`.
     """
     num_rows, num_inner = a_shape
     assert num_inner == b_shape[0]
@@ -773,6 +776,9 @@ def make_elementwise_normalize(
               the same shape as ``a`` and bitwidth ``output_bitwidth``.
     """  # noqa: E501 W505
     assert a.bitwidth >= output_bitwidth
+    assert m0.n_word == a.bitwidth
+    assert m0.n_frac == a.bitwidth
+
     num_rows, num_columns = a.shape
 
     # The code below assumes that ``a`` was quantized on axis 0 (see

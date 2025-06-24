@@ -21,6 +21,6 @@ WireMatrix2D
 
 .. automodule:: pyrtlnet.wire_matrix_2d
     :members:
-    :special-members: __init__
+    :special-members: __init__, __getitem__
 
 

@@ -10,7 +10,7 @@ Three inference implementations are included:
 * :ref:`numpy_inference`, a software re-implementation in `NumPy`_ and
   `fxpmath`_. This implementation is useful for understanding quantization math
   before moving on to a hardware implementation.
-* :ref:`pyrtl_inference`, a hardware implementation in `PyRTL`_.
+* :ref:`pyrtl_inference`, a hardware re-implementation in `PyRTL`_.
 
 .. _LiteRT: https://ai.google.dev/edge/litert
 .. _NumPy: https://numpy.org/

@@ -170,7 +170,7 @@ def normalize(
     factors and shift amounts. See `per-axis quantization`_ for details.
 
     :param product: Matrix to normalize, with ``dtype int32``.
-    :param m0: Vector of per-row 32-bit fixed-point multipliers.
+    :param m0: Vector of per-row fixed-point multipliers.
     :param n: Vector of per-row shift amounts.
     :param z3: Vector of per-row zero-point adjustments.
 
