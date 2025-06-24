@@ -168,7 +168,18 @@ def normalize(
 
     Layers can have per-axis scale factors, so ``m0`` and ``n`` will be vectors of scale
     factors and shift amounts. See `per-axis quantization`_ for details.
+
+    :param product: Matrix to normalize, with ``dtype int32``.
+    :param m0: Vector of per-row 32-bit fixed-point multipliers.
+    :param n: Vector of per-row shift amounts.
+    :param z3: Vector of per-row zero-point adjustments.
+
+    :returns: ``z3 + (product * m0) >> n``, where ``*`` is elementwise fixed-point
+              multiplication, and ``>>`` is a rounding right shift. The return value has
+              the same shape as ``product`` and ``dtype int8``.
     """
+    assert product.dtype == np.int32
+
     # Implement Equation 7, the part outside the parentheses. This function adds `z3`
     # and multiplies by `m`, using fixed-point arithmetic. `m` is decomposed into `(m0,
     # n)` by `normalization_constants()`, using Equation 6.

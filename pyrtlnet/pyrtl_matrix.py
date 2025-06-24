@@ -729,7 +729,6 @@ def make_elementwise_normalize(
     m0: Fxp,
     n: np.ndarray,
     z3: np.ndarray,
-    accumulator_bitwidth: int,
     output_bitwidth: int,
 ) -> WireMatrix2D:
     """Convert an un-normalized layer output to a normalized output.
@@ -762,19 +761,18 @@ def make_elementwise_normalize(
     This implementation is fully combinational (no registers).
 
     :param name: The returned :class:`.WireMatrix2D` will be named ``{name}.output``.
-    :param a: Matrix to normalize.
-    :param m0: Vector of per-row 32-bit fixed-point multipliers.
+    :param a: Matrix to normalize, with bitwidth ``accumulator_bitwidth``.
+    :param m0: Vector of per-row fixed-point multipliers.
     :param n: Vector of per-row shift amounts.
     :param z3: Vector of per-row zero-point adjustments.
-    :param accumulator_bitwidth: Number of accumulator bits. This should generally be
-        32.
     :param output_bitwidth: Number of bits to output for each element. This should
         generally be 8.
-    :returns: ``z3 + (a * m0) >> n``, where ``*`` is elementwise fixed-point
-        multiplication, and ``>>`` is a rounding right shift.
 
+    :returns: ``z3 + (a * m0) >> n``, where ``*`` is elementwise fixed-point
+              multiplication, and ``>>`` is a rounding right shift. The return value has
+              the same shape as ``a`` and bitwidth ``output_bitwidth``.
     """  # noqa: E501 W505
-    assert accumulator_bitwidth >= output_bitwidth
+    assert a.bitwidth >= output_bitwidth
     num_rows, num_columns = a.shape
 
     # The code below assumes that ``a`` was quantized on axis 0 (see
@@ -795,13 +793,8 @@ def make_elementwise_normalize(
     # ``m0`` is always positive, so zero-extend it by one bit to ensure its high bit is
     # always zero. This ensures that the ``signed_mult`` below does not interpret ``m0``
     # as a negative number.
-    m0 = [
-        pyrtl.Const(multiplier.val, bitwidth=accumulator_bitwidth + 1)
-        for multiplier in m0
-    ]
-    z3 = [
-        pyrtl.Const(zero, signed=True, bitwidth=accumulator_bitwidth + 1) for zero in z3
-    ]
+    m0 = [pyrtl.Const(multiplier.val, bitwidth=a.bitwidth + 1) for multiplier in m0]
+    z3 = [pyrtl.Const(zero, signed=True, bitwidth=a.bitwidth + 1) for zero in z3]
 
     # Collect a 2D array of normalized ``outputs``. Intermediate results are collected
     # in these additional ``multiplied``, ``round_up``, and ``shifted`` arrays to make
@@ -819,8 +812,8 @@ def make_elementwise_normalize(
             # because we zero-extended ``m0`` above.
             multiplied[row][column] = pyrtl.signed_mult(a[row][column], m0[row])
 
-            # Rounding right shift by ``accumulator_bitwidth + n[row]``. Shifting by
-            # ``accumulator_bitwidth`` converts the multiplier output from a 64-bit
+            # Rounding right shift by ``a.bitwidth + n[row]``. Shifting by
+            # ``a.bitwidth`` converts the multiplier output from a 64-bit
             # value to a 32-bit value. Shifting by ``n[row]`` shifts the output by its
             # per-axis ``n`` value, which drops all fractional bits, and results in a
             # signed integer with bitwidth between 8 and 32 bits.
@@ -844,7 +837,7 @@ def make_elementwise_normalize(
             # See
             # https://github.com/tensorflow/tensorflow/issues/25087#issuecomment-634262762
             # for more details.
-            shift_amount = accumulator_bitwidth + n[row]
+            shift_amount = a.bitwidth + n[row]
             round_up[row][column] = multiplied[row][column][
                 shift_amount - 1 : shift_amount
             ].zero_extended(2)

@@ -248,7 +248,6 @@ class PyRTLInference:
             m0=self.layer[layer_num].m0,
             n=self.layer[layer_num].n,
             z3=self.layer[layer_num].zero,
-            accumulator_bitwidth=self.accumulator_bitwidth,
             output_bitwidth=self.input_bitwidth,
         )
 

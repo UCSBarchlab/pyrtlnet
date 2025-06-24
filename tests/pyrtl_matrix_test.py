@@ -336,7 +336,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         np.testing.assert_array_equal(relu_actual, relu_expected, strict=True)
 
     def test_normalize(self):
-        a = np.array([[1, -2, 3], [-4, 5, -6]])
+        a = np.array([[1, -2, 3], [-4, 5, -6]]).astype(np.int32)
 
         input_bitwidth = pyrtl_matrix.minimum_bitwidth(a)
         # m0 must be in the interval [.5, 1).
@@ -352,7 +352,6 @@ class TestPyrtlMatrix(unittest.TestCase):
             m0=m0,
             n=n,
             z3=z3,
-            accumulator_bitwidth=input_bitwidth,
             output_bitwidth=input_bitwidth,
         )
         normal_matrix.ready <<= True
