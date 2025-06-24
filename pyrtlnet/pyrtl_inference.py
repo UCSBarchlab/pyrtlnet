@@ -5,8 +5,8 @@ This does not invoke the :ref:`litert_inference` or :ref:`numpy_inference`
 implementations, though it does use some of their utilities to retrieve weights and
 biases, and calculate quantization parameters offline.
 
-This effectively reimplements :ref:`numpy_inference` in hardware, running in a `PyRTL`_
-:class:`~pyrtl.simulation.Simulation`.
+This effectively reimplements :ref:`numpy_inference` in hardware, using the
+:ref:`matrix`, running in a `PyRTL`_ :class:`~pyrtl.simulation.Simulation`.
 
 The `pyrtl_inference demo`_ uses :class:`PyRTLInference` to implement quantized
 inference with `PyRTL`_.
@@ -34,15 +34,83 @@ class PyRTLInference:
     ):
         """Convert the quantized model to PyRTL inference hardware.
 
-        This builds the necessary hardware for each layer's matrix operations:
+        This builds the necessary hardware for each layer's matrix operations. The
+        diagram below shows ``layer0``'s data flow::
 
-        * Matrix multiplication of the layer's weights and inputs, with
-          :func:`.make_systolic_array`.
-        * Elementwise addition of the layer's bias, with :func:`.make_elementwise_add`.
-        * ReLU, if necessary, with :func:`.make_elementwise_relu`.
-        * Normalization to convert from intermediate values with bitwidth
-          ``accumulator_bitwidth`` to the layer's output values with bitwidth
-          ``input_bitwidth``, with :func:`.make_elementwise_normalize`.
+            layer0 weight, shape: (18, 144), input_bitwidth
+                │
+                │   layer0 input image, shape: (144, 1), input_bitwidth
+                │       │
+                ▼       ▼
+            ┌─────────────────────────────────────────────────────────┐
+            │ layer0 systolic_array (matrix multiplication by weight) │
+            └─────────────────────────────────────────────────────────┘
+                │
+                │ output, shape: (18, 1), accumulator_bitwidth
+                │
+                │   layer0 bias, shape: (18, 1), accumulator_bitwidth
+                │       │
+                ▼       ▼
+            ┌───────────────────────────────────┐
+            │ layer0 elementwise_add (add bias) │
+            └───────────────────────────────────┘
+                │
+                │ output, shape: (18, 1), accumulator_bitwidth
+                ▼
+            ┌─────────────────────────┐
+            │ layer0 elementwise_relu │
+            └─────────────────────────┘
+                │
+                │ output, shape: (18, 1), accumulator_bitwidth
+                ▼
+            ┌────────────────────────────────────────────────┐
+            │ layer0 elementwise_normalize (reduce bitwidth) │
+            └────────────────────────────────────────────────┘
+                        │
+                        │
+                        ▼
+                    layer0 output, shape: (18, 1), input_bitwidth
+
+        And this diagram shows the ``layer1``'s data flow, where the ``layer0 output``
+        from ``layer0`` is the second input to ``layer1``'s ``systolic_array``::
+
+            layer1 weight, shape: (10, 18), input_bitwidth
+                │
+                │   layer0 output, shape: (18, 1), input_bitwidth
+                │       │
+                ▼       ▼
+            ┌─────────────────────────────────────────────────────────┐
+            │ layer1 systolic_array (matrix multiplication by weight) │
+            └─────────────────────────────────────────────────────────┘
+                │
+                │ output, shape: (10, 1), accumulator_bitwidth
+                │
+                │   layer1 bias, shape: (10, 1), accumulator_bitwidth
+                │       │
+                ▼       ▼
+            ┌───────────────────────────────────┐
+            │ layer1 elementwise_add (add bias) │
+            └───────────────────────────────────┘
+                │
+                │ output, shape: (10, 1), accumulator_bitwidth
+                ▼
+            ┌────────────────────────────────────────────────┐
+            │ layer1 elementwise_normalize (reduce bitwidth) │
+            └────────────────────────────────────────────────┘
+                │
+                │
+                ▼
+            layer1 output, shape: (10, 1), input_bitwidth
+
+
+        * :func:`.make_systolic_array` performs the matrix multiplication of each
+          layer's weight and input.
+        * :func:`.make_elementwise_add` performs the elementwise addition of each
+          layer's bias.
+        * :func:`.make_elementwise_relu` performs ReLU (only for ``layer0``).
+        * :func:`.make_elementwise_normalize` performs normalization to convert from
+          intermediate values with bitwidth ``accumulator_bitwidth`` to each layer's
+          output values with bitwidth ``input_bitwidth``.
 
         :param interpreter: LiteRT ``Interpreter`` to retrieve weights, biases, and
             quantization metadata from.
@@ -50,7 +118,6 @@ class PyRTLInference:
             generally be ``8``.
         :param accumulator_bitwidth: Bitwidth of accumulator registers in the systolic
             array. This should generally be ``32``, and larger than ``input_bitwidth``.
-
         """
 
         # Extract weights, biases, and quantization metadata from the LiteRT
@@ -230,13 +297,14 @@ class PyRTLInference:
         the hardware generated by :meth:`__init__`.
 
         :param test_image: An image to run through the NumPy inference implementation.
-        :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
-            ``layer0_output`` is the first layer's raw tensor output, with shape
-            ``(18, 1)``. ``layer1_output`` is the second layer's raw tensor output, with
-            shape ``(10, 1)``. Note that these layer outputs are transposed compared to
-            :func:`run_tflite_model`. ``predicted_digit`` is the actual predicted digit.
-            ``predicted_digit`` is equivalent to ``layer1_output.flatten().argmax()``.
 
+        :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
+                  ``layer0_output`` is the first layer's raw tensor output, with shape
+                  ``(18, 1)``. ``layer1_output`` is the second layer's raw tensor
+                  output, with shape ``(10, 1)``. Note that these layer outputs are
+                  transposed compared to :func:`.run_tflite_model`. ``predicted_digit``
+                  is the actual predicted digit. ``predicted_digit`` is equivalent to
+                  ``layer1_output.flatten().argmax()``.
         """
         layer0_weight_shape = self.layer[0].weight.shape
         batch_size = 1

@@ -270,8 +270,9 @@ class QuantizedLayer:
         :param input_scale: Scale factor for the layer's input. The first layer's input
             comes from the model's input tensor, and that tensor's scale can be
             retrieved with :func:`get_tensor_scale_zero`. The input for subsequent
-            layers comes from the preceding layer, and the preceding layer's scale
-            factor can be retrieved with ``QuantizedLayer.scale``.
+            layers comes from the preceding layer, so subsequent layer inputs use the
+            preceding layer's scale factor. Each layer's scale factor can be retrieved
+            with ``QuantizedLayer.scale``.
         :param weight_index: Index of this layer's weight tensor in the model. This
             index can be found in the `Model Explorer`_.
         :param bias_index: Index of this layer's bias tensor in the model. This index
@@ -369,13 +370,14 @@ class NumPyInference:
         All calculations are done with NumPy and fxpmath.
 
         :param test_image: An image to run through the NumPy inference implementation.
-        :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
-            ``layer0_output`` is the first layer's raw tensor output, with shape
-            ``(18, 1)``. ``layer1_output`` is the second layer's raw tensor output, with
-            shape ``(10, 1)``. Note that these layer outputs are transposed compared to
-            :func:`run_tflite_model`. ``predicted_digit`` is the actual predicted digit.
-            ``predicted_digit`` is equivalent to ``layer1_output.flatten().argmax()``.
 
+        :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
+                  ``layer0_output`` is the first layer's raw tensor output, with shape
+                  ``(18, 1)``. ``layer1_output`` is the second layer's raw tensor
+                  output, with shape ``(10, 1)``. Note that these layer outputs are
+                  transposed compared to :func:`.run_tflite_model`. ``predicted_digit``
+                  is the actual predicted digit. ``predicted_digit`` is equivalent to
+                  ``layer1_output.flatten().argmax()``.
         """
         # Flatten the image and add the batch dimension.
         batch_size = 1
