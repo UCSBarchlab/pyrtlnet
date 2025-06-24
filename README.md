@@ -1,6 +1,9 @@
 `pyrtlnet`
 ==========
 
+[![Build Status](https://github.com/UCSBarchlab/pyrtlnet/actions/workflows/python-test.yml/badge.svg)](https://github.com/UCSBarchlab/pyrtlnet/actions/workflows/python-test.yml)
+[![Documentation Status](https://readthedocs.org/projects/pyrtlnet/badge/?version=latest)](http://pyrtlnet.readthedocs.org/en/latest/?badge=latest)                                 
+
 Train it. Quantize it. Synthesize and simulate it — in hardware. All in Python.
 
 `pyrtlnet` is a self-contained example of a quantized neural network that runs
