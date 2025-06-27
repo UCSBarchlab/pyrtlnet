@@ -29,16 +29,16 @@ def make_input_memblock_data(
     """Convert a ``ndarray`` to ``MemBlock`` data for use with the systolic array.
 
     When :func:`make_systolic_array` uses a :class:`.WireMatrix2D` with a
-    :class:`~pyrtl.memory.MemBlock` as input, the systolic array will read consecutive
-    addresses of the :class:`~pyrtl.memory.MemBlock` each cycle. The data at each
-    address must contain all the values in ``a`` that will be consumed by the systolic
-    array in the next cycle. All the values needed in a cycle are concatenated together,
-    and stored at one address.
+    :class:`~pyrtl.MemBlock` as input, the systolic array will read consecutive
+    addresses of the :class:`~pyrtl.MemBlock` each cycle. The data at each address must
+    contain all the values in ``a`` that will be consumed by the systolic array in the
+    next cycle. All the values needed in a cycle are concatenated together, and stored
+    at one address.
 
     The returned ``memblock_data`` can be directly used as the ``romdata`` for a
-    :class:`~pyrtl.memory.RomBlock`, or enumerated and converted to a :class:`dict` and
-    used with a :class:`~pyrtl.memory.MemBlock`, via ``memory_value_map`` in
-    :class:`~pyrtl.simulation.Simulation`::
+    :class:`~pyrtl.RomBlock`, or enumerated and converted to a :class:`dict` and used
+    with a :class:`~pyrtl.MemBlock`, via ``memory_value_map`` in
+    :class:`~pyrtl.Simulation`::
 
         memblock_data = pyrtl_matrix.make_input_memblock_data(...)
         memblock_dict = dict(enumerate(memblock_data))
@@ -49,10 +49,10 @@ def make_input_memblock_data(
     :param addrwidth: Number of ``MemBlock`` address bits. This must be large enough to
         hold the number of cycles needed to run the systolic array. See
         :func:`num_systolic_array_cycles`.
-    :returns: A list of integer values, ready for storage in a ``MemBlock``. Each
-        integer contains all the bits from ``a`` that the systolic array needs in one
-        cycle.
 
+    :returns: A list of integer values, ready for storage in a ``MemBlock``. Each
+              integer contains all the bits from ``a`` that the systolic array needs in
+              one cycle.
     """
     # To construct the memblock_data, the input matrix is first padded with zeroes and
     # shifted into a parallelogram shape. See the "top inputs for each cycle" comment in
@@ -187,8 +187,8 @@ def num_systolic_array_cycles(
 ) -> int:
     """Return the cycles needed to multiply ``a`` and ``b`` with the systolic array.
 
-    When using :func:`make_systolic_array` with a :class:`~pyrtl.memory.MemBlock` as
-    input, this function is useful for calculating the ``MemBlock``'s ``addrwidth``.
+    When using :func:`make_systolic_array` with a :class:`~pyrtl.MemBlock` as input,
+    this function is useful for calculating the ``MemBlock``'s ``addrwidth``.
 
     :param a_shape: Shape of matrix ``a``.
     :param b_shape: Shape of matrix ``b``.
@@ -260,7 +260,7 @@ def make_systolic_array(
     The systolic array multiplies matrices ``a`` and ``b``, where ``a`` has shape
     ``(num_rows, num_inner)`` and ``b`` has shape ``(num_inner, num_columns)``.
 
-    The systolic array is a 2D array of :class:`~pyrtl.wire.Register` (``reg``) and
+    The systolic array is a 2D array of :class:`~pyrtl.Register` (``reg``) and
     processing elements (``pe``), arranged in ``num_rows`` rows and ``num_columns``
     columns. Pairs of Register and processing element are grouped into a tile, for
     example ``reg_0_0`` and ``pe_0_0`` form the tile at ``(0, 0)``. Multiple tiles can
@@ -340,7 +340,7 @@ def make_systolic_array(
     The `pyrtl_matrix demo`_ runs this example through the systolic array named ``mm0``,
     and these parallelogram-shaped inputs can be seen propagating through the array's
     ``mm0.left`` and ``mm0.top`` inputs in the output from
-    :meth:`~pyrtl.simulation.SimulationTrace.render_trace`::
+    :meth:`~pyrtl.SimulationTrace.render_trace`::
 
                         │0   │1   │2   │3   │4   │5   │6   │7   │8   │9   │10  │11
 

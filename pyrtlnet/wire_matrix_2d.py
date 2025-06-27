@@ -3,28 +3,26 @@ import pyrtl
 
 
 class WireMatrix2D:
-    """``WireMatrix2D`` represents a 2D matrix of :class:`~pyrtl.wire.WireVector`.
+    """``WireMatrix2D`` represents a 2D matrix of :class:`~pyrtl.WireVector`.
 
-    ``WireMatrix2D`` functions like a 2D :func:`~pyrtl.helperfuncs.wire_matrix`, with a
-    NumPy-style :attr:`shape` tuple, and :attr:`ready`/:attr:`valid` signals. It serves
-    as the input and output type for all operations in the :ref:`matrix`. These matrix
-    operations can be composed. For example, when computing ``x ⋅ y + a``, there is an
-    intermediate ``WireMatrix2D`` that serves as both the output of the multiplication
-    ``x ⋅ y``, and the input to the addition ``_ + a``.
+    ``WireMatrix2D`` functions like a 2D :func:`~pyrtl.wire_matrix`, with a NumPy-style
+    :attr:`shape` tuple, and :attr:`ready`/:attr:`valid` signals. It serves as the input
+    and output type for all operations in the :ref:`matrix`. These matrix operations can
+    be composed. For example, when computing ``x ⋅ y + a``, there is an intermediate
+    ``WireMatrix2D`` that serves as both the output of the multiplication ``x ⋅ y``, and
+    the input to the addition ``_ + a``.
 
     ``WireMatrix2D`` supports two underlying representations:
 
-    1. ``self.Matrix``, which is a 2D :func:`~pyrtl.helperfuncs.wire_matrix`.
-       ``wire_matrix`` supports any PyRTL :class:`~pyrtl.wire.WireVector` type, so
-       you could have a ``self.Matrix`` of :class:`~pyrtl.wire.Register` for
-       example. This representation is used when the ``WireMatrix2D`` is constructed
-       without a :class:`~pyrtl.memory.MemBlock`.
+    1. ``self.Matrix``, which is a 2D :func:`~pyrtl.wire_matrix`. ``wire_matrix``
+       supports any PyRTL :class:`~pyrtl.WireVector` type, so you could have a
+       ``self.Matrix`` of :class:`~pyrtl.Register` for example. This representation is
+       used when the ``WireMatrix2D`` is constructed without a :class:`~pyrtl.MemBlock`.
 
-    2. ``MemBlock``, where the matrix data is stored in a
-       :class:`~pyrtl.memory.MemBlock` or :class:`~pyrtl.memory.RomBlock`. This
-       representation is currently experimental and not completely supported. This
-       representation is used when the ``WireMatrix2D`` is constructed with a
-       :class:`~pyrtl.memory.MemBlock`.
+    2. ``MemBlock``, where the matrix data is stored in a :class:`~pyrtl.MemBlock` or
+       :class:`~pyrtl.RomBlock`. This representation is currently experimental and not
+       completely supported. This representation is used when the ``WireMatrix2D`` is
+       constructed with a :class:`~pyrtl.MemBlock`.
     """
 
     shape: tuple[int, int]
@@ -53,10 +51,10 @@ class WireMatrix2D:
         ready=None,
         valid=None,
     ):
-        """Construct a 2D :func:`~pyrtl.helperfuncs.wire_matrix` containing ``values``.
+        """Construct a 2D :func:`~pyrtl.wire_matrix` containing ``values``.
 
         :param values: Values for the ``WireMatrix2D``. If ``None``, creates a
-            ``WireMatrix2D`` of :class:`~pyrtl.wire.Input`. ``values`` can also be a
+            ``WireMatrix2D`` of :class:`~pyrtl.Input`. ``values`` can also be a
             ``ndarray``, a list of lists of ``WireVector``, one large concatenated
             ``WireVector`` containing all the values for matrix, or a ``MemBlock``.
         :param shape: Shape of the ``WireMatrix2D``. Must be two dimensional. If
@@ -70,7 +68,6 @@ class WireMatrix2D:
             is ready to read the data in the matrix.
         :param valid: 1-bit signal indicating if the producer of this ``WireMatrix2D``
             has finished writing the data in the matrix.
-
         """
         if isinstance(values, np.ndarray):
             shape = values.shape
@@ -149,17 +146,16 @@ class WireMatrix2D:
     def __getitem__(self, row: pyrtl.WireVector) -> pyrtl.WireVector:
         """Implements ``WireMatrix2D``'s ``[]`` operator.
 
-        If this ``WireMatrix2D`` was not constructed with a
-        :class:`~pyrtl.memory.MemBlock`, its elements can be accessed with
-        ``self[row][column]``. This returns a ``WireVector`` with bitwidth
-        :attr:`self.bitwidth<bitwidth>`. This method only implements row-level indexing,
-        and returns a :func:`~pyrtl.helperfuncs.wire_matrix`. Column-level indexing is
-        implemented by the returned :func:`~pyrtl.helperfuncs.wire_matrix`.
+        If this ``WireMatrix2D`` was not constructed with a :class:`~pyrtl.MemBlock`,
+        its elements can be accessed with ``self[row][column]``. This returns a
+        ``WireVector`` with bitwidth :attr:`self.bitwidth<bitwidth>`. This method only
+        implements row-level indexing, and returns a :func:`~pyrtl.wire_matrix`.
+        Column-level indexing is implemented by the returned :func:`~pyrtl.wire_matrix`.
 
         .. WARNING::
 
             If this ``WireMatrix2D`` was constructed with a
-            :class:`~pyrtl.memory.MemBlock`, this method can currently only retrieve a
+            :class:`~pyrtl.MemBlock`, this method can currently only retrieve a
             full row of values as ``matrix[row]``. Per-element access is currently not
             supported.
 
@@ -167,10 +163,9 @@ class WireMatrix2D:
 
         :return: A ``WireVector`` containing all the data in the row concatenated
                  together. If this ``WireMatrix2D`` was not constructed with a
-                 :class:`~pyrtl.memory.MemBlock`, the returned ``WireVector`` is
-                 actually a :func:`~pyrtl.helperfuncs.wire_matrix`, which can be further
-                 indexed with its ``__getitem__`` operator to retrieve data in a
-                 specific column.
+                 :class:`~pyrtl.MemBlock`, the returned ``WireVector`` is actually a
+                 :func:`~pyrtl.wire_matrix`, which can be further indexed with its
+                 ``__getitem__`` operator to retrieve data in a specific column.
         """
         if self.memblock is not None:
             return self.memblock[row]
@@ -212,10 +207,9 @@ class WireMatrix2D:
         return outputs_matrix
 
     def make_outputs(self):
-        """Create :class:`~pyrtl.wire.Output` ``WireVectors`` for ``self``.
+        """Create :class:`~pyrtl.Output` ``WireVectors`` for ``self``.
 
         Use :meth:`.inspect` to retrieve these ``Output`` values.
-
         """
         num_rows, num_columns = self.shape
 
@@ -229,15 +223,15 @@ class WireMatrix2D:
     def inspect(self, sim: pyrtl.Simulation) -> np.ndarray:
         """Collect and return ``Output`` values from a ``Simulation``.
 
-        Retrieves :class:`~pyrtl.wire.Output` values for ``self`` from a
-        :class:`~pyrtl.simulation.Simulation`, and returns the retrieved values in a
+        Retrieves :class:`~pyrtl.Output` values for ``self`` from a
+        :class:`~pyrtl.Simulation`, and returns the retrieved values in a
         :class:`~numpy.ndarray`.
 
         Use :meth:`.make_outputs` to create the retrieved ``Output`` values.
 
         :param sim: ``Simulation`` to retrieve values from.
-        :returns: Retrieved values as a ``ndarray``.
 
+        :returns: Retrieved values as a ``ndarray``.
         """
         num_rows, num_columns = self.shape
         array = [[None for _ in range(num_columns)] for _ in range(num_rows)]
@@ -250,18 +244,17 @@ class WireMatrix2D:
         return np.array(array)
 
     def make_provided_inputs(self, values: np.ndarray) -> dict[str, int]:
-        """Create ``provided_inputs`` for :class:`~pyrtl.simulation.Simulation`.
+        """Create ``provided_inputs`` for :class:`~pyrtl.Simulation`.
 
-        This should only be used with a ``WireMatrix2D`` of :class:`~pyrtl.wire.Input`.
-        This ``WireMatrix2D`` should have been constructed with ``values=None``.
+        This should only be used with a ``WireMatrix2D`` of :class:`~pyrtl.Input`. This
+        ``WireMatrix2D`` should have been constructed with ``values=None``.
 
         :param values: Values to pack into a ``provided_inputs`` :class:`dict`.
 
         :returns: A ``provided_inputs`` :class:`dict` that contains matrix data from
-            ``values``. This :class:`dict` can be passed to
-            :meth:`~pyrtl.simulation.Simulation.step`, and it will set the
-            :class:`~pyrtl.wire.Input` for the ``WireMatrix2D`` to ``values``.
-
+                  ``values``. This :class:`dict` can be passed to
+                  :meth:`~pyrtl.Simulation.step`, and it will set the
+                  :class:`~pyrtl.Input` for the ``WireMatrix2D`` to ``values``.
         """
         assert self.is_input
         assert len(values.shape) == 2
@@ -278,16 +271,16 @@ class WireMatrix2D:
 def make_concatenated_value(values: np.ndarray, bitwidth: int) -> int:
     """Pack all elements of ``values`` into a large integer, in row-major order.
 
-    When using a :class:`.WireMatrix2D` with a :class:`~pyrtl.memory.MemBlock`, this
-    function is useful for setting the initial value of a
-    :class:`~pyrtl.memory.MemBlock` or :class:`~pyrtl.memory.RomBlock`.
+    When using a :class:`.WireMatrix2D` with a :class:`~pyrtl.MemBlock`, this function
+    is useful for setting the initial value of a :class:`~pyrtl.MemBlock` or
+    :class:`~pyrtl.RomBlock`.
 
     :param values: Values to concatenate.
     :param bitwidth: Bitwidth of each element.
-    :returns: A large integer containing all bits from ``values``, concatenated together
-        in row-major order. The total number of bits returned will be ``values.size *
-        bitwidth``.
 
+    :returns: A large integer containing all bits from ``values``, concatenated together
+              in row-major order. The total number of bits returned will be
+              ``values.size * bitwidth``.
     """
     assert len(values.shape) == 2
     num_rows, num_columns = values.shape
