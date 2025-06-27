@@ -19,10 +19,10 @@ class WireMatrix2D:
        ``self.Matrix`` of :class:`~pyrtl.Register` for example. This representation is
        used when the ``WireMatrix2D`` is constructed without a :class:`~pyrtl.MemBlock`.
 
-    2. ``MemBlock``, where the matrix data is stored in a :class:`~pyrtl.MemBlock` or
-       :class:`~pyrtl.RomBlock`. This representation is currently experimental and not
-       completely supported. This representation is used when the ``WireMatrix2D`` is
-       constructed with a :class:`~pyrtl.MemBlock`.
+    2. :class:`~pyrtl.MemBlock`, where the matrix data is stored in a
+       :class:`~pyrtl.MemBlock` or :class:`~pyrtl.RomBlock`. This representation is
+       currently experimental and not completely supported. This representation is used
+       when the ``WireMatrix2D`` is constructed with a :class:`~pyrtl.MemBlock`.
     """
 
     shape: tuple[int, int]
@@ -55,8 +55,9 @@ class WireMatrix2D:
 
         :param values: Values for the ``WireMatrix2D``. If ``None``, creates a
             ``WireMatrix2D`` of :class:`~pyrtl.Input`. ``values`` can also be a
-            ``ndarray``, a list of lists of ``WireVector``, one large concatenated
-            ``WireVector`` containing all the values for matrix, or a ``MemBlock``.
+            ``ndarray``, a list of lists of :class:`~pyrtl.WireVector`, one large
+            concatenated :class:`~pyrtl.WireVector` containing all the values for
+            matrix, or a :class:`~pyrtl.MemBlock`.
         :param shape: Shape of the ``WireMatrix2D``. Must be two dimensional. If
             ``values`` is a ``ndarray``, the shape will be inferred from the ``ndarray``
             and this ``shape`` argument can be omitted.
@@ -148,24 +149,25 @@ class WireMatrix2D:
 
         If this ``WireMatrix2D`` was not constructed with a :class:`~pyrtl.MemBlock`,
         its elements can be accessed with ``self[row][column]``. This returns a
-        ``WireVector`` with bitwidth :attr:`self.bitwidth<bitwidth>`. This method only
-        implements row-level indexing, and returns a :func:`~pyrtl.wire_matrix`.
-        Column-level indexing is implemented by the returned :func:`~pyrtl.wire_matrix`.
+        :class:`~pyrtl.WireVector` with bitwidth :attr:`self.bitwidth<bitwidth>`. This
+        method only implements row-level indexing, and returns a
+        :func:`~pyrtl.wire_matrix`. Column-level indexing is implemented by the returned
+        :func:`~pyrtl.wire_matrix`.
 
         .. WARNING::
 
-            If this ``WireMatrix2D`` was constructed with a
-            :class:`~pyrtl.MemBlock`, this method can currently only retrieve a
-            full row of values as ``matrix[row]``. Per-element access is currently not
-            supported.
+            If this ``WireMatrix2D`` was constructed with a :class:`~pyrtl.MemBlock`,
+            this method can currently only retrieve a full row of values as
+            ``matrix[row]``. Per-element access is currently not supported.
 
         :param row: Row number to retrieve from the matrix.
 
-        :return: A ``WireVector`` containing all the data in the row concatenated
-                 together. If this ``WireMatrix2D`` was not constructed with a
-                 :class:`~pyrtl.MemBlock`, the returned ``WireVector`` is actually a
-                 :func:`~pyrtl.wire_matrix`, which can be further indexed with its
-                 ``__getitem__`` operator to retrieve data in a specific column.
+        :return: A :class:`~pyrtl.WireVector` containing all the data in the row
+                 concatenated together. If this ``WireMatrix2D`` was not constructed
+                 with a :class:`~pyrtl.MemBlock`, the returned
+                 :class:`~pyrtl.WireVector` is actually a :func:`~pyrtl.wire_matrix`,
+                 which can be further indexed with its ``__getitem__`` operator to
+                 retrieve data in a specific column.
         """
         if self.memblock is not None:
             return self.memblock[row]
@@ -178,8 +180,8 @@ class WireMatrix2D:
         .. WARNING::
 
             If ``self.memblock`` is not ``None``, this does not reformat the
-            ``MemBlock``'s data. It only changes the shape. The ``MemBlock`` is assumed
-            to already contain transposed data.
+            :class:`~pyrtl.MemBlock`'s data. It only changes the shape. The
+            :class:`~pyrtl.MemBlock` is assumed to already contain transposed data.
 
         :returns: A transposed version of ``self``.
         """
@@ -209,7 +211,7 @@ class WireMatrix2D:
     def make_outputs(self):
         """Create :class:`~pyrtl.Output` ``WireVectors`` for ``self``.
 
-        Use :meth:`.inspect` to retrieve these ``Output`` values.
+        Use :meth:`.inspect` to retrieve these :class:`~pyrtl.Output` values.
         """
         num_rows, num_columns = self.shape
 
@@ -221,13 +223,13 @@ class WireMatrix2D:
                 output <<= self[row][column]
 
     def inspect(self, sim: pyrtl.Simulation) -> np.ndarray:
-        """Collect and return ``Output`` values from a ``Simulation``.
+        """Collect and return :class:`~pyrtl.Output` values from a ``Simulation``.
 
         Retrieves :class:`~pyrtl.Output` values for ``self`` from a
         :class:`~pyrtl.Simulation`, and returns the retrieved values in a
         :class:`~numpy.ndarray`.
 
-        Use :meth:`.make_outputs` to create the retrieved ``Output`` values.
+        Use :meth:`.make_outputs` to create the retrieved :class:`~pyrtl.Output` values.
 
         :param sim: ``Simulation`` to retrieve values from.
 
