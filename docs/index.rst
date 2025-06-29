@@ -1,3 +1,6 @@
+.. meta::
+   :google-site-verification: sO_rsKD1QKb6nFywsuLnRDiz8Ekep-jVNpBDMm65wQc
+
 #########################
 `pyrtlnet`_ Documentation
 #########################
