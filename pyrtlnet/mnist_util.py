@@ -5,8 +5,7 @@ def _resize_images(images, new_size):
     """Resize images to `new_size`."""
     images = tf.constant(images)
     images = images[..., tf.newaxis]
-    images = tf.image.resize(images, new_size)[..., 0].numpy()
-    return images
+    return tf.image.resize(images, new_size)[..., 0].numpy()
 
 
 def _preprocess_images(images):

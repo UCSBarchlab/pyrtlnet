@@ -82,14 +82,12 @@ def _make_input_romblock(
     """Convert a numpy array to a RomBlock for use with a systolic array."""
     num_rows, num_inner = a.shape
     romblock_data = make_input_memblock_data(a, input_bitwidth, addrwidth)
-    romblock = pyrtl.RomBlock(
+    return pyrtl.RomBlock(
         addrwidth=addrwidth,
         bitwidth=input_bitwidth * num_rows,
         romdata=romblock_data,
         max_read_ports=1,
     )
-
-    return romblock
 
 
 class State(enum.IntEnum):
@@ -522,14 +520,12 @@ def make_systolic_array(
             return _make_systolic_array_memblock_inputs(
                 a.shape, counter, left_romblock, input_bitwidth
             )
-        else:
-            assert isinstance(a, WireMatrix2D)
-            if a.memblock is not None:
-                return _make_systolic_array_memblock_inputs(
-                    a.shape, counter, a.memblock, input_bitwidth
-                )
-            else:
-                return _make_systolic_array_wire_inputs(a, reset, input_bitwidth)
+        assert isinstance(a, WireMatrix2D)
+        if a.memblock is not None:
+            return _make_systolic_array_memblock_inputs(
+                a.shape, counter, a.memblock, input_bitwidth
+            )
+        return _make_systolic_array_wire_inputs(a, reset, input_bitwidth)
 
     num_rows, num_inner = a.shape
     assert num_inner == b.shape[0]
@@ -681,14 +677,13 @@ def make_elementwise_add(
     a.ready <<= True
     b.ready <<= True
     # Combinational adder's output is valid when both inputs are valid.
-    sums_matrix = WireMatrix2D(
+    return WireMatrix2D(
         values=sums,
         shape=a.shape,
         bitwidth=output_bitwidth,
         name=f"{name}.output",
         valid=a.valid & b.valid,
     )
-    return sums_matrix
 
 
 def make_elementwise_relu(name: str, a: WireMatrix2D) -> WireMatrix2D:
@@ -716,14 +711,13 @@ def make_elementwise_relu(name: str, a: WireMatrix2D) -> WireMatrix2D:
     # Combinational relu is always ready for input.
     a.ready <<= True
     # Combinational relu's output is valid when its input is valid.
-    outputs_matrix = WireMatrix2D(
+    return WireMatrix2D(
         values=outputs,
         shape=a.shape,
         bitwidth=a.bitwidth,
         name=f"{name}.output",
         valid=a.valid,
     )
-    return outputs_matrix
 
 
 def make_elementwise_normalize(
@@ -859,14 +853,13 @@ def make_elementwise_normalize(
 
     # Combinational normalize is always ready for input.
     a.ready <<= True
-    outputs_matrix = WireMatrix2D(
+    return WireMatrix2D(
         values=outputs,
         shape=a.shape,
         bitwidth=output_bitwidth,
         name=f"{name}.output",
         valid=a.valid,
     )
-    return outputs_matrix
 
 
 def make_argmax(a: WireMatrix2D) -> pyrtl.WireVector:

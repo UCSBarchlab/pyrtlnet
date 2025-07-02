@@ -171,8 +171,7 @@ class WireMatrix2D:
         """
         if self.memblock is not None:
             return self.memblock[row]
-        else:
-            return self.matrix[row]
+        return self.matrix[row]
 
     def transpose(self) -> "WireMatrix2D":
         """Return a transposed version of ``self``, as another ``WireMatrix2D``.
@@ -198,7 +197,7 @@ class WireMatrix2D:
                 for column in range(num_columns):
                     outputs[column][row] = self[row][column]
 
-        outputs_matrix = WireMatrix2D(
+        return WireMatrix2D(
             values=outputs,
             shape=(num_columns, num_rows),
             bitwidth=self.bitwidth,
@@ -206,7 +205,6 @@ class WireMatrix2D:
             ready=self.ready,
             valid=self.valid,
         )
-        return outputs_matrix
 
     def make_outputs(self):
         """Create :class:`~pyrtl.Output` ``WireVectors`` for ``self``.

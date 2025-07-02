@@ -20,6 +20,8 @@ select = [
     "B",
     # flake8-comprehensions
     "C4",
+    # flake8-return
+    "RET",
     # flake8-simplify
     "SIM",
     # flake8-unused-arguments
@@ -27,7 +29,7 @@ select = [
     # isort
     "I",
     # pylint
-    "PLC", "PLE", "PLW",
+    "PLE", "PLW", "PLC",
 ]
 ignore = [
     # Use ternary operator.

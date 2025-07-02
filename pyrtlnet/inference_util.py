@@ -113,9 +113,9 @@ def _bar(index, x, expected, actual, smallest) -> str:
     red = _set_fg(0xD6, 0x27, 0x28)
     if expected == actual and actual == index:
         return green + bar + _reset() + " " + str(x) + " (expected, actual)"
-    elif expected != actual and actual == index:
+    if expected != actual and actual == index:
         return red + bar + _reset() + " " + str(x) + " (actual)"
-    elif expected != actual and expected == index:
+    if expected != actual and expected == index:
         return green + bar + _reset() + " " + str(x) + " (expected)"
     return bar + " " + str(x)
 

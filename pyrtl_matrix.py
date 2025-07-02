@@ -14,11 +14,10 @@ def _verify_tensor(name: str, expected: np.ndarray, actual: np.ndarray) -> bool:
     ):
         print(f"Correct result for {name} tensor:\n{actual}")
         return True
-    else:
-        print(f"{name} results DO NOT MATCH!")
-        print(f"\nExpected {name} tensor is:\n{expected}")
-        print(f"\nActual {name} tensor is:\n{actual}")
-        return False
+    print(f"{name} results DO NOT MATCH!")
+    print(f"\nExpected {name} tensor is:\n{expected}")
+    print(f"\nActual {name} tensor is:\n{actual}")
+    return False
 
 
 def _make_np_matrix(shape: tuple[int, int], start: int) -> np.ndarray:

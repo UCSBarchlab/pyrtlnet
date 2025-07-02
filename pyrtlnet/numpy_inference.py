@@ -220,11 +220,9 @@ def normalize(
     # Add `z3` and convert to int8. overflow="wrap" makes values larger than 127 or
     # smaller than -128 wrap around (128 -> -128).
     added = z3 + shifted
-    added = Fxp(
+    return Fxp(
         added.transpose(), signed=True, n_word=8, n_frac=0, overflow="wrap"
     ).astype(np.int8)
-
-    return added
 
 
 def get_tensor_scale_zero(
