@@ -10,7 +10,7 @@ from pyrtlnet.tensorflow_training import quantize_model, train_unquantized_model
 
 
 class TestNumPyInference(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         """Prepare a LiteRT Interpreter and NumPyInference for a comparison test.
 
         This trains a quantized TensorFlow model for one epoch, to reduce run time.
@@ -46,7 +46,7 @@ class TestNumPyInference(unittest.TestCase):
             self.interpreter = load_tflite_model(model_file_name=model_file_name)
             self.numpy_inference = NumPyInference(self.interpreter)
 
-    def test_numpy_inference(self):
+    def test_numpy_inference(self) -> None:
         """Check that LiteRT Interpreter and NumPyInference produce the same results.
 
         This runs one image through both inference systems and compares the tensor

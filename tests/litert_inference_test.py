@@ -7,7 +7,7 @@ from pyrtlnet.tensorflow_training import quantize_model, train_unquantized_model
 
 
 class TestLiteRTInference(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         """Train a quantized TensorFlow model and load it in the LiteRT Interpreter.
 
         The model is only trained for one epoch to reduce run time.
@@ -39,7 +39,7 @@ class TestLiteRTInference(unittest.TestCase):
             )
             self.interpreter = load_tflite_model(model_file_name=model_file_name)
 
-    def test_litert_inference(self):
+    def test_litert_inference(self) -> None:
         """Run the LiteRT Interpreter on several images and check its accuracy."""
         num_images = 10
         correct = 0

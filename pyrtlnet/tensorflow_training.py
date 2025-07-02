@@ -54,6 +54,7 @@ The model consists of two dense layers::
 """
 
 import pathlib
+from collections.abc import Generator
 
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
@@ -156,7 +157,7 @@ def quantize_model(
 
     quantized_model.fit(train_images, train_labels, epochs=epochs)
 
-    def representative_dataset():
+    def representative_dataset() -> Generator[tf.Tensor, None, None]:
         for data in tf.data.Dataset.from_tensor_slices(train_images).batch(1).take(100):
             yield [tf.dtypes.cast(data, tf.float32)]
 

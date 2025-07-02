@@ -48,9 +48,9 @@ class WireMatrix2D:
         shape: tuple[int, int] = (),
         bitwidth: int = 0,
         name: str = "",
-        ready=None,
-        valid=None,
-    ):
+        ready: bool | pyrtl.WireVector = None,
+        valid: bool | pyrtl.WireVector = None,
+    ) -> None:
         """Construct a 2D :func:`~pyrtl.wire_matrix` containing ``values``.
 
         :param values: Values for the ``WireMatrix2D``. If ``None``, creates a
@@ -126,7 +126,9 @@ class WireMatrix2D:
             for row in range(num_rows):
                 self.matrix[row].name = pyrtl.wire.next_tempvar_name()
 
-        def create_ready_valid(value, suffix: str) -> pyrtl.WireVector:
+        def create_ready_valid(
+            value: bool | pyrtl.WireVector, suffix: str
+        ) -> pyrtl.WireVector:
             """Return a 1-bit ready or valid wire. Create one if necessary."""
             output_name = ""
             if name != "":
@@ -206,7 +208,7 @@ class WireMatrix2D:
             valid=self.valid,
         )
 
-    def make_outputs(self):
+    def make_outputs(self) -> None:
         """Create :class:`~pyrtl.Output` ``WireVectors`` for ``self``.
 
         Use :meth:`.inspect` to retrieve these :class:`~pyrtl.Output` values.

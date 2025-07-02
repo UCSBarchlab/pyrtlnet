@@ -9,13 +9,13 @@ from pyrtlnet.tensorflow_training import (
 
 
 class TestTensorFlowTraining(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         """Load MNIST training and test data sets."""
         (self.train_images, self.train_labels), (self.test_images, self.test_labels) = (
             load_mnist_images()
         )
 
-    def test_unquantized_tensorflow_training(self):
+    def test_unquantized_tensorflow_training(self) -> None:
         """Train and evalute an unquantized TensorFlow model.
 
         This test only runs one epoch of training to reduce run time.
@@ -35,7 +35,7 @@ class TestTensorFlowTraining(unittest.TestCase):
         # possible outputs, so randomly guesses will have an accuracy around 10%
         self.assertTrue(accuracy > 0.75)
 
-    def test_quantized_tensorflow_training(self):
+    def test_quantized_tensorflow_training(self) -> None:
         """Train and evalute a quantized TensorFlow model.
 
         This test only runs one epoch of training to reduce run time.

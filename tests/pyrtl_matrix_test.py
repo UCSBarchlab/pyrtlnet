@@ -11,7 +11,7 @@ from pyrtlnet.wire_matrix_2d import WireMatrix2D
 
 
 class TestPyrtlMatrix(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         pyrtl.reset_working_block()
 
     def make_wire_matrix_2d(
@@ -26,7 +26,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         )
 
     @pytest.mark.filterwarnings("ignore:Both systolic array inputs are NumPy arrays")
-    def test_systolic_array_two_ndarrays(self):
+    def test_systolic_array_two_ndarrays(self) -> None:
         """Test matrix multiplication with two NumPy arrays."""
         a = np.array([[1, -2, 3], [-4, 5, -6]])
         b = np.array([[11, 12, 13, 14], [15, 16, 17, 18], [19, 20, 21, 22]])
@@ -54,7 +54,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         ab_expected = a @ (b - b_zero)
         np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
-    def test_systolic_array_one_wire_matrix_2d(self):
+    def test_systolic_array_one_wire_matrix_2d(self) -> None:
         """Test matrix multiplication with one WireMatrix2D."""
         a = np.array([[1, -2, 3], [-4, 5, -6]])
         b = np.array([[11, 12, 13, 14], [15, 16, 17, 18], [19, 20, 21, 22]])
@@ -83,7 +83,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         ab_expected = a @ (b - b_zero)
         np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
-    def test_systolic_array_two_wire_matrix_2d(self):
+    def test_systolic_array_two_wire_matrix_2d(self) -> None:
         """Test matrix multiplication with two WireMatrix2Ds."""
         a = np.array([[1, -2, 3], [-4, 5, -6]])
         b = np.array([[11, 12, 13, 14], [15, 16, 17, 18], [19, 20, 21, 22]])
@@ -145,7 +145,7 @@ class TestPyrtlMatrix(unittest.TestCase):
 
         return matrix, memblock, memblock_data
 
-    def test_systolic_array_memblock(self):
+    def test_systolic_array_memblock(self) -> None:
         """Test matrix multiplication with two MemBlocks."""
         a = np.array([[1, -2, 3], [-4, 5, -6]])
         b = np.array([[11, 12, 13, 14], [15, 16, 17, 18], [19, 20, 21, 22]])
@@ -193,7 +193,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         ab_expected = a @ (b - b_zero)
         np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
-    def test_systolic_array_idle(self):
+    def test_systolic_array_idle(self) -> None:
         """Test that the systolic array remain idle before and after processing.
 
         The systolic array should remain idle before its inputs are ``valid`` and after
@@ -250,7 +250,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         ab_expected = a @ b
         np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
-    def test_chained_systolic_arrays(self):
+    def test_chained_systolic_arrays(self) -> None:
         """Test using the output of one systolic array as the input to another."""
         # Matrix a has shape (2, 3).
         a = np.array([[1, -2, 3], [-4, 5, -6]])
@@ -294,7 +294,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         print("actual", abc_actual)
         np.testing.assert_array_equal(abc_actual, abc_expected, strict=True)
 
-    def test_elementwise_add(self):
+    def test_elementwise_add(self) -> None:
         a = np.array([[1, -2, 3], [-4, 5, -6]])
         b = np.array([[10, 11, 12], [13, 14, 15]])
 
@@ -317,7 +317,7 @@ class TestPyrtlMatrix(unittest.TestCase):
 
         np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
-    def test_elementwise_relu(self):
+    def test_elementwise_relu(self) -> None:
         a = np.array([[1, -2, 3], [-4, 5, -6]])
 
         input_bitwidth = pyrtl_matrix.minimum_bitwidth(a)
@@ -335,7 +335,7 @@ class TestPyrtlMatrix(unittest.TestCase):
 
         np.testing.assert_array_equal(relu_actual, relu_expected, strict=True)
 
-    def test_normalize(self):
+    def test_normalize(self) -> None:
         a = np.array([[1, -2, 3], [-4, 5, -6]]).astype(np.int32)
 
         input_bitwidth = pyrtl_matrix.minimum_bitwidth(a)
@@ -365,7 +365,7 @@ class TestPyrtlMatrix(unittest.TestCase):
 
         np.testing.assert_array_equal(normal_actual, normal_expected, strict=True)
 
-    def test_argmax(self):
+    def test_argmax(self) -> None:
         a = np.array([[1, -2, 3, -4, 5, -6]]).transpose()
 
         input_bitwidth = pyrtl_matrix.minimum_bitwidth(a)

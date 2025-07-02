@@ -8,10 +8,10 @@ from pyrtlnet.wire_matrix_2d import WireMatrix2D
 
 
 class TestWireMatrix2D(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         pyrtl.reset_working_block()
 
-    def test_input_matrix(self):
+    def test_input_matrix(self) -> None:
         """Test a WireMatrix2D of Inputs."""
         expected_values = np.array([[1, 2, 3], [4, 5, 6]])
         shape = expected_values.shape
@@ -37,7 +37,7 @@ class TestWireMatrix2D(unittest.TestCase):
         actual_values = matrix.inspect(sim=sim)
         np.testing.assert_array_equal(actual_values, expected_values, strict=True)
 
-    def test_lists(self):
+    def test_lists(self) -> None:
         """Test a WireMatrix2D created from a list of lists."""
         lists = [[1, 2, 3], [4, 5, 6]]
         expected_values = np.array(lists)
@@ -62,7 +62,7 @@ class TestWireMatrix2D(unittest.TestCase):
         actual_values = matrix.inspect(sim=sim)
         np.testing.assert_array_equal(actual_values, expected_values, strict=True)
 
-    def test_numpy_array(self):
+    def test_numpy_array(self) -> None:
         """Test a WireMatrix2D created from a NumPy array."""
         expected_values = np.array([[1, 2, 3], [4, 5, 6]])
         shape = expected_values.shape
@@ -86,7 +86,7 @@ class TestWireMatrix2D(unittest.TestCase):
         actual_values = matrix.inspect(sim=sim)
         np.testing.assert_array_equal(actual_values, expected_values, strict=True)
 
-    def test_concatenated_input_wire_vector(self):
+    def test_concatenated_input_wire_vector(self) -> None:
         """Test a WireMatrix2D created from a concatenated Input WireVector."""
         expected_values = np.array([[1, 2, 3], [4, 5, 6]])
         shape = expected_values.shape
@@ -120,7 +120,7 @@ class TestWireMatrix2D(unittest.TestCase):
         actual_values = matrix.inspect(sim=sim)
         np.testing.assert_array_equal(actual_values, expected_values, strict=True)
 
-    def test_transpose(self):
+    def test_transpose(self) -> None:
         """Test transposing a WireMatrix2D created from a NumPy array."""
         expected_values = np.array([[1, 2, 3], [4, 5, 6]])
         shape = expected_values.shape

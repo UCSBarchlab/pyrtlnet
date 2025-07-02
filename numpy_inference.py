@@ -9,7 +9,7 @@ from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.numpy_inference import NumPyInference
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(prog="numpy_inference.py")
     parser.add_argument("--start_image", type=int, default=0)
     parser.add_argument("--num_images", type=int, default=1)

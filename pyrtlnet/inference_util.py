@@ -1,4 +1,5 @@
 import math
+from numbers import Number
 
 import numpy as np
 
@@ -49,7 +50,7 @@ def _reset() -> str:
     return "\033[39m\033[49m"
 
 
-def display_image(image: np.ndarray):
+def display_image(image: np.ndarray) -> None:
     """Print an image as ASCII art in a terminal.
 
     Requires a terminal that supports 24-bit color.
@@ -67,7 +68,7 @@ def display_image(image: np.ndarray):
     smallest = np.min(image)
     largest = np.max(image)
 
-    def normalize(x):
+    def normalize(x: Number) -> Number:
         """Normalize a pixel value to the range [0, 255]."""
         return int(255 * (x + smallest) / (largest - smallest))
 
@@ -84,7 +85,9 @@ def display_image(image: np.ndarray):
         print(line + _reset())
 
 
-def _bar(index, x, expected, actual, smallest) -> str:
+def _bar(
+    index: Number, x: Number, expected: Number, actual: Number, smallest: Number
+) -> str:
     """Return a string representing a horizontal bar in a bar chart.
 
     The bar corresponding to the ``expected`` digit is always colored green. If the
@@ -120,7 +123,7 @@ def _bar(index, x, expected, actual, smallest) -> str:
     return bar + " " + str(x)
 
 
-def display_outputs(output: np.ndarray, expected: int, actual: int):
+def display_outputs(output: np.ndarray, expected: int, actual: int) -> None:
     """Display the neural network's output as a bar chart.
 
     Bars for higher probability digits are displayed before bars for lower probability

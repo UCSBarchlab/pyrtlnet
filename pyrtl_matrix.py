@@ -31,7 +31,7 @@ def _make_np_matrix(shape: tuple[int, int], start: int) -> np.ndarray:
     return np.reshape(array, newshape=shape)
 
 
-def _render_trace(sim: pyrtl.Simulation, prefixes: list[str]):
+def _render_trace(sim: pyrtl.Simulation, prefixes: list[str]) -> None:
     """Display traces that start with a prefix in ``prefixes``.
 
     This also displays signed integers instead of the default ``hex``, and displays
@@ -53,7 +53,7 @@ def _render_trace(sim: pyrtl.Simulation, prefixes: list[str]):
     )
 
 
-def main():
+def main() -> None:
     """Simulate matrix multiplication and elementwise addition (x · (y - y_zero) + a).
 
     Do the calculations with numpy and PyRTL, and verify that the results are the same.

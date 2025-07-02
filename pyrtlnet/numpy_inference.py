@@ -269,7 +269,7 @@ class QuantizedLayer:
         weight_index: int,
         bias_index: int,
         output_index: int,
-    ):
+    ) -> None:
         """Retrieve weights, biases, and quantization metadata from an ``Interpreter``.
 
         Tensor indices can be found by uploading the model to the `Model Explorer`_.
@@ -307,7 +307,7 @@ class QuantizedLayer:
 class NumPyInference:
     """Run quantized inference on an input image with NumPy and fxpmath."""
 
-    def __init__(self, interpreter: Interpreter):
+    def __init__(self, interpreter: Interpreter) -> None:
         """Collect weights, biases, and quantization metadata from an ``Interpreter``.
 
         :param interpreter: LiteRT ``Interpreter`` to retrieve the neural network's

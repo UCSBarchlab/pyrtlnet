@@ -7,7 +7,7 @@ from pyrtlnet.tensorflow_training import (
 )
 
 
-def main():
+def main() -> None:
     # Load MNIST dataset.
     (train_images, train_labels), (test_images, test_labels) = load_mnist_images()
 

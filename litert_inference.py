@@ -8,7 +8,7 @@ from pyrtlnet.litert_inference import load_tflite_model, run_tflite_model
 from pyrtlnet.mnist_util import load_mnist_images
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(prog="litert_inference.py")
     parser.add_argument(
         "--start_image",

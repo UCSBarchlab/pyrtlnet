@@ -11,7 +11,7 @@ from pyrtlnet.tensorflow_training import quantize_model, train_unquantized_model
 
 
 class TestPyRTLInference(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         """Prepare NumPyInference and PyRTLInference for a comparison test.
 
         This trains a quantized TensorFlow model for one epoch, to reduce run time.
@@ -49,7 +49,7 @@ class TestPyRTLInference(unittest.TestCase):
                 interpreter, input_bitwidth=8, accumulator_bitwidth=32
             )
 
-    def test_pyrtl_inference(self):
+    def test_pyrtl_inference(self) -> None:
         """Check that NumPyInference and PyRTLInference produce the same results.
 
         This runs one image through both inference systems and compares the tensor

@@ -31,7 +31,7 @@ class PyRTLInference:
 
     def __init__(
         self, interpreter: Interpreter, input_bitwidth: int, accumulator_bitwidth: int
-    ):
+    ) -> None:
         """Convert the quantized model to PyRTL inference hardware.
 
         This builds the necessary hardware for each layer's matrix operations. The
@@ -168,7 +168,7 @@ class PyRTLInference:
         # Create hardware that implements neural network inference.
         self._make_inference()
 
-    def _make_input_memblock(self):
+    def _make_input_memblock(self) -> None:
         """Build the MemBlock that will hold the input image data."""
         weight_shape = self.layer[0].weight.shape
         batch_size = 1
@@ -257,7 +257,7 @@ class PyRTLInference:
 
         return output
 
-    def _make_inference(self):
+    def _make_inference(self) -> None:
         """Build the PyRTL inference hardware."""
         # Build all layers.
         layer0 = self._make_layer(
