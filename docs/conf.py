@@ -4,26 +4,23 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import os
+import sys
+
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-import os
-import sys
-
 sys.path.insert(0, os.path.abspath(".."))
 
 
 # -- Project information -----------------------------------------------------
-
 project = "pyrtlnet"
 copyright = "2025, Jeremy Lau"
 author = "Jeremy Lau"
 
 # -- General configuration ---------------------------------------------------
-
 master_doc = "index"
 
 # Add any Sphinx extension module names here, as strings. They can be extensions coming
@@ -44,13 +41,21 @@ toc_object_entries_show_parents = "hide"
 # html_extra_path.
 exclude_patterns = ["_build"]
 
-primary_domain = "py"
-
+# sphinx.ext.intersphinx configuration.
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "pyrtl": ("https://pyrtl.readthedocs.io/en/latest/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
 }
+
+# sphinx_copybutton: exclude line numbers, prompts, and outputs.
+copybutton_exclude = ".linenos, .gp, .go"
+
+# sphinx-autodoc-typehints configuration: Always display Unions with vertical bars,
+# show default values, and don't document :rtype: None.
+always_use_bars_union = True
+typehints_defaults = "comma"
+typehints_document_rtype_none = False
 
 # -- Options for HTML output -------------------------------------------------
 
