@@ -27,11 +27,11 @@ Main features include:
   1. A reference quantized inference implementation, using the standard
      [LiteRT](https://ai.google.dev/edge/litert) `Interpreter`.
 
-  2. A software implementation of quantized inference, using [NumPy](https://numpy.org)
+  1. A software implementation of quantized inference, using [NumPy](https://numpy.org)
      and [fxpmath](https://github.com/francof2a/fxpmath), to verify the math performed
      by the reference implementation.
 
-  3. A [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware implementation of
+  1. A [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware implementation of
      quantized inference that is simulated right at the logic gate level.
 
 * A new [PyRTL](https://github.com/UCSBarchlab/PyRTL) linear algebra library, including
@@ -60,7 +60,7 @@ Main features include:
    Python 3.12.8
    ```
 
-2. Create a [venv](https://docs.python.org/3/library/venv.html) for `pyrtlnet`.
+1. Create a [venv](https://docs.python.org/3/library/venv.html) for `pyrtlnet`.
    `pyrtlnet` depends on many `pip` packages, pinned to specific versions for
    reproducible behavior. Installation of these packages should be done in a clean
    `venv` to avoid conflicts with installed system packages.
@@ -75,7 +75,7 @@ Main features include:
    (pyrtlnet-venv) $
    ```
 
-3. Install `pip` packages.
+1. Install `pip` packages.
 
    ```shell
    (pyrtlnet-venv) $ pip install --upgrade -r requirements.txt
@@ -135,7 +135,7 @@ Main features include:
    model's weights, biases, and quantization parameters. This file will be read
    by all the inference implementations.
 
-2. Run
+1. Run
    [`litert_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py) in this repository's root directory.
    This runs one test image through the reference LiteRT inference implementation.
 
@@ -149,15 +149,15 @@ Main features include:
       [iTerm2](https://iterm2.com/). This is the first image in the test data set
       `(#0)`.
 
-   2. The input shape, `(12, 12)`, and `dtype float32`.
+   1. The input shape, `(12, 12)`, and `dtype float32`.
 
-   3. The output from the first layer of the network, with shape `(1, 18)` and `dtype
+   1. The output from the first layer of the network, with shape `(1, 18)` and `dtype
       int8`.
 
-   4. The output from the second layer of the network, with shape `(1, 10)` and `dtype
+   1. The output from the second layer of the network, with shape `(1, 10)` and `dtype
       int8`.
 
-   5. A bar chart displaying the network's final output, which is the inferred
+   1. A bar chart displaying the network's final output, which is the inferred
       likelihood that the image contains each digit. The network only has two layers, so
       this is the same data from the `layer 1 output` line, reformatted into a bar
       chart.
@@ -180,7 +180,7 @@ Main features include:
    9/10 correct predictions, 90% accuracy
    ```
 
-3. Run
+1. Run
    [`numpy_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py) in this repository's root directory.
    This runs one test image through the software NumPy and fxpmath inference
    implementation. This implements inference for the quantized neural network as a
@@ -191,7 +191,7 @@ Main features include:
    The tensors output by this script should exactly match the tensors output by
    `litert_inference.py`, except that each layer's outputs are transposed.
 
-4. Run
+1. Run
    [`pyrtl_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py) in this repository's root directory.
    This runs one test image through the hardware PyRTL inference
    implementation. This implementation converts the quantized neural network
@@ -264,6 +264,11 @@ multiplies matrices. Also see the documentation for
 
 Contributions are welcome! Please check a few things before sending a pull request:
 
+1. Before attempting a large change, please discuss your plan with maintainers.
+   [Open an issue](https://github.com/UCSBarchlab/pyrtlnet/issues) or [start a
+   discussion](https://github.com/UCSBarchlab/pyrtlnet/discussions) and
+   describe your proposed change.
+
 1. Ensure that all tests pass, and that new features are tested. Tests are run with
    [`pytest`](https://docs.pytest.org/en/stable/), which is installed by
    `requirements.txt`:
@@ -287,7 +292,7 @@ Contributions are welcome! Please check a few things before sending a pull reque
    [`pytest-xdist`](https://github.com/pytest-dev/pytest-xdist) is also installed, so
    testing can be accelerated by running the tests in parallel with `pytest -n auto`.
 
-2. Ensure that [`ruff`](https://docs.astral.sh/ruff/) lint checks pass. `ruff` is
+1. Ensure that [`ruff`](https://docs.astral.sh/ruff/) lint checks pass. `ruff` is
    installed by `requirements.txt`:
 
    ```shell
@@ -295,7 +300,7 @@ Contributions are welcome! Please check a few things before sending a pull reque
    All checks passed!
    ```
 
-3. Apply `ruff` automatic code formatting:
+1. Apply `ruff` automatic code formatting:
 
    ```shell
    (pyrtlnet-venv) $ ruff format
