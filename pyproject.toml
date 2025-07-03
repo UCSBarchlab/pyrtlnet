@@ -32,8 +32,12 @@ select = [
     "I",
     # pylint
     "PLE", "PLW", "PLC",
+    # ruff-specific checks
+    "RUF"
 ]
 ignore = [
     # Use ternary operator.
-    "SIM108"
+    "SIM108",
+    # Docstring/comment contains ambiguous <unicode>
+    "RUF002", "RUF003",
 ]

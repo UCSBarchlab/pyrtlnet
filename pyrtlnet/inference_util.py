@@ -104,8 +104,8 @@ def _bar(
 
     """
     max_bar_length = 10
-    bar_length = int(math.ceil(abs(x) / max_bar_length))
-    negative_bar_length = int(math.ceil(abs(smallest) / max_bar_length))
+    bar_length = math.ceil(abs(x) / max_bar_length)
+    negative_bar_length = math.ceil(abs(smallest) / max_bar_length)
     if x < 0:
         padding = negative_bar_length - bar_length
     else:

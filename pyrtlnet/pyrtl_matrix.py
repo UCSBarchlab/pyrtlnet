@@ -768,7 +768,7 @@ def make_elementwise_normalize(
     :returns: ``z3 + (a * m0) >> n``, where ``*`` is elementwise fixed-point
               multiplication, and ``>>`` is a rounding right shift. The return value has
               the same shape as ``a`` and bitwidth ``output_bitwidth``.
-    """  # noqa: E501 W505
+    """  # noqa: E501
     assert a.bitwidth >= output_bitwidth
     assert m0.n_word == a.bitwidth
     assert m0.n_frac == a.bitwidth
