@@ -59,17 +59,14 @@ installation instructions and tutorial in `README.md`_.
 
 .. _README.md: https://github.com/UCSBarchlab/pyrtlnet/blob/main/README.md
 
-This reference documentation is split into three sections:
+This reference documentation is split into five sections:
 
 * :ref:`training`, which covers the `TensorFlow`_ training functions.
-* :ref:`inference`, which covers the three included inference implementations:
-
-  1. :ref:`litert_inference`, which uses the reference `LiteRT`_
-     ``Interpreter`` implementation.
-  2. :ref:`numpy_inference`, a software re-implementation in `NumPy`_ and
-     `fxpmath`_.
-  3. :ref:`pyrtl_inference`, a hardware re-implementation in `PyRTL`_.
-
+* :ref:`litert_inference`, which uses the reference `LiteRT`_
+  ``Interpreter`` implementation.
+* :ref:`numpy_inference`, a software re-implementation in `NumPy`_ and
+  `fxpmath`_.
+* :ref:`pyrtl_inference`, a hardware re-implementation in `PyRTL`_.
 * :ref:`matrix`, which covers the included PyRTL linear algebra library.
 
 Contents
@@ -79,7 +76,9 @@ Contents
    :maxdepth: 2
 
    training
-   inference
+   litert_inference
+   numpy_inference
+   pyrtl_inference
    matrix
 
 .. _fxpmath: https://github.com/francof2a/fxpmath
