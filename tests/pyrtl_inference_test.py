@@ -1,8 +1,8 @@
+import pathlib
 import tempfile
 import unittest
 
 import numpy as np
-from ai_edge_litert.interpreter import Interpreter
 
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.numpy_inference import NumPyInference
@@ -17,14 +17,13 @@ class TestPyRTLInference(unittest.TestCase):
         This trains a quantized TensorFlow model for one epoch, to reduce run time.
 
         The trained model is loaded in instances of NumPyInference and PyRTLInference.
-
         """
         (train_images, train_labels), (self.test_images, self.test_labels) = (
             load_mnist_images()
         )
 
-        with tempfile.NamedTemporaryFile(prefix="quantized_tflite_model") as file:
-            model_file_name = file.name
+        with tempfile.TemporaryDirectory() as temp_dir:
+            quantized_model_prefix = str(pathlib.Path(temp_dir) / "quantized")
 
             learning_rate = 0.001
             epochs = 1
@@ -41,12 +40,15 @@ class TestPyRTLInference(unittest.TestCase):
                 epochs=epochs,
                 train_images=train_images,
                 train_labels=train_labels,
-                model_file_name=model_file_name,
+                quantized_model_prefix=quantized_model_prefix,
             )
-            interpreter = Interpreter(model_path=model_file_name)
-            self.numpy_inference = NumPyInference(interpreter)
+            self.numpy_inference = NumPyInference(
+                quantized_model_prefix=quantized_model_prefix
+            )
             self.pyrtl_inference = PyRTLInference(
-                interpreter, input_bitwidth=8, accumulator_bitwidth=32
+                quantized_model_prefix=quantized_model_prefix,
+                input_bitwidth=8,
+                accumulator_bitwidth=32,
             )
 
     def test_pyrtl_inference(self) -> None:
@@ -54,7 +56,6 @@ class TestPyRTLInference(unittest.TestCase):
 
         This runs one image through both inference systems and compares the tensor
         outputs from each layer.
-
         """
         test_image = self.test_images[0]
 

@@ -1,11 +1,16 @@
 import argparse
+import pathlib
 import shutil
+import sys
 
 import numpy as np
 
-from pyrtlnet.inference_util import display_image, display_outputs, tflite_file_name
+from pyrtlnet.inference_util import (
+    display_image,
+    display_outputs,
+    quantized_model_prefix,
+)
 from pyrtlnet.litert_inference import load_tflite_model, run_tflite_model
-from pyrtlnet.mnist_util import load_mnist_images
 
 
 def main() -> None:
@@ -24,10 +29,22 @@ def main() -> None:
     terminal_columns = shutil.get_terminal_size((80, 24)).columns
     np.set_printoptions(linewidth=terminal_columns)
 
-    # Load MNIST dataset.
-    _, (test_images, test_labels) = load_mnist_images()
+    mnist_test_data_file = pathlib.Path(".") / "mnist_test_data.npz"
+    if not mnist_test_data_file.exists():
+        sys.exit("mnist_test_data.npz not found. Run tensorflow_training.py first.")
 
-    interpreter = load_tflite_model(model_file_name=tflite_file_name)
+    # Load MNIST test data.
+    mnist_test_data = np.load(str(mnist_test_data_file))
+    test_images = mnist_test_data.get("test_images")
+    test_labels = mnist_test_data.get("test_labels")
+
+    tflite_file = pathlib.Path(".") / f"{quantized_model_prefix}.tflite"
+    if not tflite_file.exists():
+        sys.exit(
+            f"{quantized_model_prefix}.tflite not found. Run tensorflow_training.py "
+            "first."
+        )
+    interpreter = load_tflite_model(quantized_model_prefix=quantized_model_prefix)
 
     correct = 0
     for test_index in range(args.start_image, args.start_image + args.num_images):

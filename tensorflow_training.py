@@ -1,4 +1,6 @@
-from pyrtlnet.inference_util import tflite_file_name
+import numpy as np
+
+from pyrtlnet.inference_util import quantized_model_prefix
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.tensorflow_training import (
     evaluate_model,
@@ -26,18 +28,29 @@ def main() -> None:
         model=model, test_images=test_images, test_labels=test_labels
     )
 
-    print(f"Training quantized model and writing {tflite_file_name}.")
+    print(
+        f"Training quantized model and writing {quantized_model_prefix}.tflite and "
+        f"{quantized_model_prefix}.npz."
+    )
     model = quantize_model(
         model=model,
         learning_rate=learning_rate / 10000,
         epochs=int(epochs / 5),
         train_images=train_images,
         train_labels=train_labels,
-        model_file_name=tflite_file_name,
+        quantized_model_prefix=quantized_model_prefix,
     )
     print("Evaluating quantized model.")
     loss, accuracy = evaluate_model(
         model=model, test_images=test_images, test_labels=test_labels
+    )
+
+    # Save the preprocessed MNIST test data so the inference scripts can use it without
+    # importing tensorflow. Importing tensorflow is slow and prints a bunch of debug
+    # output.
+    print("Writing mnist_test_data.npz.")
+    np.savez_compressed(
+        file="mnist_test_data.npz", test_images=test_images, test_labels=test_labels
     )
 
 

@@ -1,12 +1,15 @@
 import argparse
+import pathlib
 import shutil
 import sys
 
 import numpy as np
-from ai_edge_litert.interpreter import Interpreter
 
-from pyrtlnet.inference_util import display_image, display_outputs, tflite_file_name
-from pyrtlnet.mnist_util import load_mnist_images
+from pyrtlnet.inference_util import (
+    display_image,
+    display_outputs,
+    quantized_model_prefix,
+)
 from pyrtlnet.pyrtl_inference import PyRTLInference
 
 
@@ -23,16 +26,29 @@ def main() -> None:
     terminal_columns = shutil.get_terminal_size((80, 24)).columns
     np.set_printoptions(linewidth=terminal_columns)
 
-    # Load MNIST data set.
-    _, (test_images, test_labels) = load_mnist_images()
+    mnist_test_data_file = pathlib.Path(".") / "mnist_test_data.npz"
+    if not mnist_test_data_file.exists():
+        sys.exit("mnist_test_data.npz not found. Run tensorflow_training.py first.")
 
-    # Load quantized model.
-    interpreter = Interpreter(model_path=tflite_file_name)
+    # Load MNIST test data.
+    mnist_test_data = np.load(str(mnist_test_data_file))
+    test_images = mnist_test_data.get("test_images")
+    test_labels = mnist_test_data.get("test_labels")
+
+    tensor_file = pathlib.Path(".") / f"{quantized_model_prefix}.npz"
+    if not tensor_file.exists():
+        sys.exit(
+            f"{quantized_model_prefix}.npz not found. Run tensorflow_training.py first."
+        )
 
     # Create PyRTL inference hardware.
     input_bitwidth = 8
     accumulator_bitwidth = 32
-    pyrtl_inference = PyRTLInference(interpreter, input_bitwidth, accumulator_bitwidth)
+    pyrtl_inference = PyRTLInference(
+        quantized_model_prefix=quantized_model_prefix,
+        input_bitwidth=input_bitwidth,
+        accumulator_bitwidth=accumulator_bitwidth,
+    )
 
     correct = 0
     for test_index in range(args.start_image, args.start_image + args.num_images):

@@ -2,8 +2,7 @@
 Implement quantized inference with `PyRTL`_.
 
 This does not invoke the :ref:`litert_inference` or :ref:`numpy_inference`
-implementations, though it does use some of their utilities to retrieve weights and
-biases, and calculate quantization parameters offline.
+implementations.
 
 This effectively reimplements :ref:`numpy_inference` in hardware, using the
 :ref:`matrix`, running in a `PyRTL`_ :class:`~pyrtl.Simulation`.
@@ -16,10 +15,9 @@ inference with `PyRTL`_.
 
 import numpy as np
 import pyrtl
-from ai_edge_litert.interpreter import Interpreter
 
 import pyrtlnet.pyrtl_matrix as pyrtl_matrix
-from pyrtlnet.numpy_inference import QuantizedLayer, get_tensor_scale_zero
+from pyrtlnet.inference_util import SavedTensors
 from pyrtlnet.wire_matrix_2d import WireMatrix2D
 
 
@@ -30,7 +28,10 @@ class PyRTLInference:
     """
 
     def __init__(
-        self, interpreter: Interpreter, input_bitwidth: int, accumulator_bitwidth: int
+        self,
+        quantized_model_prefix: str,
+        input_bitwidth: int,
+        accumulator_bitwidth: int,
     ) -> None:
         """Convert the quantized model to PyRTL inference hardware.
 
@@ -112,55 +113,20 @@ class PyRTLInference:
           intermediate values with bitwidth ``accumulator_bitwidth`` to each layer's
           output values with bitwidth ``input_bitwidth``.
 
-        :param interpreter: LiteRT ``Interpreter`` to retrieve weights, biases, and
-            quantization metadata from.
+        :param quantized_model_prefix: Prefix of the ``.npz`` file created by
+            ``tensorflow_training.py``, without the ``.npz`` suffix.
         :param input_bitwidth: Bitwidth of each element in the input matrix. This should
             generally be ``8``.
         :param accumulator_bitwidth: Bitwidth of accumulator registers in the systolic
             array. This should generally be ``32``, and larger than ``input_bitwidth``.
         """
-
-        # Extract weights, biases, and quantization metadata from the LiteRT
-        # Interpreter. The Interpreter is not actually used for inference.
-        self.interpreter = interpreter
         self.input_bitwidth = input_bitwidth
         self.accumulator_bitwidth = accumulator_bitwidth
 
-        # Tensor metadata, from the Model Explorer
-        # (https://github.com/google-ai-edge/model-explorer):
-        #
-        # tensor 0: input          int8[1, 12, 12]
-        #
-        # tensor 1: reshape shape  int32[2]
-        # tensor 2: reshape output int8[1, 144]
-        #
-        # tensor 3: layer 0 weight int8[18, 144]
-        # tensor 4: layer 0 bias   int32[18]
-        # tensor 5: layer 0 output int8[1, 18]
-        #
-        # tensor 6: layer 1 weight int8[10, 18]
-        # tensor 7: layer 1 bias   int32[10]
-        # tensor 8: layer 1 output int8[1, 10]
-        self.input_scale, self.input_zero = get_tensor_scale_zero(
-            interpreter=interpreter, tensor_index=2
-        )
-
-        # Extract weights, biases, and quantization metadata from the TFLite model.
-        layer0 = QuantizedLayer(
-            interpreter=interpreter,
-            input_scale=self.input_scale,
-            weight_index=3,
-            bias_index=4,
-            output_index=5,
-        )
-        layer1 = QuantizedLayer(
-            interpreter=interpreter,
-            input_scale=layer0.scale,
-            weight_index=6,
-            bias_index=7,
-            output_index=8,
-        )
-        self.layer = [layer0, layer1]
+        saved_tensors = SavedTensors(quantized_model_prefix)
+        self.input_scale = saved_tensors.input_scale
+        self.input_zero = saved_tensors.input_zero
+        self.layer = saved_tensors.layer
 
         # Create the MemBlock for the input image data.
         self._make_input_memblock()

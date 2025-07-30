@@ -13,6 +13,12 @@ TensorFlow Training
 .. automodule:: pyrtlnet.tensorflow_training
     :members:
 
+Training Utilities
+------------------
+
+.. automodule:: pyrtlnet.training_util
+    :members:
+
 MNIST Utilities
 ---------------
 

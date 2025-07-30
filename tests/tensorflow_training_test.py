@@ -19,7 +19,6 @@ class TestTensorFlowTraining(unittest.TestCase):
         """Train and evalute an unquantized TensorFlow model.
 
         This test only runs one epoch of training to reduce run time.
-
         """
         learning_rate = 0.001
         epochs = 1
@@ -39,7 +38,6 @@ class TestTensorFlowTraining(unittest.TestCase):
         """Train and evalute a quantized TensorFlow model.
 
         This test only runs one epoch of training to reduce run time.
-
         """
         learning_rate = 0.001
         epochs = 1
@@ -56,7 +54,7 @@ class TestTensorFlowTraining(unittest.TestCase):
             epochs=epochs,
             train_images=self.train_images,
             train_labels=self.train_labels,
-            model_file_name=None,
+            quantized_model_prefix=None,
         )
         loss, accuracy = evaluate_model(model, self.test_images, self.test_labels)
         # Accuracy should be over 75% after one epoch of training. MNIST has ten

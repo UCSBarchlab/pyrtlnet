@@ -17,19 +17,21 @@ import numpy as np
 from ai_edge_litert.interpreter import Interpreter
 
 
-def load_tflite_model(model_file_name: str) -> Interpreter:
+def load_tflite_model(quantized_model_prefix: str) -> Interpreter:
     """Load the quantized model and return an initialized LiteRT ``Interpreter``.
 
     The quantized model should be produced by :func:`quantize_model`.
 
-    :param model_file_name: Name of the file produced by :func:`.quantize_model`.
-    :returns: An initialized LiteRT ``Interpreter``.
+    :param quantized_model_prefix: Prefix of the ``.tflite`` file created by
+            ``tensorflow_training.py``, without the ``.tflite`` suffix.
 
+    :returns: An initialized LiteRT ``Interpreter``.
     """
     # Set preserve_all_tensors so we can inspect intermediate tensor values.
     # Intermediate values help when debugging other quantized inference implementations.
     interpreter = Interpreter(
-        model_path=model_file_name, experimental_preserve_all_tensors=True
+        model_path=f"{quantized_model_prefix}.tflite",
+        experimental_preserve_all_tensors=True,
     )
     interpreter.allocate_tensors()
     return interpreter
@@ -39,7 +41,6 @@ def _normalize_input(interpreter: Interpreter, input: np.ndarray) -> np.ndarray:
     """Normalize input data to ``int8``.
 
     This effectively shifts the input data from ``[0, 255]`` to ``[-128, 127]``.
-
     """
     input_details = interpreter.get_input_details()[0]
 
@@ -68,12 +69,12 @@ def run_tflite_model(
     :param interpreter: An initialized TFLite ``Interpreter``, produced by
         :func:`load_tflite_model`.
     :param test_image: An image to run through the ``Interpreter``.
-    :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
-        ``layer0_output`` is the first layer's raw tensor output, with shape
-        ``(1, 18)``. ``layer1_output`` is the second layer's raw tensor output, with
-        shape ``(1, 10)``. ``predicted_digit`` is the actual predicted digit.
-        ``predicted_digit`` is equivalent to ``layer1_output.flatten().argmax()``.
 
+    :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
+              ``layer0_output`` is the first layer's raw tensor output, with shape ``(1,
+              18)``. ``layer1_output`` is the second layer's raw tensor output, with
+              shape ``(1, 10)``. ``predicted_digit`` is the actual predicted digit.
+              ``predicted_digit`` is equivalent to ``layer1_output.flatten().argmax()``.
     """
     input_details = interpreter.get_input_details()[0]
     output_details = interpreter.get_output_details()[0]

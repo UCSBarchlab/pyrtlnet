@@ -1,4 +1,6 @@
+mnist_test_data.npz
 quantized.tflite
+quantized.npz
 docs/_build
 
 # Generated Verilog and VCD output.

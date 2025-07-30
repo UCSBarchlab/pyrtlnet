@@ -58,7 +58,10 @@ from collections.abc import Generator
 
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
+from ai_edge_litert.interpreter import Interpreter
 from tensorflow_model_optimization.python.core.keras.compat import keras
+
+from pyrtlnet.training_util import save_tensors
 
 
 def train_unquantized_model(
@@ -70,8 +73,8 @@ def train_unquantized_model(
     :param epochs: Number of times the ``train_images`` are processed.
     :param train_images: Training image data from :func:`.load_mnist_images`.
     :param train_labels: Training labels from :func:`.load_mnist_images`.
-    :returns: A trained Keras ``Model``.
 
+    :returns: A trained Keras ``Model``.
     """
     # Define the model architecture. This model is unoptimized, so higher accuracy
     # can be achieved by changing the architecture or its hyperparameters.
@@ -110,10 +113,10 @@ def evaluate_model(
     :param model: A trained Keras ``Model``
     :param test_images: Test image data from :func:`.load_mnist_images`.
     :param test_labels: Test image labels from :func:`.load_mnist_images`.
-    :returns: ``(loss, accuracy)``, where ``loss`` is the loss function's output (lower
-        is better) and ``accuracy`` is the model's accuracy on the test data set (higher
-        is better).
 
+    :returns: ``(loss, accuracy)``, where ``loss`` is the loss function's output (lower
+              is better) and ``accuracy`` is the model's accuracy on the test data set
+              (higher is better).
     """
     assert len(model.metrics_names) == 2
     assert model.metrics_names[0] == "loss"
@@ -127,24 +130,31 @@ def quantize_model(
     epochs: int,
     train_images: tf.Tensor,
     train_labels: tf.Tensor,
-    model_file_name: str,
+    quantized_model_prefix: str,
 ) -> keras.Model:
     """Quantize and save a ``model``.
 
     The ``model`` should be trained with :func:`train_unquantized_model`.
 
-    The quantized model will be saved to a file named ``model_file_name``, and can be
-    loaded with the LiteRT ``Interpreter``, :func:`.load_tflite_model`,
-    :class:`.NumPyInference`, or :class:`.PyRTLInference`.
+    The quantized model will be saved to a file named
+    ``{quantized_model_prefix}.tflite``, and can be loaded with the LiteRT
+    ``Interpreter``, :func:`.load_tflite_model`, :class:`.NumPyInference`, or
+    :class:`.PyRTLInference`.
+
+    The quantized model's NumPy weights, biases, and quantization metadata will also be
+    saved with :func:`.save_tensors`, to a file named ``{quantized_model_prefix}.npz``.
+    This file can be loaded with :class:`.SavedTensors`.
 
     :param model: A trained Keras ``Model`` from :func:`train_unquantized_model`.
     :param learning_rate: Controls how quickly the neural network adjusts its weights.
     :param epochs: Number of times the ``train_images`` are processed.
     :param train_images: Training image data from :func:`.load_mnist_images`.
     :param train_labels: Training labels from :func:`.load_mnist_images`.
-    :param model_file_name: Name for the quantized model file.
-    :returns: A quantized Keras ``Model``.
+    :param quantized_model_prefix: Prefix for the saved quantized ``.tflite`` model
+        file, and the NumPy ``.npz`` file containing the model's weights, biases, and
+        quantization parameters.
 
+    :returns: A quantized Keras ``Model``.
     """
     quantized_model = tfmot.quantization.keras.quantize_model(model)
 
@@ -161,7 +171,7 @@ def quantize_model(
         for data in tf.data.Dataset.from_tensor_slices(train_images).batch(1).take(100):
             yield [tf.dtypes.cast(data, tf.float32)]
 
-    if model_file_name is not None:
+    if quantized_model_prefix is not None:
         # Fully quantize the model to int8. Our hardware implementation does not support
         # floating point computations.
         converter = tf.lite.TFLiteConverter.from_keras_model(quantized_model)
@@ -174,7 +184,13 @@ def quantize_model(
         quantized_tflite_model = converter.convert()
 
         # Save the quantized model.
-        tflite_model_quant_file = pathlib.Path(".") / model_file_name
+        tflite_model_quant_file = pathlib.Path(".") / f"{quantized_model_prefix}.tflite"
         tflite_model_quant_file.write_bytes(quantized_tflite_model)
+
+        # Save the quantized model's tensors to a NumPy .npz file.
+        interpreter = Interpreter(model_path=str(tflite_model_quant_file))
+        save_tensors(
+            interpreter=interpreter, quantized_model_prefix=quantized_model_prefix
+        )
 
     return quantized_model
