@@ -67,6 +67,7 @@ def main() -> None:
     parser.add_argument("--y_zero", type=int, default=0)
     parser.add_argument("--a_shape", type=int, nargs=2, default=(2, 4))
     parser.add_argument("--a_start", type=int, default=1)
+    parser.add_argument("--verilog", action="store_true", default=False)
     args = parser.parse_args()
 
     # Create input matrices.
@@ -107,7 +108,7 @@ def main() -> None:
         input_bitwidth=input_bitwidth,
         accumulator_bitwidth=accumulator_bitwidth,
     )
-    matrix_xy.make_outputs()
+    matrix_xy.make_outputs("matrix_xy")
 
     # Build the elementwise adder. It consumes the systolic array's output, and adds
     # ``matrix_a`` to it, which is an array of ``pyrtl.Const``s. Generate pyrtl.Outputs
@@ -116,7 +117,7 @@ def main() -> None:
     matrix_xya = pyrtl_matrix.make_elementwise_add(
         name="add0", a=matrix_xy, b=matrix_a, output_bitwidth=accumulator_bitwidth
     )
-    matrix_xya.make_outputs()
+    matrix_xya.make_outputs("matrix_xya")
     matrix_xya.ready <<= True
 
     # Provide the initial data for ``y_memblock``.
@@ -161,6 +162,28 @@ def main() -> None:
     expected_xya = expected_xy + a
     actual_xya = matrix_xya.inspect(sim=sim)
     _verify_tensor("x ⋅ y + a", expected_xya, actual_xya)
+
+    if args.verilog:
+        with open("pyrtl_matrix.v", "w") as output:
+            pyrtl.output_to_verilog(output)
+            pyrtl.output_verilog_testbench(
+                output,
+                simulation_trace=sim.tracer,
+                vcd="pyrtl_matrix.vcd",
+                cmd=(
+                    '$display("time %3t, matrix_xya:'
+                    '\\n[[%3d %3d %3d %3d]\\n [%3d %3d %3d %3d]\\n", '
+                    "$time, "
+                    "$signed(matrix_xya_0_0), "
+                    "$signed(matrix_xya_0_1), "
+                    "$signed(matrix_xya_0_2), "
+                    "$signed(matrix_xya_0_3), "
+                    "$signed(matrix_xya_1_0), "
+                    "$signed(matrix_xya_1_1), "
+                    "$signed(matrix_xya_1_2), "
+                    "$signed(matrix_xya_1_3));"
+                ),
+            )
 
 
 if __name__ == "__main__":

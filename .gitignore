@@ -1,2 +1,9 @@
 quantized.tflite
 docs/_build
+
+# Generated Verilog and VCD output.
+*.v
+*.vcd
+
+# Verilator.
+obj_dir

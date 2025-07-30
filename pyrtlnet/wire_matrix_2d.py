@@ -88,6 +88,7 @@ class WireMatrix2D:
 
         self.matrix = None
         self.memblock = None
+        self.output_name = None
         if values is None:
             # Create a Matrix of Inputs.
             self.is_input = True
@@ -208,17 +209,22 @@ class WireMatrix2D:
             valid=self.valid,
         )
 
-    def make_outputs(self) -> None:
+    def make_outputs(self, output_name: str) -> None:
         """Create :class:`~pyrtl.Output` ``WireVectors`` for ``self``.
 
         Use :meth:`.inspect` to retrieve these :class:`~pyrtl.Output` values.
+
+        :param output_name: The generated :class:`Outputs<pyrtl.Output>` will have names
+            of the form ``{output_name}_{row}_{column}``.
         """
         num_rows, num_columns = self.shape
+        assert not self.output_name
+        self.output_name = output_name
 
         for row in range(num_rows):
             for column in range(num_columns):
                 output = pyrtl.Output(
-                    name=f"output_{self.name}[{row}][{column}]", bitwidth=self.bitwidth
+                    name=f"{self.output_name}_{row}_{column}", bitwidth=self.bitwidth
                 )
                 output <<= self[row][column]
 
@@ -240,7 +246,7 @@ class WireMatrix2D:
         for row in range(num_rows):
             for column in range(num_columns):
                 array[row][column] = pyrtl.val_to_signed_integer(
-                    sim.inspect(f"output_{self.name}[{row}][{column}]"),
+                    sim.inspect(f"{self.output_name}_{row}_{column}"),
                     bitwidth=self.bitwidth,
                 )
         return np.array(array)

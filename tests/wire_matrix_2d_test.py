@@ -26,7 +26,7 @@ class TestWireMatrix2D(unittest.TestCase):
         )
 
         # Create an Output for each matrix element.
-        matrix.make_outputs()
+        matrix.make_outputs("matrix")
 
         # Run simulation and verify that the correct matrix elements were retrieved.
         sim = pyrtl.Simulation()
@@ -53,7 +53,7 @@ class TestWireMatrix2D(unittest.TestCase):
         )
 
         # Create an Output for each matrix element.
-        matrix.make_outputs()
+        matrix.make_outputs("matrix")
 
         # Run simulation and verify that the correct matrix elements were retrieved.
         sim = pyrtl.Simulation()
@@ -77,7 +77,7 @@ class TestWireMatrix2D(unittest.TestCase):
         )
 
         # Create an Output for each matrix element.
-        matrix.make_outputs()
+        matrix.make_outputs("matrix")
 
         # Run simulation and verify that the correct matrix elements were retrieved.
         sim = pyrtl.Simulation()
@@ -105,7 +105,7 @@ class TestWireMatrix2D(unittest.TestCase):
         )
 
         # Create an Output for each matrix element.
-        matrix.make_outputs()
+        matrix.make_outputs("matrix")
 
         # Run simulation and verify that the correct matrix elements were retrieved.
         sim = pyrtl.Simulation()
@@ -136,7 +136,7 @@ class TestWireMatrix2D(unittest.TestCase):
         transposed = matrix.transpose()
 
         # Create an Output for each transposed matrix element.
-        transposed.make_outputs()
+        transposed.make_outputs("transposed")
 
         # Run simulation and verify that the correct matrix elements were retrieved.
         sim = pyrtl.Simulation()

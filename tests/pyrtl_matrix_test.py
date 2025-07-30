@@ -43,7 +43,7 @@ class TestPyrtlMatrix(unittest.TestCase):
             accumulator_bitwidth=accumulator_bitwidth,
         )
         ab_matrix.ready <<= True
-        ab_matrix.make_outputs()
+        ab_matrix.make_outputs("ab_matrix")
 
         sim = pyrtl.Simulation()
         while not sim.inspect("matmul.output.valid"):
@@ -72,7 +72,7 @@ class TestPyrtlMatrix(unittest.TestCase):
             accumulator_bitwidth=accumulator_bitwidth,
         )
         ab_matrix.ready <<= True
-        ab_matrix.make_outputs()
+        ab_matrix.make_outputs("ab_matrix")
 
         sim = pyrtl.Simulation()
         while not sim.inspect("matmul.output.valid"):
@@ -102,7 +102,7 @@ class TestPyrtlMatrix(unittest.TestCase):
             accumulator_bitwidth=accumulator_bitwidth,
         )
         ab_matrix.ready <<= True
-        ab_matrix.make_outputs()
+        ab_matrix.make_outputs("ab_matrix")
 
         sim = pyrtl.Simulation()
         while not sim.inspect("matmul.output.valid"):
@@ -180,7 +180,7 @@ class TestPyrtlMatrix(unittest.TestCase):
             accumulator_bitwidth=accumulator_bitwidth,
         )
         ab_matrix.ready <<= True
-        ab_matrix.make_outputs()
+        ab_matrix.make_outputs("ab_matrix")
 
         sim = pyrtl.Simulation(
             memory_value_map={memblock_a: memblock_data_a, memblock_b: memblock_data_b}
@@ -218,7 +218,7 @@ class TestPyrtlMatrix(unittest.TestCase):
             accumulator_bitwidth=accumulator_bitwidth,
         )
         ab_matrix.ready <<= True
-        ab_matrix.make_outputs()
+        ab_matrix.make_outputs("ab_matrix")
 
         sim = pyrtl.Simulation()
         provided_inputs = a_matrix.make_provided_inputs(a)
@@ -281,7 +281,7 @@ class TestPyrtlMatrix(unittest.TestCase):
             accumulator_bitwidth=accumulator_bitwidth,
         )
         abc_matrix.ready <<= True
-        abc_matrix.make_outputs()
+        abc_matrix.make_outputs("abc_matrix")
 
         sim = pyrtl.Simulation()
         while not sim.inspect("matmul1.output.valid"):
@@ -307,7 +307,7 @@ class TestPyrtlMatrix(unittest.TestCase):
             name="add", a=a_matrix, b=b_matrix, output_bitwidth=output_bitwidth
         )
         ab_matrix.ready <<= True
-        ab_matrix.make_outputs()
+        ab_matrix.make_outputs("ab_matrix")
 
         sim = pyrtl.Simulation()
         sim.step()
@@ -325,7 +325,7 @@ class TestPyrtlMatrix(unittest.TestCase):
 
         relu_matrix = pyrtl_matrix.make_elementwise_relu(name="relu", a=a_matrix)
         relu_matrix.ready <<= True
-        relu_matrix.make_outputs()
+        relu_matrix.make_outputs("relu_matrix")
 
         sim = pyrtl.Simulation()
         sim.step()
@@ -355,7 +355,7 @@ class TestPyrtlMatrix(unittest.TestCase):
             output_bitwidth=input_bitwidth,
         )
         normal_matrix.ready <<= True
-        normal_matrix.make_outputs()
+        normal_matrix.make_outputs("normal_matrix")
 
         sim = pyrtl.Simulation()
         sim.step()

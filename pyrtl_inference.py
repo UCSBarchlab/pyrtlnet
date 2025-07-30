@@ -1,5 +1,6 @@
 import argparse
 import shutil
+import sys
 
 import numpy as np
 from ai_edge_litert.interpreter import Interpreter
@@ -13,7 +14,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="pyrtl_inference.py")
     parser.add_argument("--start_image", type=int, default=0)
     parser.add_argument("--num_images", type=int, default=1)
+    parser.add_argument("--verilog", action="store_true", default=False)
     args = parser.parse_args()
+
+    if args.verilog and args.num_images != 1:
+        sys.exit("--verilog can only be used with one image (--num_images=1)")
 
     terminal_columns = shutil.get_terminal_size((80, 24)).columns
     np.set_printoptions(linewidth=terminal_columns)
@@ -37,7 +42,9 @@ def main() -> None:
         display_image(test_image)
 
         # Run PyRTL inference on the test image.
-        layer0_output, layer1_output, actual = pyrtl_inference.simulate(test_image)
+        layer0_output, layer1_output, actual = pyrtl_inference.simulate(
+            test_image, args.verilog
+        )
 
         # Print results.
         print(

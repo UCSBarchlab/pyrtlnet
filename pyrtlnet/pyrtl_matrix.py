@@ -77,12 +77,13 @@ def make_input_memblock_data(
 
 
 def _make_input_romblock(
-    a: np.ndarray, input_bitwidth: int, addrwidth: int
+    a: np.ndarray, input_bitwidth: int, addrwidth: int, name: str
 ) -> pyrtl.RomBlock:
     """Convert a numpy array to a RomBlock for use with a systolic array."""
     num_rows, num_inner = a.shape
     romblock_data = make_input_memblock_data(a, input_bitwidth, addrwidth)
     return pyrtl.RomBlock(
+        name=name,
         addrwidth=addrwidth,
         bitwidth=input_bitwidth * num_rows,
         romdata=romblock_data,
@@ -505,17 +506,18 @@ def make_systolic_array(
     reset <<= counter == 0
 
     def process_input(
-        a: WireMatrix2D | np.ndarray,
+        a: WireMatrix2D | np.ndarray, name: str
     ) -> list[pyrtl.WireVector]:
         """Convert a left input matrix ``a`` into a list of ``left`` WireVector inputs.
 
         This can also be used to convert a right input matrix ``b`` into a list of
         ``top`` WireVector inputs by first transposing the matrix ``b``.
 
+        If a :class:`~pyrtl.RomBlock` will be created, it will be named ``name``.
         """
         if isinstance(a, np.ndarray):
             left_romblock = _make_input_romblock(
-                a, input_bitwidth=input_bitwidth, addrwidth=counter_bitwidth
+                a, input_bitwidth=input_bitwidth, addrwidth=counter_bitwidth, name=name
             )
             return _make_systolic_array_memblock_inputs(
                 a.shape, counter, left_romblock, input_bitwidth
@@ -531,11 +533,11 @@ def make_systolic_array(
     assert num_inner == b.shape[0]
     num_columns = b.shape[1]
 
-    left = process_input(a)
+    left = process_input(a, name=f"{name}_a")
     for row in range(num_rows):
         left[row].name = f"{name}.left[{row}]"
 
-    top = process_input(b.transpose())
+    top = process_input(b.transpose(), name=f"{name}_b")
     for col in range(num_columns):
         top[col].name = f"{name}.top[{col}]"
 
