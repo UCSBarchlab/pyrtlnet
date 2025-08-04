@@ -2,7 +2,7 @@
 ==========
 
 [![Build Status](https://github.com/UCSBarchlab/pyrtlnet/actions/workflows/python-test.yml/badge.svg)](https://github.com/UCSBarchlab/pyrtlnet/actions/workflows/python-test.yml)
-[![Documentation Status](https://readthedocs.org/projects/pyrtlnet/badge/?version=latest)](http://pyrtlnet.readthedocs.org/en/latest/?badge=latest)                                 
+[![Documentation Status](https://readthedocs.org/projects/pyrtlnet/badge/?version=latest)](http://pyrtlnet.readthedocs.org/en/latest/?badge=latest)
 
 Train it. Quantize it. Synthesize and simulate it — in hardware. All in Python.
 
@@ -52,91 +52,67 @@ Main features include:
 
 ### Installation
 
-1. Install Python 3.12. `pyrtlnet` is only tested with Python 3.12. Note that TensorFlow
-   currently does not support Python 3.13.
-
-   ```shell
-   $ python --version
-   Python 3.12.8
-   ```
-
-1. Create a [venv](https://docs.python.org/3/library/venv.html) for `pyrtlnet`.
-   `pyrtlnet` depends on many `pip` packages, pinned to specific versions for
-   reproducible behavior. Installation of these packages should be done in a clean
-   `venv` to avoid conflicts with installed system packages.
-
-   ```shell
-   $ python -m venv pyrtlnet-venv
-   $ . pyrtlnet-venv/bin/activate
-   (pyrtlnet-venv) $ pip list
-   Package Version
-   ------- -------
-   pip     24.3.1
-   (pyrtlnet-venv) $
-   ```
-
-1. Install `pip` packages.
-
-   ```shell
-   (pyrtlnet-venv) $ pip install --upgrade -r requirements.txt
-   ...
-   Successfully installed absl-py-1.4.0 ai-edge-litert-1.3.0 astunparse-1.6.3 attrs-25.3.0 backports-strenum-1.2.8 certifi-2025.6.15 charset-normalizer-3.4.2 dm-tree-0.1.9 execnet-2.1.1 flatbuffers-25.2.10 fxpmath-0.4.9 gast-0.6.0 google-pasta-0.2.0 grpcio-1.73.0 h5py-3.14.0 idna-3.10 iniconfig-2.1.0 keras-3.10.0 libclang-18.1.1 markdown-3.8 markdown-it-py-3.0.0 markupsafe-3.0.2 mdurl-0.1.2 ml-dtypes-0.5.1 namex-0.1.0 numpy-1.26.4 opt-einsum-3.4.0 optree-0.16.0 packaging-25.0 pluggy-1.6.0 protobuf-5.29.5 pygments-2.19.1 pyrtl-0.11.3 pytest-8.4.0 pytest-xdist-3.7.0 requests-2.32.4 rich-14.0.0 ruff-0.11.13 setuptools-80.9.0 six-1.17.0 tensorboard-2.19.0 tensorboard-data-server-0.7.2 tensorflow-2.19.0 tensorflow-model-optimization-0.8.0 termcolor-3.1.0 tf-keras-2.19.0 tqdm-4.67.1 typing-extensions-4.14.0 urllib3-2.4.0 werkzeug-3.1.3 wheel-0.45.1 wrapt-1.17.2
-   (pyrtlnet-venv) $
-   ```
+1. Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/).
 
 ### Usage
 
 1. Run
-   [`tensorflow_training.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/tensorflow_training.py) in this repository's root directory.
-   This trains a quantized neural network with TensorFlow, on the MNIST data set, and
-   produces a quantized `tflite` saved model file, named `quantized.tflite`.
+   [`uv run tensorflow_training.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/tensorflow_training.py)
+   in this repository's root directory. This trains a quantized neural network
+   with TensorFlow, on the MNIST data set, and produces a quantized `tflite`
+   saved model file, named `quantized.tflite`.
 
    ```shell
-   (pyrtlnet-venv) $ python tensorflow_training.py
+   $ uv run tensorflow_training.py
    Training unquantized model.
    Epoch 1/10
-   1875/1875 [==============================] - 1s 395us/step - loss: 0.6666 - accuracy: 0.8176
+   1875/1875 [==============================] - 1s 350us/step - loss: 0.6532 - accuracy: 0.8202
    Epoch 2/10
-   1875/1875 [==============================] - 1s 391us/step - loss: 0.3291 - accuracy: 0.9059
+   1875/1875 [==============================] - 1s 346us/step - loss: 0.3304 - accuracy: 0.9039
    Epoch 3/10
-   1875/1875 [==============================] - 1s 395us/step - loss: 0.2955 - accuracy: 0.9146
+   1875/1875 [==============================] - 1s 347us/step - loss: 0.2944 - accuracy: 0.9145
    Epoch 4/10
-   1875/1875 [==============================] - 1s 389us/step - loss: 0.2769 - accuracy: 0.9193
+   1875/1875 [==============================] - 1s 350us/step - loss: 0.2719 - accuracy: 0.9205
    Epoch 5/10
-   1875/1875 [==============================] - 1s 394us/step - loss: 0.2622 - accuracy: 0.9225
+   1875/1875 [==============================] - 1s 352us/step - loss: 0.2551 - accuracy: 0.9245
    Epoch 6/10
-   1875/1875 [==============================] - 1s 392us/step - loss: 0.2510 - accuracy: 0.9255
+   1875/1875 [==============================] - 1s 348us/step - loss: 0.2403 - accuracy: 0.9288
    Epoch 7/10
-   1875/1875 [==============================] - 1s 399us/step - loss: 0.2406 - accuracy: 0.9293
+   1875/1875 [==============================] - 1s 350us/step - loss: 0.2280 - accuracy: 0.9330
    Epoch 8/10
-   1875/1875 [==============================] - 1s 400us/step - loss: 0.2313 - accuracy: 0.9316
+   1875/1875 [==============================] - 1s 346us/step - loss: 0.2178 - accuracy: 0.9358
    Epoch 9/10
-   1875/1875 [==============================] - 1s 390us/step - loss: 0.2231 - accuracy: 0.9331
+   1875/1875 [==============================] - 1s 348us/step - loss: 0.2092 - accuracy: 0.9378
    Epoch 10/10
-   1875/1875 [==============================] - 1s 396us/step - loss: 0.2157 - accuracy: 0.9356
+   1875/1875 [==============================] - 1s 350us/step - loss: 0.2023 - accuracy: 0.9403
    Evaluating unquantized model.
-   313/313 [==============================] - 0s 288us/step - loss: 0.2131 - accuracy: 0.9373
-   Training quantized model and writing quantized.tflite.
+   313/313 [==============================] - 0s 235us/step - loss: 0.1994 - accuracy: 0.9414
+   Training quantized model and writing quantized.tflite and quantized.npz.
    Epoch 1/2
-   1875/1875 [==============================] - 1s 457us/step - loss: 0.2135 - accuracy: 0.9359
+   1875/1875 [==============================] - 1s 410us/step - loss: 0.1963 - accuracy: 0.9426
    Epoch 2/2
-   1875/1875 [==============================] - 1s 463us/step - loss: 0.2118 - accuracy: 0.9359
+   1875/1875 [==============================] - 1s 408us/step - loss: 0.1936 - accuracy: 0.9423
+   ...
    Evaluating quantized model.
-   313/313 [==============================] - 0s 361us/step - loss: 0.2141 - accuracy: 0.9364
-   (pyrtlnet-venv) $ ls -l quantized.tflite
-   -rw-rw-r-- 1 lauj lauj 5568 Jun 17 19:58 quantized.tflite
+   313/313 [==============================] - 0s 286us/step - loss: 0.1996 - accuracy: 0.9413
+   Writing mnist_test_data.npz.
    ```
 
-   The script's output shows that the unquantized model achieved `0.9373` accuracy on
-   the test data set, while the quantized model achieved `0.9364` accuracy on the test
-   data set. Your accuracy numbers may differ.
+   The script's output shows that the unquantized model achieved `0.9414` accuracy on
+   the test data set, while the quantized model achieved `0.9413` accuracy on the test
+   data set.
 
-   This script produces a `quantized.tflite` file which includes all the
-   model's weights, biases, and quantization parameters. This file will be read
-   by all the inference implementations.
+   This script produces `quantized.tflite` and `quantized.npz` files which
+   includes all the model's weights, biases, and quantization parameters.
+   `quantized.tflite` is a standard `.tflite` saved model file that can be read
+   by standard tools like the
+   [Model Explorer](https://github.com/google-ai-edge/model-explorer).
+   `quantized.npz` stores the weights, biases, and quantization parameters as
+   [NumPy saved arrays](https://numpy.org/doc/stable/reference/generated/numpy.savez_compressed.html).
+   `quantized.npz` is read by all the provided inference implementations.
 
 1. Run
-   [`litert_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py) in this repository's root directory.
+   [`uv run litert_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py) in this repository's root directory.
    This runs one test image through the reference LiteRT inference implementation.
 
    ![litert_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/litert_inference.png?raw=true)
@@ -162,8 +138,8 @@ Main features include:
       this is the same data from the `layer 1 output` line, reformatted into a bar
       chart.
 
-      In this case, the digit `7` is the most likely, with a score of `95`, followed by
-      the digit `3` with a score of `51`. The digit `7` is labeled as `actual` because
+      In this case, the digit `7` is the most likely, with a score of `93`, followed by
+      the digit `3` with a score of `58`. The digit `7` is labeled as `actual` because
       it is the actual prediction generated by the neural network. It is also labeled as
       `expected` because the labled test data confirms that the image actually depicts
       the digit `7`.
@@ -175,13 +151,13 @@ Main features include:
    command line flags. For example:
 
    ```shell
-   (pyrtlnet-venv) $ python litert_inference.py --start_image=7 --num_images=10
+   $ uv run litert_inference.py --start_image=7 --num_images=10
    ...
    9/10 correct predictions, 90% accuracy
    ```
 
 1. Run
-   [`numpy_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py) in this repository's root directory.
+   [`uv run numpy_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py) in this repository's root directory.
    This runs one test image through the software NumPy and fxpmath inference
    implementation. This implements inference for the quantized neural network as a
    series of NumPy calls, using the fxpmath fixed-point math library.
@@ -192,7 +168,7 @@ Main features include:
    `litert_inference.py`, except that each layer's outputs are transposed.
 
 1. Run
-   [`pyrtl_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py) in this repository's root directory.
+   [`uv run pyrtl_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py) in this repository's root directory.
    This runs one test image through the hardware PyRTL inference
    implementation. This implementation converts the quantized neural network
    into hardware logic, and simulates the hardware with a PyRTL
@@ -209,10 +185,10 @@ The [reference
 documentation](https://pyrtlnet.readthedocs.io/en/latest/index.html) has more
 information on how these scripts work and their main interfaces.
 
-Try the demo script
-[`pyrtl_matrix.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_matrix.py)
-in this repository's root directory to see how the PyRTL systolic array
-multiplies matrices. Also see the documentation for
+Try the `pyrtl_matrix.py` demo script, with
+[`uv run pyrtl_matrix.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_matrix.py)
+to see how the PyRTL systolic array multiplies matrices. Also see the
+documentation for
 [`make_systolic_array`](https://pyrtlnet.readthedocs.io/en/latest/matrix.html#pyrtlnet.pyrtl_matrix.make_systolic_array):
 
 ![pyrtl_matrix.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/pyrtl_matrix.png?raw=true)
@@ -270,11 +246,10 @@ Contributions are welcome! Please check a few things before sending a pull reque
    describe your proposed change.
 
 1. Ensure that all tests pass, and that new features are tested. Tests are run with
-   [`pytest`](https://docs.pytest.org/en/stable/), which is installed by
-   `requirements.txt`:
+   [`pytest`](https://docs.pytest.org/en/stable/):
 
    ```shell
-   (pyrtlnet-venv) $ pytest
+   $ uv run pytest
    ============================ test session starts ============================
    ...
    collected 20 items
@@ -292,28 +267,26 @@ Contributions are welcome! Please check a few things before sending a pull reque
    [`pytest-xdist`](https://github.com/pytest-dev/pytest-xdist) is also installed, so
    testing can be accelerated by running the tests in parallel with `pytest -n auto`.
 
-1. Ensure that [`ruff`](https://docs.astral.sh/ruff/) lint checks pass. `ruff` is
-   installed by `requirements.txt`:
+1. Ensure that [`ruff`](https://docs.astral.sh/ruff/) lint checks pass:
 
    ```shell
-   (pyrtlnet-venv) $ ruff check
+   $ uv run ruff check
    All checks passed!
    ```
 
 1. Apply `ruff` automatic code formatting:
 
    ```shell
-   (pyrtlnet-venv) $ ruff format
+   $ uv run ruff format
    22 files left unchanged
    ```
 
 ### Maintenance
 
-Periodically update the pinned dependencies in
-[`requirements.txt`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/requirements.txt)
-with `make requirements.txt`.
+`uv` pins all `pip` dependencies to specific versions for reproducible
+behavior. These pinned dependencies must be manually updated with
+`uv lock --upgrade`.
 
-When a new [minor version version of Python](https://devguide.python.org/versions/) is
-released, update the [GitHub testing
-workflow](https://github.com/UCSBarchlab/pyrtlnet/blob/main/.github/workflows/python-test.yml)
-and the installation instructions in `README.md`.
+When a new
+[minor version version of Python](https://devguide.python.org/versions/) is
+released, update the pinned Python version with `uv python pin $VERSION`.

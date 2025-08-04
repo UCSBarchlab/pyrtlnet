@@ -56,6 +56,7 @@ def main() -> None:
         test_image = test_images[test_index]
         print(f"PyRTL network input (#{test_index}):")
         display_image(test_image)
+        print("test_image", test_image.shape, test_image.dtype, "\n")
 
         # Run PyRTL inference on the test image.
         layer0_output, layer1_output, actual = pyrtl_inference.simulate(
@@ -73,7 +74,7 @@ def main() -> None:
         )
         print(layer1_output.transpose(), "\n")
 
-        print(f"\nPyRTL network output (#{test_index}):")
+        print(f"PyRTL network output (#{test_index}):")
         expected = test_labels[test_index]
         display_outputs(layer1_output, expected=expected, actual=actual)
 

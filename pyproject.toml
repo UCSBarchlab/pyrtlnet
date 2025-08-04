@@ -1,3 +1,30 @@
+[project]
+name = "pyrtlnet"
+version = "0.1.0"
+description = "`pyrtlnet` is a self-contained example of a quantized neural network that runs end-to-end in Python."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ai-edge-litert>=1.4.0",
+    "fxpmath>=0.4.9",
+    "numpy>=1.26.4",
+    "pyrtl>=0.12",
+    "tensorflow>=2.18.1",
+    "tensorflow-model-optimization>=0.8.0",
+    "tf-keras>=2.18.0",
+]
+
+[dependency-groups]
+dev = [
+    "furo>=2025.7.19",
+    "pytest>=8.4.1",
+    "pytest-xdist>=3.8.0",
+    "ruff>=0.12.7",
+    "sphinx>=8.2.3",
+    "sphinx-autodoc-typehints>=3.2.0",
+    "sphinx-copybutton>=0.5.2",
+]
+
 [tool.pytest.ini_options]
 filterwarnings = [
     # note the use of single quote below to denote "raw" strings in TOML
