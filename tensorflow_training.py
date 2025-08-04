@@ -1,4 +1,7 @@
+import random
+
 import numpy as np
+import tensorflow as tf
 
 from pyrtlnet.inference_util import quantized_model_prefix
 from pyrtlnet.mnist_util import load_mnist_images
@@ -10,6 +13,12 @@ from pyrtlnet.tensorflow_training import (
 
 
 def main() -> None:
+    seed = 42
+
+    tf.random.set_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
     # Load MNIST dataset.
     (train_images, train_labels), (test_images, test_labels) = load_mnist_images()
 
