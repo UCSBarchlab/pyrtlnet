@@ -52,12 +52,26 @@ Main features include:
 
 ### Installation
 
+1. Install [`git`](https://github.com/git-guides/install-git).
+
+1. Clone this repository, and `cd` to the repository's root directory.
+
+   ```shell
+   $ git clone https://github.com/UCSBarchlab/pyrtlnet.git
+   $ cd pyrtlnet
+   ```
+
 1. Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/).
+
+1. (optional) Install
+   [Verilator](https://verilator.org/guide/latest/install.html) if you want to
+   export the inference hardware to Verilog, and simulate the Verilog version
+   of the hardware.
 
 ### Usage
 
 1. Run
-   [`uv run tensorflow_training.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/tensorflow_training.py)
+   `uv run` [`tensorflow_training.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/tensorflow_training.py)
    in this repository's root directory. This trains a quantized neural network
    with TensorFlow, on the MNIST data set, and produces a quantized `tflite`
    saved model file, named `quantized.tflite`.
@@ -105,14 +119,14 @@ Main features include:
    This script produces `quantized.tflite` and `quantized.npz` files which
    includes all the model's weights, biases, and quantization parameters.
    `quantized.tflite` is a standard `.tflite` saved model file that can be read
-   by standard tools like the
+   by tools like the
    [Model Explorer](https://github.com/google-ai-edge/model-explorer).
    `quantized.npz` stores the weights, biases, and quantization parameters as
    [NumPy saved arrays](https://numpy.org/doc/stable/reference/generated/numpy.savez_compressed.html).
    `quantized.npz` is read by all the provided inference implementations.
 
 1. Run
-   [`uv run litert_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py) in this repository's root directory.
+   `uv run` [`litert_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py) in this repository's root directory.
    This runs one test image through the reference LiteRT inference implementation.
 
    ![litert_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/litert_inference.png?raw=true)
@@ -157,7 +171,7 @@ Main features include:
    ```
 
 1. Run
-   [`uv run numpy_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py) in this repository's root directory.
+   `uv run` [`numpy_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py) in this repository's root directory.
    This runs one test image through the software NumPy and fxpmath inference
    implementation. This implements inference for the quantized neural network as a
    series of NumPy calls, using the fxpmath fixed-point math library.
@@ -168,7 +182,9 @@ Main features include:
    `litert_inference.py`, except that each layer's outputs are transposed.
 
 1. Run
-   [`uv run pyrtl_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py) in this repository's root directory.
+   `uv run`
+   [`pyrtl_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py)
+   `--verilog` in this repository's root directory.
    This runs one test image through the hardware PyRTL inference
    implementation. This implementation converts the quantized neural network
    into hardware logic, and simulates the hardware with a PyRTL
@@ -179,6 +195,43 @@ Main features include:
    The tensors output by this script should exactly match the tensors output by
    `numpy_inference.py`.
 
+   The `--verilog` flag makes `pyrtl_inference.py` generate a Verilog version
+   of the hardware, which is written to `pyrtl_inference.v`. The next step will
+   use this generated Verilog file.
+
+1. If `verilator` is installed, run `verilator --trace -j 0 --binary pyrtl_inference.v`:
+
+   ```shell
+   $ verilator --trace -j 0 --binary pyrtl_inference.v
+   ...
+   - V e r i l a t i o n   R e p o r t: Verilator 5.032 2025-01-01 rev (Debian 5.032-1)
+   - Verilator: Built from 0.227 MB sources in 3 modules, into 13.052 MB in 18 C++ files needing 0.022 MB
+   - Verilator: Walltime 3.576 s (elab=0.014, cvt=0.598, bld=2.857); cpu 0.847 s on 32 threads; alloced 164.512 MB
+   ```
+
+   This converts the generated Verilog file to generated C++ code, and compiles
+   the generated C++ code. The outputs of this process can be found in the
+   `obj_dir` directory.
+
+1. If `verilator` is installed, run `obj_dir/Vpyrtl_inference`:
+
+   ```shell
+   $ obj_dir/Vpyrtl_inference
+   ...
+   time 1970
+   layer1 output (transposed):
+   [[  33  -48   29   58  -50   31  -87   93    9   49]]
+   argmax: 7
+
+   - pyrtl_inference.v:3638: Verilog $finish
+   - S i m u l a t i o n   R e p o r t: Verilator 5.032 2025-01-01
+   - Verilator: $finish at 2ns; walltime 0.006 s; speed 319.047 ns/s
+   - Verilator: cpu 0.006 s on 1 threads; alloced 249 MB
+   ```
+
+   The final `layer1 output` printed by the Verilator simulation should
+   exactly match the `layer1 output` tensors output by `pyrtl_inference.py`.
+
 ### Next Steps
 
 The [reference
@@ -186,12 +239,15 @@ documentation](https://pyrtlnet.readthedocs.io/en/latest/index.html) has more
 information on how these scripts work and their main interfaces.
 
 Try the `pyrtl_matrix.py` demo script, with
-[`uv run pyrtl_matrix.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_matrix.py)
+`uv run` [`pyrtl_matrix.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_matrix.py)
 to see how the PyRTL systolic array multiplies matrices. Also see the
 documentation for
 [`make_systolic_array`](https://pyrtlnet.readthedocs.io/en/latest/matrix.html#pyrtlnet.pyrtl_matrix.make_systolic_array):
 
 ![pyrtl_matrix.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/pyrtl_matrix.png?raw=true)
+
+`pyrtl_matrix.py` also supports the `--verilog` flag, so this systolic array
+simulation can be repeated with Verilator.
 
 ### Project Ideas
 
@@ -222,15 +278,10 @@ documentation for
 
 * Add FPGA suppport:
 
-  * Export the PyRTL design to [Verilog](https://en.wikipedia.org/wiki/Verilog), with
-    PyRTL's
-    [`output_to_verilog()`](https://pyrtl.readthedocs.io/en/latest/export.html#pyrtl.importexport.output_to_verilog).
-    Simulate the exported design with a standard Verilog simulator like
-    [Verilator](https://github.com/verilator/verilator).
-
-  * Synthesize the exported design and run it on a FPGA. This could involve
-    tools like [icestorm](https://github.com/YosysHQ/icestorm) or
-    [Vivado](https://www.amd.com/en/products/software/adaptive-socs-and-fpgas/vivado.html), depending on the type of FPGA.
+  * Synthesize the exported Verilog design and run it on a FPGA. This could
+    involve tools like [icestorm](https://github.com/YosysHQ/icestorm) or
+    [Vivado](https://www.amd.com/en/products/software/adaptive-socs-and-fpgas/vivado.html),
+    depending on the type of FPGA.
 
 * Support more advanced neural network architectures, like [convolutional neural
   networks](https://en.wikipedia.org/wiki/Convolutional_neural_network) or
@@ -289,4 +340,5 @@ behavior. These pinned dependencies must be manually updated with
 
 When a new
 [minor version version of Python](https://devguide.python.org/versions/) is
-released, update the pinned Python version with `uv python pin $VERSION`.
+released, update the pinned Python version with `uv python pin $VERSION`, and
+the Python version in `.readthedocs.yaml`.
