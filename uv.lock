@@ -29,7 +29,7 @@ wheels = [
 
 [[package]]
 name = "ai-edge-litert"
-version = "1.4.0"
+version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backports-strenum" },
@@ -39,9 +39,9 @@ dependencies = [
     { name = "typing-extensions" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/d1/d862284acb7f20dc99dac175f60ff948bd4cb1a66f9b9284ff1de8ba839f/ai_edge_litert-1.4.0-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:b110e532f93b496351bde9dff72341fb56693476e8b3ba012630f5673c6d1436", size = 2972510, upload-time = "2025-07-02T17:38:39.067Z" },
-    { url = "https://files.pythonhosted.org/packages/eb/7b/664dac80c53a8a310f063971c0344f1a3830c1e4c79158828b37896de5fd/ai_edge_litert-1.4.0-cp312-cp312-manylinux_2_17_aarch64.whl", hash = "sha256:edd8c0cda48c9c1c6567afa09888fa667fd4243bd26ca8e5bd9da813d3390b0e", size = 8683057, upload-time = "2025-07-02T17:19:40.895Z" },
-    { url = "https://files.pythonhosted.org/packages/85/43/9238f0c9ae84e312f66cb0b14d7c3cea5d01590587410b289bc2dd90bab4/ai_edge_litert-1.4.0-cp312-cp312-manylinux_2_17_x86_64.whl", hash = "sha256:3f01fa53ad2ca1504a45829c0f9e0594e22dfea7371e9e2977ac67a5096a81a7", size = 11193339, upload-time = "2025-07-02T17:17:26.899Z" },
+    { url = "https://files.pythonhosted.org/packages/42/f9/4f604a0df117895d399cc3b4508054f4d4a80234fba8104bac2ba6b41a68/ai_edge_litert-1.3.0-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:3fb5eeb9bda506f1c25e0ba06721070dd021e490cb272b1a869bbca9c546bf25", size = 5097059, upload-time = "2025-05-19T22:42:30.539Z" },
+    { url = "https://files.pythonhosted.org/packages/11/2e/5aab3c644cb1a9a77498852ad7e4c36197961f03c6376e04f407ba707ec9/ai_edge_litert-1.3.0-cp312-cp312-manylinux_2_17_aarch64.whl", hash = "sha256:4e92616096c0db4c328dc97baa742bc0271f77879198c0dfed0805ae18584998", size = 6698700, upload-time = "2025-05-19T22:36:29.601Z" },
+    { url = "https://files.pythonhosted.org/packages/17/99/528cb51c01190500120237f59c1015124d66be51c9db730fcbd431fb9c27/ai_edge_litert-1.3.0-cp312-cp312-manylinux_2_17_x86_64.whl", hash = "sha256:0ea9b2fe5de9e7a00c7c6c5f79bdd1ace39c933a576751621020f7eb0b8ccca3", size = 11220335, upload-time = "2025-05-19T22:35:11.614Z" },
 ]
 
 [[package]]
@@ -660,7 +660,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ai-edge-litert", specifier = ">=1.4.0" },
+    { name = "ai-edge-litert", specifier = "==1.3.0" },
     { name = "fxpmath", specifier = ">=0.4.9" },
     { name = "numpy", specifier = ">=1.26.4" },
     { name = "pyrtl", specifier = ">=0.12" },
