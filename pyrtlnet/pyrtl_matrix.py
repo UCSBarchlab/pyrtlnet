@@ -95,9 +95,8 @@ class State(enum.IntEnum):
     """State for the systolic array's state machine."""
 
     INIT = 0  # Initialize systolic array inputs.
-    READ = 1  # Read first MemBlock address.
-    BUSY = 2  # Multiply matrices.
-    DONE = 3  # Wait for output to be consumed.
+    BUSY = 1  # Multiply matrices.
+    DONE = 2  # Wait for output to be consumed.
 
 
 def _make_systolic_array_wire_inputs(
@@ -591,16 +590,6 @@ def make_systolic_array(
 
     done_next_cycle = counter == done_cycle
     done_next_cycle.name = f"{name}.done_next_cycle"
-    with pyrtl.conditional_assignment:
-        # Reset the counter in INIT and READ states.
-        with (state == State.INIT) | (state == State.READ):
-            counter.next |= 0
-        # Stop advancing the counter when the matrix multiplication is done.
-        with done_next_cycle:
-            counter.next |= counter
-        # Otherwise, advance the counter.
-        with pyrtl.otherwise:
-            counter.next |= counter + 1
 
     a_is_wire_matrix_2d = isinstance(a, WireMatrix2D)
     b_is_wire_matrix_2d = isinstance(b, WireMatrix2D)
@@ -624,6 +613,17 @@ def make_systolic_array(
         )
         valid = pyrtl.Const(val=True, bitwidth=1)
 
+    with pyrtl.conditional_assignment:
+        # Reset the counter in INIT state.
+        with (state == State.INIT) & ~valid:
+            counter.next |= 0
+        # Stop advancing the counter when the matrix multiplication is done.
+        with done_next_cycle:
+            counter.next |= counter
+        # Otherwise, advance the counter.
+        with pyrtl.otherwise:
+            counter.next |= counter + 1
+
     # Update current state.
     with pyrtl.conditional_assignment:
         with state == State.INIT:
@@ -636,9 +636,7 @@ def make_systolic_array(
                 b.ready |= True
 
             with valid:
-                state.next |= State.READ
-        with state == State.READ:
-            state.next |= State.BUSY
+                state.next |= State.BUSY
         with (state == State.BUSY) & done_next_cycle:
             state.next |= State.DONE
         with state == State.DONE:
