@@ -340,39 +340,39 @@ def make_systolic_array(
     ``mm0.left`` and ``mm0.top`` inputs in the output from
     :meth:`~pyrtl.SimulationTrace.render_trace`::
 
-                        │0   │1   │2   │3   │4   │5   │6   │7   │8   │9   │10  │11
+                        ▕0    ▕1    ▕2    ▕3    ▕4    ▕5    ▕6    ▕7    ▕8    ▕9
 
-             mm0.left[0] ────┤1             │2   │3   ├─────────────────────────────
+             mm0.left[0] ──────▏1   ▕ 2   ▕ 3   ▕────────────────────────────────────
 
-             mm0.left[1] ───────────────────┤4   │5   │6   ├────────────────────────
+             mm0.left[1] ────────────▏4   ▕ 5   ▕ 6   ▕──────────────────────────────
 
-              mm0.top[0] ────┤7             │11  │15  ├─────────────────────────────
+              mm0.top[0] ──────▏7   ▕ 11  ▕ 15  ▕────────────────────────────────────
 
-              mm0.top[1] ───────────────────┤8   │12  │16  ├────────────────────────
+              mm0.top[1] ────────────▏8   ▕ 12  ▕ 16  ▕──────────────────────────────
 
-              mm0.top[2] ────────────────────────┤9   │13  │17  ├───────────────────
+              mm0.top[2] ──────────────────▏9   ▕ 13  ▕ 17  ▕────────────────────────
 
-              mm0.top[3] ─────────────────────────────┤10  │14  │18  ├──────────────
+              mm0.top[3] ────────────────────────▏10  ▕ 14  ▕ 18  ▕──────────────────
 
-        mm0.output[0][0] ────────────────────────┤7   │29  │74
+        mm0.output[0][0] ──────────────────▏7   ▕ 29  ▕ 74
 
-        mm0.output[0][1] ─────────────────────────────┤8   │32  │80
+        mm0.output[0][1] ────────────────────────▏8   ▕ 32  ▕ 80
 
-        mm0.output[0][2] ──────────────────────────────────┤9   │35  │86
+        mm0.output[0][2] ──────────────────────────────▏9   ▕ 35  ▕ 86
 
-        mm0.output[0][3] ───────────────────────────────────────┤10  │38  │92
+        mm0.output[0][3] ────────────────────────────────────▏10  ▕ 38  ▕ 92
 
-        mm0.output[1][0] ─────────────────────────────┤28  │83  │173
+        mm0.output[1][0] ────────────────────────▏28  ▕ 83  ▕ 173
 
-        mm0.output[1][1] ──────────────────────────────────┤32  │92  │188
+        mm0.output[1][1] ──────────────────────────────▏32  ▕ 92  ▕ 188
 
-        mm0.output[1][2] ───────────────────────────────────────┤36  │101 │203
+        mm0.output[1][2] ────────────────────────────────────▏36  ▕ 101 ▕ 203
 
-        mm0.output[1][3] ────────────────────────────────────────────┤40  │110 │218
+        mm0.output[1][3] ──────────────────────────────────────────▏40  ▕ 110 ▕ 218
 
-               mm0.state INIT│READ│BUSY                                        │DONE
-                                                                               ┌────
-        mm0.output.valid ──────────────────────────────────────────────────────┘
+               mm0.state INIT ▕ BUSY                                          ▕ DONE
+                                                                               ▁▁▁▁▁▁
+        mm0.output.valid ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▏
 
     The ``mm0.output`` signals show the systolic array's output matrix. For example,
     ``mm0.output[0][0]`` shows the output matrix's final top left value is ``74``, which
@@ -382,9 +382,9 @@ def make_systolic_array(
     matrix multiplication over time. For example, the trace for ``mm0.output[0][0]``
     shows::
 
-         7 in cycle 5, which is 1 * 7.
-        29 in cycle 6, which is 1 * 7 + 2 * 11.
-        74 in cycle 7, which is 1 * 7 + 2 * 11 + 3 * 15.
+         7 in cycle 3, which is 1 * 7.
+        29 in cycle 4, which is 1 * 7 + 2 * 11.
+        74 in cycle 5, which is 1 * 7 + 2 * 11 + 3 * 15.
 
     The inputs for computing ``mm0.output[0][0]`` can be found in the ``mm0.left[0]``
     and ``mm0.top[0]`` traces.
@@ -614,7 +614,8 @@ def make_systolic_array(
         valid = pyrtl.Const(val=True, bitwidth=1)
 
     with pyrtl.conditional_assignment:
-        # Reset the counter in INIT state.
+        # Reset the counter in the INIT state when input is invalid. If the input is valid,
+        # the counter is incremented so computation can begin in the next cycle.
         with (state == State.INIT) & ~valid:
             counter.next |= 0
         # Stop advancing the counter when the matrix multiplication is done.
