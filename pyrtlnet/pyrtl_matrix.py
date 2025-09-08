@@ -614,8 +614,8 @@ def make_systolic_array(
         valid = pyrtl.Const(val=True, bitwidth=1)
 
     with pyrtl.conditional_assignment:
-        # Reset the counter in the INIT state when input is invalid. If the input is valid,
-        # the counter is incremented so computation can begin in the next cycle.
+        # Reset the counter in the INIT state when input is invalid. If the input is
+        # valid, the counter is incremented so computation can begin in the next cycle.
         with (state == State.INIT) & ~valid:
             counter.next |= 0
         # Stop advancing the counter when the matrix multiplication is done.
