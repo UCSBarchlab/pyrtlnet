@@ -3,6 +3,7 @@ import tempfile
 import unittest
 
 import numpy as np
+import pyrtl
 
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.numpy_inference import NumPyInference
@@ -18,6 +19,7 @@ class TestPyRTLInference(unittest.TestCase):
 
         The trained model is loaded in instances of NumPyInference and PyRTLInference.
         """
+        pyrtl.reset_working_block()
         (train_images, train_labels), (self.test_images, self.test_labels) = (
             load_mnist_images()
         )
