@@ -59,7 +59,7 @@ installation instructions and tutorial in `README.md`_.
 
 .. _README.md: https://github.com/UCSBarchlab/pyrtlnet/blob/main/README.md
 
-This reference documentation is split into five sections:
+This reference documentation is split into six sections:
 
 * :ref:`training`, which covers the `TensorFlow`_ training functions.
 * :ref:`litert_inference`, which uses the reference `LiteRT`_
@@ -68,6 +68,8 @@ This reference documentation is split into five sections:
   `fxpmath`_.
 * :ref:`pyrtl_inference`, a hardware re-implementation in `PyRTL`_.
 * :ref:`matrix`, which covers the included PyRTL linear algebra library.
+* :ref:`pyrtl_axi`, a basic PyRTL implementation of the `AXI`_ protocol, which
+  can be useful for integrating `pyrtlnet`_'s hardware with other systems.
 
 Contents
 ========
@@ -80,6 +82,7 @@ Contents
    numpy_inference
    pyrtl_inference
    matrix
+   pyrtl_axi
 
 .. _fxpmath: https://github.com/francof2a/fxpmath
 .. _LiteRT: https://ai.google.dev/edge/litert
@@ -87,3 +90,4 @@ Contents
 .. _PyRTL: https://github.com/UCSBarchlab/PyRTL
 .. _pyrtlnet: https://github.com/UCSBarchlab/pyrtlnet
 .. _TensorFlow: https://www.tensorflow.org/
+.. _AXI: https://developer.arm.com/documentation/ihi0022/latest

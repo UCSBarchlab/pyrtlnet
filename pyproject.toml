@@ -65,6 +65,9 @@ select = [
 ignore = [
     # Use ternary operator.
     "SIM108",
+    # Use a single `with` statement with multiple contexts instead of nested
+    # `with` statements
+    "SIM117",
     # Docstring/comment contains ambiguous <unicode>
     "RUF002", "RUF003",
 ]
