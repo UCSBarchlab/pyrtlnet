@@ -17,9 +17,9 @@ Neural Network
     our case, the problem is determining which digit is shown in each image.
 
 Inference
-    `Inference` means we're just using a `neural network` to make predictions, as
-    opposed to `training`, which figures out how to adjust the neural network's
-    equation so it makes better predictions.
+    `Inference` means we're only using the `neural network` to make
+    predictions, as opposed to `training`, which figures out how to adjust the
+    neural network's equation so it makes better predictions.
 
 Quantized
     `pyrtlnet`_ is fully `quantized`, which means it only does math with

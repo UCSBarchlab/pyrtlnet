@@ -196,36 +196,37 @@ Main features include:
    `numpy_inference.py`.
 
    The `--verilog` flag makes `pyrtl_inference.py` generate a Verilog version
-   of the hardware, which is written to `pyrtl_inference.v`. The next step will
-   use this generated Verilog file.
+   of the hardware, which is written to `pyrtl_inference.v`, and a testbench
+   written to `pyrtl_inference_test.v`. The next step will use these generated
+   Verilog files.
 
-1. If `verilator` is installed, run `verilator --trace -j 0 --binary pyrtl_inference.v`:
+1. If `verilator` is installed, run `verilator --trace -j 0 --binary pyrtl_inference_test.v`:
 
    ```shell
-   $ verilator --trace -j 0 --binary pyrtl_inference.v
+   $ verilator --trace -j 0 --binary pyrtl_inference_test.v
    ...
    - V e r i l a t i o n   R e p o r t: Verilator 5.032 2025-01-01 rev (Debian 5.032-1)
    - Verilator: Built from 0.227 MB sources in 3 modules, into 13.052 MB in 18 C++ files needing 0.022 MB
    - Verilator: Walltime 3.576 s (elab=0.014, cvt=0.598, bld=2.857); cpu 0.847 s on 32 threads; alloced 164.512 MB
    ```
 
-   This converts the generated Verilog file to generated C++ code, and compiles
-   the generated C++ code. The outputs of this process can be found in the
-   `obj_dir` directory.
+   This converts the generated Verilog files to generated C++ code, and
+   compiles the generated C++ code. The outputs of this process can be found in
+   the `obj_dir` directory.
 
-1. If `verilator` is installed, run `obj_dir/Vpyrtl_inference`:
+1. If `verilator` is installed, run `obj_dir/Vpyrtl_inference_test`:
 
    ```shell
-   $ obj_dir/Vpyrtl_inference
+   $ obj_dir/Vpyrtl_inference_test
    ...
-   time 1970
+   time 1930
    layer1 output (transposed):
    [[  33  -48   29   58  -50   31  -87   93    9   49]]
    argmax: 7
 
-   - pyrtl_inference.v:3638: Verilog $finish
+   - pyrtl_inference_test.v:858: Verilog $finish
    - S i m u l a t i o n   R e p o r t: Verilator 5.032 2025-01-01
-   - Verilator: $finish at 2ns; walltime 0.006 s; speed 319.047 ns/s
+   - Verilator: $finish at 2ns; walltime 0.005 s; speed 329.491 ns/s
    - Verilator: cpu 0.006 s on 1 threads; alloced 249 MB
    ```
 

@@ -6,7 +6,7 @@ from pyrtlnet import pyrtl_axi
 
 
 def main() -> None:
-    """AXI-Lite and AXI-Stream demo:
+    """AXI-Stream and AXI-Lite demo:
 
     1. Write data from AXI-Stream to a :class:`~pyrtl.MemBlock`, using
        :func:`make_axi_stream_subordinate`.

@@ -18,6 +18,7 @@ def main() -> None:
     parser.add_argument("--start_image", type=int, default=0)
     parser.add_argument("--num_images", type=int, default=1)
     parser.add_argument("--verilog", action="store_true", default=False)
+    parser.add_argument("--axi", action="store_true", default=False)
     args = parser.parse_args()
 
     if args.verilog and args.num_images != 1:
@@ -48,6 +49,7 @@ def main() -> None:
         quantized_model_prefix=quantized_model_prefix,
         input_bitwidth=input_bitwidth,
         accumulator_bitwidth=accumulator_bitwidth,
+        axi=args.axi,
     )
 
     correct = 0

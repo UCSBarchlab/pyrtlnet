@@ -1,3 +1,24 @@
+"""
+Basic hardware implementation of `AXI`_ protocol subordinates, in the `PyRTL`_ hardware
+description language.
+
+.. _AXI: https://developer.arm.com/documentation/ihi0022/latest
+
+.. _PyRTL: https://github.com/UCSBarchlab/PyRTL
+
+These subordinates can be useful for integrating ``pyrtlnet``'s hardware with other
+systems, for example most `Xilinx IP`_ connects via AXI. The `pyrtl_inference demo`_
+uses these subordinates when its ``--axi`` option is enabled.
+
+.. _Xilinx IP: https://docs.amd.com/v/u/en-US/ug1037-vivado-axi-reference-guide
+
+.. _pyrtl_inference demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py
+
+See the `pyrtl_axi demo`_ for a simple example of how these subordinates work.
+
+.. _pyrtl_axi demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_axi.py
+"""
+
 from enum import IntEnum
 
 import pyrtl
@@ -64,11 +85,14 @@ def make_axi_lite_subordinate(
 ) -> list[pyrtl.Register]:
     """Makes a basic :class:`~pyrtl.Register`-based AXI-Lite subordinate.
 
+    This creates a set of :class:`Registers<pyrtl.Register>` that can be read or written
+    via AXI-Lite. Each register has a fixed bitwidth of 32 bits. The registers are
+    assigned AXI addresses, which are byte addresses, so register 0 has AXI address 0,
+    register 1 has AXI address 4, register 2 has AXI address 8, and so on.
+
     See the `AXI Specification`_ for details.
 
     .. _AXI Specification: https://developer.arm.com/documentation/ihi0022/latest
-
-    The data bitwidth is fixed at 32 bits.
 
     The generated reset logic only resets :class:`Registers<pyrtl.Register>` that can be
     written via AXI. See the ``num_writable_registers`` argument.
@@ -91,9 +115,10 @@ def make_axi_lite_subordinate(
 
     :returns: A :class:`list` of 32-bit :class:`Registers<pyrtl.Register>` that can be
               read or written via AXI-Lite. These :class:`Registers<pyrtl.Register>` can
-              be freely read outside of this function. Any unwritable registers (see the
-              ``num_writable_registers`` argument) must have their
-              :attr:`~pyrtl.Register.next` attribute set outside of this function.
+              be freely read outside of this function. Any unwritable
+              :class:`Registers<pyrtl.Register>` (see the ``num_writable_registers``
+              argument) must have their :attr:`~pyrtl.Register.next` attribute set
+              outside of this function.
     """
     assert num_registers > 0
 
@@ -140,7 +165,7 @@ def make_axi_lite_subordinate(
 
     # Read channel data.
     read_data = pyrtl.Output(name=f"{prefix}rdata", bitwidth=data_bitwidth)
-    # Status of the last read. 0 means OKAY.
+    # Status of the last read. See the `RResp` `IntEnum`.
     read_resp = pyrtl.Output(name=f"{prefix}rresp", bitwidth=2)
     # Indicates that the manager is ready to receive ``read_data`` and ``read_resp``.
     read_data_ready = pyrtl.Input(name=f"{prefix}rready", bitwidth=1)
@@ -164,7 +189,7 @@ def make_axi_lite_subordinate(
     # implementation assumes all ``write_data`` bytes are always valid.
     _ = pyrtl.Input(name=f"{prefix}wstrb", bitwidth=4)
 
-    # Status of the last write. 0 means OKAY.
+    # Status of the last write.  See the `BResp` `IntEnum`.
     write_resp = pyrtl.Output(name=f"{prefix}bresp", bitwidth=2)
     # Indicates that the manager is ready to receive ``write_resp``.
     write_resp_ready = pyrtl.Input(name=f"{prefix}bready", bitwidth=1)
@@ -298,16 +323,16 @@ def make_axi_stream_subordinate(
 ) -> pyrtl.WireVector:
     """Makes a basic :class:`~pyrtl.MemBlock`-based AXI-Stream subordinate.
 
-    See the `AXI-Stream Spec`_ for details.
-
-    .. _AXI-Stream Spec: https://developer.arm.com/documentation/ihi0051/latest/
-
     The Stream's data will be written to the :class:`~pyrtl.MemBlock`. The
     :class:`~pyrtl.MemBlock` will be completely overwritten with the Stream's data,
     starting from address ``0``. The :class:`~pyrtl.MemBlock`'s
     :attr:`~pyrtl.MemBlock.addrwidth` determines the number of data items to write, and
     the :class:`~pyrtl.MemBlock`'s :attr:`~pyrtl.MemBlock.bitwidth` determines the size
     of each data item.
+
+    See the `AXI-Stream Spec`_ for details.
+
+    .. _AXI-Stream Spec: https://developer.arm.com/documentation/ihi0051/latest/
 
     The generated reset logic does not reset the :class:`~pyrtl.MemBlock`'s contents.
 
