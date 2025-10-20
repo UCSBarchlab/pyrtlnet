@@ -239,7 +239,8 @@ class PyRTLInference:
 
         # Create pyrtl.Outputs for the layer's output. These can be inspected with
         # output.inspect().
-        output.make_outputs(layer_name)
+        if not self.axi:
+            output.make_outputs(layer_name)
 
         return output
 
@@ -276,11 +277,24 @@ class PyRTLInference:
         valid <<= layer1.valid
 
         if self.axi:
-            # Make an AXI-Lite subordinate with one register, that returns `argmax`.
+            # Make an AXI-Lite subordinate. Register map:
+            #
+            #      Register 0: argmax
+            #  Registers 1-18: layer 0 output
+            # Registers 19-28: layer 1 output
+            num_registers = (
+                1 + self.layer_outputs[0].shape[0] + self.layer_outputs[1].shape[0]
+            )
             registers = pyrtl_axi.make_axi_lite_subordinate(
-                num_registers=1, num_writable_registers=0
+                num_registers=num_registers, num_writable_registers=0
             )
             registers[0].next <<= argmax
+            for row in range(self.layer_outputs[0].shape[0]):
+                registers[1 + row].next <<= self.layer_outputs[0][row][0]
+            for row in range(self.layer_outputs[1].shape[0]):
+                registers[
+                    1 + self.layer_outputs[0].shape[0] + row
+                ].next <<= self.layer_outputs[1][row][0]
 
     def _memblock_data(self, test_image: np.ndarray) -> list[int]:
         """Convert ``test_image`` to loadable data for :attr:`flat_image_memblock`.
@@ -390,18 +404,9 @@ class PyRTLInference:
             }
 
             # Transmit the memblock_data via AXI-Stream.
-            for i, data in enumerate(memblock_data):
-                ready = False
-                while not ready:
-                    sim.step(
-                        provided_inputs
-                        | {
-                            "s0_axis_tdata": data,
-                            "s0_axis_tvalid": True,
-                            "s0_axis_tlast": i == len(memblock_data) - 1,
-                        }
-                    )
-                    ready = sim.inspect("s0_axis_tready")
+            pyrtl_axi.simulate_axi_stream_send(
+                sim, provided_inputs, stream_data=memblock_data
+            )
         else:
             memblock_data_dict = dict(enumerate(memblock_data))
             sim = pyrtl.FastSimulation(
@@ -415,30 +420,41 @@ class PyRTLInference:
             sim.step(provided_inputs)
             done = sim.inspect("valid")
 
-        # Retrieve each layer's outputs.
-        layer0_output = self.layer_outputs[0].inspect(sim=sim).astype(np.int8)
-        layer1_output = self.layer_outputs[1].inspect(sim=sim).astype(np.int8)
-
-        # Retrieve the predicted digit.
+        # Retrieve each layer's outputs and the predicted digit.
         if self.axi:
-            # Read the argmax via AXI-Lite. The sum is stored in register 0, which has
-            # AXI address 0.
-            ready = False
-            while not ready:
-                sim.step(
-                    provided_inputs
-                    | {
-                        "s0_axi_araddr": 0,
-                        "s0_axi_arvalid": True,
-                    }
-                )
-                ready = sim.inspect("s0_axi_arready")
-            valid = False
-            while not valid:
-                sim.step(provided_inputs | {"s0_axi_rready": True})
-                valid = sim.inspect("s0_axi_rvalid")
-            argmax = sim.inspect("s0_axi_rdata")
+
+            def retrieve_layer_outputs(start: int, end: int) -> list[int]:
+                """Retrieve a layer's outputs via AXI-Lite.
+
+                Each layer output is a signed 8-bit value, stored in a 32-bit AXI
+                register.
+                """
+                outputs = []
+                for addr in range(start, end, 4):
+                    outputs.append(
+                        [
+                            pyrtl.val_to_signed_integer(
+                                pyrtl_axi.simulate_axi_lite_read(
+                                    sim, provided_inputs, address=addr
+                                ),
+                                bitwidth=8,
+                            )
+                        ]
+                    )
+                return np.array(outputs, dtype=np.int8)
+
+            # Registers 1-18 hold the layer0's outputs, and registers 19-28 hold
+            # layer1's outputs. Each register is 32-bits wide, and AXI addresses are
+            # byte addresses.
+            layer0_output = retrieve_layer_outputs(start=1 * 4, end=19 * 4)
+            layer1_output = retrieve_layer_outputs(start=19 * 4, end=29 * 4)
+
+            # Read the argmax via AXI-Lite. The sum is stored in AXI register 0.
+            argmax = pyrtl_axi.simulate_axi_lite_read(sim, provided_inputs, address=0)
         else:
+            layer0_output = self.layer_outputs[0].inspect(sim=sim).astype(np.int8)
+            layer1_output = self.layer_outputs[1].inspect(sim=sim).astype(np.int8)
+
             argmax = sim.inspect("argmax")
 
         if verilog:
@@ -469,4 +485,18 @@ class PyRTLInference:
                     ),
                     add_reset=False,
                 )
+
+        # Verify that all mem reads and writes are asynchronous. For each memory
+        # operation, all of the operation's inputs must be constants or registers, and
+        # all of the operation's outputs must be registers.
+        gate_graph = pyrtl.GateGraph()
+        for mem_read in gate_graph.mem_reads:
+            for arg in mem_read.args:
+                assert arg.op in "Cr", f"ERROR: async read arg {mem_read}"
+            for dest in mem_read.dests:
+                assert dest.op == "r", f"ERROR: async read dest {mem_read}"
+        for mem_write in gate_graph.mem_writes:
+            for arg in mem_write.args:
+                assert arg.op in "Cr", f"ERROR: async write arg {mem_write}"
+
         return layer0_output, layer1_output, argmax

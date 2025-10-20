@@ -62,7 +62,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="pyrtl_matrix.py")
     parser.add_argument("--x_shape", type=int, nargs=2, default=(2, 3))
     parser.add_argument("--x_start", type=int, default=1)
-    parser.add_argument("--y_shape", type=int, default=(3, 4))
+    parser.add_argument("--y_shape", type=int, nargs=2, default=(3, 4))
     parser.add_argument("--y_start", type=int, default=7)
     parser.add_argument("--y_zero", type=int, default=0)
     parser.add_argument("--a_shape", type=int, nargs=2, default=(2, 4))

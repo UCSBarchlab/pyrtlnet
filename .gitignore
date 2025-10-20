@@ -9,3 +9,10 @@ docs/_build
 
 # Verilator.
 obj_dir
+
+# Vivado.
+pyrtlnet_ip
+pyrtlnet_ip_repo
+pyrtlnet_pynq
+pyrtlnet.bit
+pyrtlnet.hwh

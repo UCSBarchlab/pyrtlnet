@@ -8,38 +8,38 @@ from pyrtlnet.tensorflow_training import quantize_model, train_unquantized_model
 
 
 class TestLiteRTInference(unittest.TestCase):
-    def setUp(self) -> None:
-        """Train a quantized TensorFlow model and load it in the LiteRT Interpreter.
-
-        The model is only trained for one epoch to reduce run time.
-        """
-        (train_images, train_labels), (self.test_images, self.test_labels) = (
+    @classmethod
+    def setUpClass(cls) -> None:
+        """Train a quantized TensorFlow model for one epoch, to reduce run time."""
+        (train_images, train_labels), (cls.test_images, cls.test_labels) = (
             load_mnist_images()
         )
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            quantized_model_prefix = str(pathlib.Path(temp_dir) / "quantized")
+        cls.temp_dir = tempfile.TemporaryDirectory()
+        cls.quantized_model_prefix = str(pathlib.Path(cls.temp_dir.name) / "quantized")
 
-            learning_rate = 0.001
-            epochs = 1
+        learning_rate = 0.001
+        epochs = 1
 
-            model = train_unquantized_model(
-                learning_rate=learning_rate,
-                epochs=epochs,
-                train_images=train_images,
-                train_labels=train_labels,
-            )
-            model = quantize_model(
-                model=model,
-                learning_rate=learning_rate / 10000,
-                epochs=epochs,
-                train_images=train_images,
-                train_labels=train_labels,
-                quantized_model_prefix=quantized_model_prefix,
-            )
-            self.interpreter = load_tflite_model(
-                quantized_model_prefix=quantized_model_prefix
-            )
+        model = train_unquantized_model(
+            learning_rate=learning_rate,
+            epochs=epochs,
+            train_images=train_images,
+            train_labels=train_labels,
+        )
+        model = quantize_model(
+            model=model,
+            learning_rate=learning_rate / 10000,
+            epochs=epochs,
+            train_images=train_images,
+            train_labels=train_labels,
+            quantized_model_prefix=cls.quantized_model_prefix,
+        )
+
+    def setUp(self) -> None:
+        self.interpreter = load_tflite_model(
+            quantized_model_prefix=self.quantized_model_prefix
+        )
 
     def test_litert_inference(self) -> None:
         """Run the LiteRT Interpreter on several images and check its accuracy."""

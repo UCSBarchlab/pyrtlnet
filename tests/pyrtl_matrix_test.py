@@ -290,8 +290,6 @@ class TestPyrtlMatrix(unittest.TestCase):
         abc_actual = abc_matrix.inspect(sim=sim)
 
         abc_expected = a @ b @ c
-        print("expected", abc_expected)
-        print("actual", abc_actual)
         np.testing.assert_array_equal(abc_actual, abc_expected, strict=True)
 
     def test_elementwise_add(self) -> None:

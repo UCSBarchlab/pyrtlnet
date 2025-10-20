@@ -9,9 +9,10 @@ from pyrtlnet.tensorflow_training import (
 
 
 class TestTensorFlowTraining(unittest.TestCase):
-    def setUp(self) -> None:
+    @classmethod
+    def setUpClass(cls) -> None:
         """Load MNIST training and test data sets."""
-        (self.train_images, self.train_labels), (self.test_images, self.test_labels) = (
+        (cls.train_images, cls.train_labels), (cls.test_images, cls.test_labels) = (
             load_mnist_images()
         )
 
@@ -29,7 +30,7 @@ class TestTensorFlowTraining(unittest.TestCase):
             train_images=self.train_images,
             train_labels=self.train_labels,
         )
-        loss, accuracy = evaluate_model(model, self.test_images, self.test_labels)
+        _loss, accuracy = evaluate_model(model, self.test_images, self.test_labels)
         # Accuracy should be over 75% after one epoch of training. MNIST has ten
         # possible outputs, so randomly guesses will have an accuracy around 10%
         self.assertTrue(accuracy > 0.75)
@@ -56,7 +57,7 @@ class TestTensorFlowTraining(unittest.TestCase):
             train_labels=self.train_labels,
             quantized_model_prefix=None,
         )
-        loss, accuracy = evaluate_model(model, self.test_images, self.test_labels)
+        _loss, accuracy = evaluate_model(model, self.test_images, self.test_labels)
         # Accuracy should be over 75% after one epoch of training. MNIST has ten
         # possible outputs, so randomly guesses will have an accuracy around 10%
         self.assertTrue(accuracy > 0.75)

@@ -117,7 +117,6 @@ def run_tflite_model(
     layer1_output = interpreter.get_tensor(layer1_output_index)
 
     output = interpreter.get_tensor(output_details["index"])[0]
-    output_scale, output_zero_point = output_details["quantization"]
 
     # Second layer's flattened output should be the model's output.
     assert np.logical_and.reduce(layer1_output.flatten() == output)

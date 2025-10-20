@@ -309,6 +309,54 @@ def make_axi_lite_subordinate(
     return registers
 
 
+def simulate_axi_lite_read(
+    sim: pyrtl.Simulation, provided_inputs: dict, address: int, channel: int = 0
+) -> None:
+    """Simulate reading an AXI-Lite register.
+
+    :param sim: The PyRTL :class:`~pyrtl.Simulation` to read the AXI-Lite register from.
+    :param provided_inputs: Additional :class:`~pyrtl.Input` values for the PyRTL
+        :class:`~pyrtl.Simulation`.
+    :param address: Address of the AXI-Lite register to read. AXI-Lite addresses are
+        byte addresses, and each register is 32 bits wide, so ``address`` must be an
+        even multiple of 4.
+    :param channel: Channel number for this AXI connection. Channel numbers are only
+        used to name wires. When a module has multiple AXI interfaces, each AXI
+        interface must use a different channel number to avoid wire name collisions.
+
+    :returns: The contents of the requested AXI-Lite register.
+    """
+    # All AXI-Lite addresses are byte addresses, and each register is 32 bits wide, so
+    # `address` must be an even multiple of 4.
+    assert address % 4 == 0
+
+    # Name prefix for all WireVectors.
+    prefix = f"s{channel}_axi_"
+
+    # Send the AXI address.
+    ready = False
+    while not ready:
+        sim.step(
+            provided_inputs
+            | {
+                f"{prefix}araddr": address,
+                f"{prefix}arvalid": True,
+            }
+        )
+        ready = sim.inspect(f"{prefix}arready")
+
+    # Receive the data.
+    valid = False
+    while not valid:
+        sim.step(provided_inputs | {f"{prefix}rready": True})
+        valid = sim.inspect(f"{prefix}rvalid")
+
+    # Read status should be OKAY (0).
+    assert sim.inspect(f"{prefix}rresp") == RResp.OKAY
+
+    return sim.inspect(f"{prefix}rdata")
+
+
 class StreamState(IntEnum):
     """States for `make_axi_stream_subordinate`'s state machine."""
 
@@ -424,3 +472,39 @@ def make_axi_stream_subordinate(
     done = pyrtl.WireVector(name=f"{prefix}done", bitwidth=1)
     done <<= state == StreamState.DONE
     return done
+
+
+def simulate_axi_stream_send(
+    sim: pyrtl.Simulation,
+    provided_inputs: dict,
+    stream_data: list[int],
+    channel: int = 0,
+) -> None:
+    """Simulate sending data to an AXI-Stream.
+
+    :param sim: The PyRTL :class:`~pyrtl.Simulation` to read the AXI-Lite register from.
+    :param provided_inputs: Additional :class:`~pyrtl.Input` values for the PyRTL
+        :class:`~pyrtl.Simulation`.
+    :param stream_data: Data to send to the AXI-Stream. At most one element from this
+        :class:`list` will be sent each cycle. Each :class:`list` element must fit in
+        the stream's bitwidth.
+    :param channel: Channel number for this AXI connection. Channel numbers are only
+        used to name wires. When a module has multiple AXI interfaces, each AXI
+        interface must use a different channel number to avoid wire name collisions.
+    """
+    # Name prefix for all WireVectors.
+    prefix = f"s{channel}_axis_"
+
+    # Transmit the memblock_data via AXI-Stream.
+    for i, data in enumerate(stream_data):
+        ready = False
+        while not ready:
+            sim.step(
+                provided_inputs
+                | {
+                    f"{prefix}tdata": data,
+                    f"{prefix}tvalid": True,
+                    f"{prefix}tlast": i == len(stream_data) - 1,
+                }
+            )
+            ready = sim.inspect(f"{prefix}tready")

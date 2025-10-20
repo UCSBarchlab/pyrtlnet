@@ -33,9 +33,7 @@ def main() -> None:
         train_labels=train_labels,
     )
     print("Evaluating unquantized model.")
-    loss, accuracy = evaluate_model(
-        model=model, test_images=test_images, test_labels=test_labels
-    )
+    evaluate_model(model=model, test_images=test_images, test_labels=test_labels)
 
     print(
         f"Training quantized model and writing {quantized_model_prefix}.tflite and "
@@ -50,9 +48,7 @@ def main() -> None:
         quantized_model_prefix=quantized_model_prefix,
     )
     print("Evaluating quantized model.")
-    loss, accuracy = evaluate_model(
-        model=model, test_images=test_images, test_labels=test_labels
-    )
+    evaluate_model(model=model, test_images=test_images, test_labels=test_labels)
 
     # Save the preprocessed MNIST test data so the inference scripts can use it without
     # importing tensorflow. Importing tensorflow is slow and prints a bunch of debug

@@ -80,7 +80,7 @@ def _make_input_romblock(
     a: np.ndarray, input_bitwidth: int, addrwidth: int, name: str
 ) -> pyrtl.RomBlock:
     """Convert a numpy array to a RomBlock for use with a systolic array."""
-    num_rows, num_inner = a.shape
+    num_rows, _num_inner = a.shape
     romblock_data = make_input_memblock_data(a, input_bitwidth, addrwidth)
     return pyrtl.RomBlock(
         name=name,
@@ -121,7 +121,6 @@ def _make_systolic_array_wire_inputs(
     Returns a list of ``WireVectors`` for each row. In the example above, this function
     would return ``[l0, l1]``. Over the first four cycles of simulation, ``l0`` produces
     the values ``[1, 2, 3, 0]`` and ``l1`` produces the values ``[0, 4, 5, 6]``.
-
     """
     assert a.memblock is None
 
@@ -162,7 +161,7 @@ def _make_systolic_array_wire_inputs(
 
 
 def _make_systolic_array_memblock_inputs(
-    shape: tuple, addr: pyrtl.WireVector, mem: pyrtl.MemBlock, input_bitwidth: int
+    shape: tuple, addr: pyrtl.Register, mem: pyrtl.MemBlock, input_bitwidth: int
 ) -> list[pyrtl.WireVector]:
     """Generate left inputs for a ``WireMatrix2D`` with a ``MemBlock``.
 
@@ -171,11 +170,12 @@ def _make_systolic_array_memblock_inputs(
     of shift registers.
 
     The MemBlock's contents must be formatted with ``make_input_memblock_data``.
-
     """
-    num_rows, num_inner = shape
+    num_rows, _num_inner = shape
     InputRow = pyrtl.wire_matrix(component_schema=input_bitwidth, size=num_rows)
     input_row = InputRow(concatenated_type=pyrtl.Register)
+    # Synchronous read: `addr` and `input_row` are both Registers.
+    assert isinstance(addr, pyrtl.Register)
     input_row.next <<= mem[addr]
     return [input_row[i] for i in range(num_rows)]
 
@@ -473,7 +473,6 @@ def make_systolic_array(
 
         This function generates the tile at ``(row, column)`` and returns the tile's
         outputs.
-
         """
         input_register = TileIn(
             name=f"{name}.reg_{row}_{column}", concatenated_type=pyrtl.Register
@@ -585,7 +584,7 @@ def make_systolic_array(
 
     # State machine.
     state = pyrtl.Register(
-        bitwidth=max(state.value for state in State), name=f"{name}.state"
+        bitwidth=pyrtl.infer_val_and_bitwidth(max(State)).bitwidth, name=f"{name}.state"
     )
 
     done_next_cycle = counter == done_cycle

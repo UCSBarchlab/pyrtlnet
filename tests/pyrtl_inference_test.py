@@ -12,22 +12,15 @@ from pyrtlnet.tensorflow_training import quantize_model, train_unquantized_model
 
 
 class TestPyRTLInference(unittest.TestCase):
-    def setUp(self) -> None:
-        """Prepare NumPyInference and PyRTLInference for a comparison test.
-
-        This trains a quantized TensorFlow model for one epoch, to reduce run time.
-
-        The trained model is loaded in instances of NumPyInference and PyRTLInference.
-        """
-        pyrtl.reset_working_block()
-        (train_images, train_labels), (self.test_images, self.test_labels) = (
+    @classmethod
+    def setUpClass(cls) -> None:
+        """Train a quantized TensorFlow model for one epoch, to reduce run time."""
+        (train_images, train_labels), (cls.test_images, cls.test_labels) = (
             load_mnist_images()
         )
 
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.quantized_model_prefix = str(
-            pathlib.Path(self.temp_dir.name) / "quantized"
-        )
+        cls.temp_dir = tempfile.TemporaryDirectory()
+        cls.quantized_model_prefix = str(pathlib.Path(cls.temp_dir.name) / "quantized")
 
         learning_rate = 0.001
         epochs = 1
@@ -44,8 +37,13 @@ class TestPyRTLInference(unittest.TestCase):
             epochs=epochs,
             train_images=train_images,
             train_labels=train_labels,
-            quantized_model_prefix=self.quantized_model_prefix,
+            quantized_model_prefix=cls.quantized_model_prefix,
         )
+
+    def setUp(self) -> None:
+        """Prepare NumPyInference for a comparison test against PyRTLInference."""
+        pyrtl.reset_working_block()
+
         self.numpy_inference = NumPyInference(
             quantized_model_prefix=self.quantized_model_prefix
         )

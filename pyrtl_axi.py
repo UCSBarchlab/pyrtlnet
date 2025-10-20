@@ -102,18 +102,8 @@ def main() -> None:
     }
     # Transmit the MemBlock's data via AXI-Stream.
     data = [i + 10 for i in range(2**mem.addrwidth)]
-    for i, d in enumerate(data):
-        ready = False
-        while not ready:
-            sim.step(
-                provided_inputs
-                | {
-                    "s0_axis_tdata": d,
-                    "s0_axis_tvalid": True,
-                    "s0_axis_tlast": i == len(data) - 1,
-                }
-            )
-            ready = sim.inspect("s0_axis_tready")
+    print("Calculating sum of:", data, "\n")
+    pyrtl_axi.simulate_axi_stream_send(sim, provided_inputs, stream_data=data)
 
     # Wait for the summation to complete.
     done = False
@@ -123,20 +113,7 @@ def main() -> None:
 
     # Read the sum via AXI-Lite. The sum is stored in register 1, which has AXI
     # byte-address 4.
-    ready = False
-    while not ready:
-        sim.step(
-            provided_inputs
-            | {
-                "s0_axi_araddr": 4,
-                "s0_axi_arvalid": True,
-            }
-        )
-        ready = sim.inspect("s0_axi_arready")
-    valid = False
-    while not valid:
-        sim.step(provided_inputs | {"s0_axi_rready": True})
-        valid = sim.inspect("s0_axi_rvalid")
+    actual_sum = pyrtl_axi.simulate_axi_lite_read(sim, provided_inputs, address=4)
 
     sim.tracer.render_trace(
         trace_list=[
@@ -171,7 +148,6 @@ def main() -> None:
         },
     )
 
-    actual_sum = sim.inspect("s0_axi_rdata")
     expected_sum = sum(data)
     if actual_sum == expected_sum:
         print("\nReceived correct sum", actual_sum)
