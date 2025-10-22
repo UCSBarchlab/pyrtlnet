@@ -19,6 +19,8 @@ def main() -> None:
     parser.add_argument("--num_images", type=int, default=1)
     parser.add_argument("--verilog", action="store_true", default=False)
     parser.add_argument("--axi", action="store_true", default=False)
+    parser.add_argument("--tensor_path", type=str, default=".")
+    parser.add_argument("--initial_delay_cycles", type=int, default=0)
     args = parser.parse_args()
 
     if args.verilog and args.num_images != 1:
@@ -27,29 +29,28 @@ def main() -> None:
     terminal_columns = shutil.get_terminal_size((80, 24)).columns
     np.set_printoptions(linewidth=terminal_columns)
 
-    mnist_test_data_file = pathlib.Path(".") / "mnist_test_data.npz"
+    mnist_test_data_file = pathlib.Path(args.tensor_path) / "mnist_test_data.npz"
     if not mnist_test_data_file.exists():
-        sys.exit("mnist_test_data.npz not found. Run tensorflow_training.py first.")
+        sys.exit(f"{mnist_test_data_file} not found. Run tensorflow_training.py first.")
 
     # Load MNIST test data.
     mnist_test_data = np.load(str(mnist_test_data_file))
     test_images = mnist_test_data.get("test_images")
     test_labels = mnist_test_data.get("test_labels")
 
-    tensor_file = pathlib.Path(".") / f"{quantized_model_prefix}.npz"
+    tensor_file = pathlib.Path(args.tensor_path) / f"{quantized_model_prefix}.npz"
     if not tensor_file.exists():
-        sys.exit(
-            f"{quantized_model_prefix}.npz not found. Run tensorflow_training.py first."
-        )
+        sys.exit(f"{tensor_file} not found. Run tensorflow_training.py first.")
 
     # Create PyRTL inference hardware.
     input_bitwidth = 8
     accumulator_bitwidth = 32
     pyrtl_inference = PyRTLInference(
-        quantized_model_prefix=quantized_model_prefix,
+        quantized_model_name=tensor_file,
         input_bitwidth=input_bitwidth,
         accumulator_bitwidth=accumulator_bitwidth,
         axi=args.axi,
+        initial_delay_cycles=args.initial_delay_cycles,
     )
 
     correct = 0

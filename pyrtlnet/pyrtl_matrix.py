@@ -95,8 +95,9 @@ class State(enum.IntEnum):
     """State for the systolic array's state machine."""
 
     INIT = 0  # Initialize systolic array inputs.
-    BUSY = 1  # Multiply matrices.
-    DONE = 2  # Wait for output to be consumed.
+    WAIT = 1  # Waiting for initial_delay_cycles.
+    BUSY = 2  # Multiply matrices.
+    DONE = 3  # Wait for output to be consumed.
 
 
 def _make_systolic_array_wire_inputs(
@@ -208,6 +209,7 @@ def make_systolic_array(
     b_zero: int,
     input_bitwidth: int,
     accumulator_bitwidth: int,
+    initial_delay_cycles: int = 0,
 ) -> WireMatrix2D:
     """Generate an output-stationary systolic array, computing ``a ⋅ (b - b_zero)``.
 
@@ -222,6 +224,9 @@ def make_systolic_array(
     :param accumulator_bitwidth: Bitwidth used when summing dot products. The systolic
         array multiplies and accumulates many input elements, so
         ``accumulator_bitwidth`` should be larger than ``input_bitwidth``.
+    :param initial_delay_cycles: Number of cycles to wait before starting operation.
+        This is a temporary hack that's currently required for correct synthesis with
+        Vivado. No delay cycles should be required.
     :returns: A :class:`.WireMatrix2D` representing ``a ⋅ (b - b_zero)``.
 
     ---------------------------
@@ -612,10 +617,16 @@ def make_systolic_array(
         )
         valid = pyrtl.Const(val=True, bitwidth=1)
 
+    init_counter = pyrtl.Register(
+        name=f"{name}.init_counter",
+        bitwidth=pyrtl.infer_val_and_bitwidth(initial_delay_cycles).bitwidth,
+    )
     with pyrtl.conditional_assignment:
         # Reset the counter in the INIT state when input is invalid. If the input is
         # valid, the counter is incremented so computation can begin in the next cycle.
-        with (state == State.INIT) & ~valid:
+        with ((state == State.INIT) & (~valid | initial_delay_cycles != 0)) | (
+            (state == State.WAIT) & (init_counter != max(0, initial_delay_cycles - 1))
+        ):
             counter.next |= 0
         # Stop advancing the counter when the matrix multiplication is done.
         with done_next_cycle:
@@ -636,7 +647,15 @@ def make_systolic_array(
                 b.ready |= True
 
             with valid:
+                if initial_delay_cycles == 0:
+                    state.next |= State.BUSY
+                else:
+                    state.next |= State.WAIT
+        with state == State.WAIT:
+            with init_counter == max(0, initial_delay_cycles - 1):
                 state.next |= State.BUSY
+            with pyrtl.otherwise:
+                init_counter.next |= init_counter + 1
         with (state == State.BUSY) & done_next_cycle:
             state.next |= State.DONE
         with state == State.DONE:

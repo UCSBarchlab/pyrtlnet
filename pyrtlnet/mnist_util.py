@@ -25,7 +25,8 @@ def _preprocess_images(images: tf.Tensor) -> np.ndarray:
 def load_mnist_images() -> tuple[
     tuple[tf.Tensor, tf.Tensor], tuple[tf.Tensor, tf.Tensor]
 ]:
-    """Load the MNIST data set and resize images from 28×28 to 12×12.
+    """Load the MNIST data set, normalize pixel data to [0.0, 1.0], and resize images
+    from 28×28 to 12×12.
 
     :returns: ``(train_images, train_labels), (test_images, test_labels)``.
     """

@@ -46,10 +46,10 @@ class TestNumPyInference(unittest.TestCase):
         NumPyInference.
         """
         self.interpreter = load_tflite_model(
-            quantized_model_prefix=self.quantized_model_prefix
+            quantized_model_name=str(self.quantized_model_prefix) + ".tflite"
         )
         self.numpy_inference = NumPyInference(
-            quantized_model_prefix=self.quantized_model_prefix
+            quantized_model_name=str(self.quantized_model_prefix) + ".npz"
         )
 
     def test_numpy_inference(self) -> None:

@@ -30,10 +30,11 @@ class PyRTLInference:
 
     def __init__(
         self,
-        quantized_model_prefix: str,
+        quantized_model_name: str,
         input_bitwidth: int,
         accumulator_bitwidth: int,
         axi: bool,
+        initial_delay_cycles: int = 0,
     ) -> None:
         """Convert the quantized model to PyRTL inference hardware.
 
@@ -117,8 +118,8 @@ class PyRTLInference:
           intermediate values with bitwidth ``accumulator_bitwidth`` to each layer's
           output values with bitwidth ``input_bitwidth``.
 
-        :param quantized_model_prefix: Prefix of the ``.npz`` file created by
-            ``tensorflow_training.py``, without the ``.npz`` suffix.
+        :param quantized_model_name: Name of the ``.npz`` file created by
+            ``tensorflow_training.py``.
         :param input_bitwidth: Bitwidth of each element in the input matrix. This should
             generally be ``8``.
         :param accumulator_bitwidth: Bitwidth of accumulator registers in the systolic
@@ -128,12 +129,16 @@ class PyRTLInference:
             image data will be loaded in ``self.flat_image_memblock`` via
             :class:`~pyrtl.Simulation`'s ``memory_value_map``, and the output's
             ``argmax`` will be inspected as an :class:`~pyrtl.Output`.
+        :param initial_delay_cycles: Number of cycles to wait before starting operation.
+            This is a temporary hack that's currently required for correct synthesis
+            with Vivado. No delay cycles should be required.
         """
         self.input_bitwidth = input_bitwidth
         self.accumulator_bitwidth = accumulator_bitwidth
         self.axi = axi
+        self.initial_delay_cycles = initial_delay_cycles
 
-        saved_tensors = SavedTensors(quantized_model_prefix)
+        saved_tensors = SavedTensors(quantized_model_name)
         self.input_scale = saved_tensors.input_scale
         self.input_zero = saved_tensors.input_zero
         self.layer = saved_tensors.layer
@@ -202,6 +207,7 @@ class PyRTLInference:
             b_zero=input_zero,
             input_bitwidth=self.input_bitwidth,
             accumulator_bitwidth=self.accumulator_bitwidth,
+            initial_delay_cycles=self.initial_delay_cycles,
         )
 
         # Create a WireMatrix2D for the layer's bias.

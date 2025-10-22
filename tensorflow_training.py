@@ -1,3 +1,5 @@
+import argparse
+import pathlib
 import random
 
 import numpy as np
@@ -13,6 +15,10 @@ from pyrtlnet.tensorflow_training import (
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(prog="pyrtl_inference.py")
+    parser.add_argument("--tensor_path", type=str, default=".")
+    args = parser.parse_args()
+
     seed = 42
 
     tf.random.set_seed(seed)
@@ -35,9 +41,10 @@ def main() -> None:
     print("Evaluating unquantized model.")
     evaluate_model(model=model, test_images=test_images, test_labels=test_labels)
 
+    model_prefix = pathlib.Path(args.tensor_path) / quantized_model_prefix
     print(
-        f"Training quantized model and writing {quantized_model_prefix}.tflite and "
-        f"{quantized_model_prefix}.npz."
+        f"Training quantized model and writing {model_prefix}.tflite and "
+        f"{model_prefix}.npz."
     )
     model = quantize_model(
         model=model,
@@ -45,7 +52,7 @@ def main() -> None:
         epochs=int(epochs / 5),
         train_images=train_images,
         train_labels=train_labels,
-        quantized_model_prefix=quantized_model_prefix,
+        quantized_model_prefix=model_prefix,
     )
     print("Evaluating quantized model.")
     evaluate_model(model=model, test_images=test_images, test_labels=test_labels)
@@ -53,9 +60,10 @@ def main() -> None:
     # Save the preprocessed MNIST test data so the inference scripts can use it without
     # importing tensorflow. Importing tensorflow is slow and prints a bunch of debug
     # output.
-    print("Writing mnist_test_data.npz.")
+    mnist_test_data_file = pathlib.Path(args.tensor_path) / "mnist_test_data.npz"
+    print(f"Writing {mnist_test_data_file}")
     np.savez_compressed(
-        file="mnist_test_data.npz", test_images=test_images, test_labels=test_labels
+        file=mnist_test_data_file, test_images=test_images, test_labels=test_labels
     )
 
 

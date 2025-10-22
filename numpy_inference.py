@@ -17,27 +17,26 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="numpy_inference.py")
     parser.add_argument("--start_image", type=int, default=0)
     parser.add_argument("--num_images", type=int, default=1)
+    parser.add_argument("--tensor_path", type=str, default=".")
     args = parser.parse_args()
 
     terminal_columns = shutil.get_terminal_size((80, 24)).columns
     np.set_printoptions(linewidth=terminal_columns)
 
-    mnist_test_data_file = pathlib.Path(".") / "mnist_test_data.npz"
+    mnist_test_data_file = pathlib.Path(args.tensor_path) / "mnist_test_data.npz"
     if not mnist_test_data_file.exists():
-        sys.exit("mnist_test_data.npz not found. Run tensorflow_training.py first.")
+        sys.exit(f"{mnist_test_data_file} not found. Run tensorflow_training.py first.")
 
     # Load MNIST test data.
     mnist_test_data = np.load(str(mnist_test_data_file))
     test_images = mnist_test_data.get("test_images")
     test_labels = mnist_test_data.get("test_labels")
 
-    tensor_file = pathlib.Path(".") / f"{quantized_model_prefix}.npz"
+    tensor_file = pathlib.Path(args.tensor_path) / f"{quantized_model_prefix}.npz"
     if not tensor_file.exists():
-        sys.exit(
-            f"{quantized_model_prefix}.npz not found. Run tensorflow_training.py first."
-        )
+        sys.exit(f"{tensor_file} not found. Run tensorflow_training.py first.")
     # Collect weights, biases, and quantization metadata.
-    numpy_inference = NumPyInference(quantized_model_prefix=quantized_model_prefix)
+    numpy_inference = NumPyInference(quantized_model_name=tensor_file)
 
     correct = 0
     for test_index in range(args.start_image, args.start_image + args.num_images):

@@ -68,6 +68,7 @@ def main() -> None:
     parser.add_argument("--a_shape", type=int, nargs=2, default=(2, 4))
     parser.add_argument("--a_start", type=int, default=1)
     parser.add_argument("--verilog", action="store_true", default=False)
+    parser.add_argument("--initial_delay_cycles", type=int, default=0)
     args = parser.parse_args()
 
     # Create input matrices.
@@ -107,6 +108,7 @@ def main() -> None:
         b_zero=y_zero,
         input_bitwidth=input_bitwidth,
         accumulator_bitwidth=accumulator_bitwidth,
+        initial_delay_cycles=args.initial_delay_cycles,
     )
     matrix_xy.make_outputs("matrix_xy")
 

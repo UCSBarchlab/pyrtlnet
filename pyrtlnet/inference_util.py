@@ -165,8 +165,8 @@ class SavedTensors:
     quantization metadata.
     """
 
-    def __init__(self, quantized_model_prefix: str) -> None:
-        tensors = np.load(f"{quantized_model_prefix}.npz")
+    def __init__(self, quantized_model_name: str) -> None:
+        tensors = np.load(quantized_model_name)
 
         self.input_scale = tensors.get("input.scale")
         self.input_zero = tensors.get("input.zero")

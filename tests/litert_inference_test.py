@@ -16,7 +16,7 @@ class TestLiteRTInference(unittest.TestCase):
         )
 
         cls.temp_dir = tempfile.TemporaryDirectory()
-        cls.quantized_model_prefix = str(pathlib.Path(cls.temp_dir.name) / "quantized")
+        cls.quantized_model_prefix = pathlib.Path(cls.temp_dir.name) / "quantized"
 
         learning_rate = 0.001
         epochs = 1
@@ -38,7 +38,7 @@ class TestLiteRTInference(unittest.TestCase):
 
     def setUp(self) -> None:
         self.interpreter = load_tflite_model(
-            quantized_model_prefix=self.quantized_model_prefix
+            quantized_model_name=str(self.quantized_model_prefix) + ".tflite"
         )
 
     def test_litert_inference(self) -> None:

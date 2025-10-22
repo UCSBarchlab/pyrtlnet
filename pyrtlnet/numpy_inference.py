@@ -167,14 +167,14 @@ def normalize(
 class NumPyInference:
     """Run quantized inference on an input image with NumPy and fxpmath."""
 
-    def __init__(self, quantized_model_prefix: str) -> None:
+    def __init__(self, quantized_model_name: str) -> None:
         """Collect weights, biases, and quantization metadata from a ``.npz`` file
         created by ``tensorflow_training.py``.
 
-        :param quantized_model_prefix: Prefix of the ``.npz`` file created by
-            ``tensorflow_training.py``, without the ``.npz`` suffix.
+        :param quantized_model_name: Name of the ``.npz`` file created by
+            ``tensorflow_training.py``.
         """
-        saved_tensors = SavedTensors(quantized_model_prefix)
+        saved_tensors = SavedTensors(quantized_model_name)
         self.input_scale = saved_tensors.input_scale
         self.input_zero = saved_tensors.input_zero
         self.layer = saved_tensors.layer
@@ -200,20 +200,18 @@ class NumPyInference:
         )
         return layer_output.astype(np.int8)
 
-    def run(self, test_image: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
-        """Run quantized inference on a single image.
+    def preprocess_image(self, test_image: np.ndarray) -> np.ndarray:
+        """Preprocess the raw image data, as required by the quantized neural network.
 
-        All calculations are done with NumPy and fxpmath.
+        This flattens the 2D image data into 1D, adds a batch dimension, and adjusts the
+        image data by ``input_scale`` and ``input_zero``.
 
-        :param test_image: An image to run through the NumPy inference implementation.
+        :param test_image: Image data to preprocess. This data should have already been
+            normalized to [0.0, 1.0] and resized to 12×12, usually by
+            :func:`~pyrtlnet.mnist_util.load_mnist_images`.
 
-        :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
-                  ``layer0_output`` is the first layer's raw tensor output, with shape
-                  ``(18, 1)``. ``layer1_output`` is the second layer's raw tensor
-                  output, with shape ``(10, 1)``. Note that these layer outputs are
-                  transposed compared to :func:`.run_tflite_model`. ``predicted_digit``
-                  is the actual predicted digit. ``predicted_digit`` is equivalent to
-                  ``layer1_output.flatten().argmax()``.
+        :returns: Flattened image data, adjusted by the quantized neural network's
+                  ``input_scale`` and ``input_zero``.
         """
         # Flatten the image and add the batch dimension.
         batch_size = 1
@@ -232,9 +230,26 @@ class NumPyInference:
         #
         # Adding input_zero_point (-128) effectively converts the uint8 image data to
         # int8, by shifting the range [0, 255] to [-128, 127].
-        flat_image = np.reshape(
+        return np.reshape(
             test_image / self.input_scale + self.input_zero, newshape=flat_shape
         ).astype(np.int8)
+
+    def run(self, test_image: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
+        """Run quantized inference on a single image.
+
+        All calculations are done with NumPy and fxpmath.
+
+        :param test_image: An image to run through the NumPy inference implementation.
+
+        :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
+                  ``layer0_output`` is the first layer's raw tensor output, with shape
+                  ``(18, 1)``. ``layer1_output`` is the second layer's raw tensor
+                  output, with shape ``(10, 1)``. Note that these layer outputs are
+                  transposed compared to :func:`.run_tflite_model`. ``predicted_digit``
+                  is the actual predicted digit. ``predicted_digit`` is equivalent to
+                  ``layer1_output.flatten().argmax()``.
+        """
+        flat_image = self.preprocess_image(test_image)
 
         layer0_output = self._run_layer(0, flat_image, self.input_zero, run_relu=True)
         layer1_output = self._run_layer(

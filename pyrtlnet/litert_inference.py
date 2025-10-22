@@ -17,20 +17,20 @@ import numpy as np
 from ai_edge_litert.interpreter import Interpreter
 
 
-def load_tflite_model(quantized_model_prefix: str) -> Interpreter:
+def load_tflite_model(quantized_model_name: str) -> Interpreter:
     """Load the quantized model and return an initialized LiteRT ``Interpreter``.
 
     The quantized model should be produced by :func:`quantize_model`.
 
-    :param quantized_model_prefix: Prefix of the ``.tflite`` file created by
-            ``tensorflow_training.py``, without the ``.tflite`` suffix.
+    :param quantized_model_name: Name of the ``.tflite`` file created by
+            ``tensorflow_training.py``.
 
     :returns: An initialized LiteRT ``Interpreter``.
     """
     # Set preserve_all_tensors so we can inspect intermediate tensor values.
     # Intermediate values help when debugging other quantized inference implementations.
     interpreter = Interpreter(
-        model_path=f"{quantized_model_prefix}.tflite",
+        model_path=quantized_model_name,
         experimental_preserve_all_tensors=True,
     )
     interpreter.allocate_tensors()
