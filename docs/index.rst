@@ -83,6 +83,7 @@ Contents
    pyrtl_inference
    matrix
    pyrtl_axi
+   pyrtlnet on GitHub <https://github.com/UCSBarchlab/pyrtlnet>
 
 .. _fxpmath: https://github.com/francof2a/fxpmath
 .. _LiteRT: https://ai.google.dev/edge/litert
