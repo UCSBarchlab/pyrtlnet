@@ -16,7 +16,9 @@ scripts have only been tested on Ubuntu 25.04.
 
 ### Pynq Z2 Set Up
 
-Follow the [Pynq Z2 Setup Guide] to configure and boot the Pynq Z2. These
+Follow the
+[Pynq Z2 Setup Guide](https://pynq.readthedocs.io/en/latest/getting_started/pynq_z2_setup.html)
+to configure and boot the Pynq Z2. These
 instructions were tested with SD card image v3.1.
 
 Verify that you can
@@ -38,7 +40,8 @@ This is not strictly necessary, but very useful for debugging.
 
 ### Install Vivado
 
-Install Vivado. Use the version
+[Install Vivado](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools.html).
+Use the version
 [recommended for your SD card image](https://pynq.readthedocs.io/en/latest/pynq_sd_card.html#use-an-existing-ubuntu-os).
 These instructions were tested with SD card image v3.1 and Vivado 2024.1.
 
@@ -113,7 +116,7 @@ Many assets are required to run `pyrtlnet` on the Pynq Z2:
 1. The generated bitstream (`pyrtlnet.bit`)
 1. The generated hardware handoff file (`pyrtlnet.hwh`)
 1. The `pyrtlnet` FPGA driver script ([`pyrtlnet.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet.py))
-1. `pyrtlnet` Python libraries (`pyrtlnet/`)
+1. `pyrtlnet` Python libraries ([`pyrtlnet/`](https://github.com/UCSBarchlab/pyrtlnet/tree/main/pyrtlnet))
 1. Trained quantized neural network weights (`quantized.npz`)
 1. MNIST test data (`mnist_test_data.npz`)
 

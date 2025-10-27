@@ -4,10 +4,11 @@
 # Tested with Vivado 2024.1
 
 set project_dir [file normalize "pyrtlnet_pynq"]
+# This `ip_repo_dir` must be consistent with `pyrtlnet_ip.tcl`'s `ip_repo_dir`.
 set ip_repo_dir [file normalize "pyrtlnet_ip_repo"]
 
 # Configure the project, and add the pyrtlnet IP repo. The IP repo is created
-# by pyrtlnet_ip.tcl.
+# by `pyrtlnet_ip.tcl`.
 set_param board.repoPaths [get_property LOCAL_ROOT_DIR [xhub::get_xstores xilinx_board_store]]
 create_project pyrtlnet_pynq "$project_dir" -part xc7z020clg400-1 -force
 set_property board_part tul.com.tw:pynq-z2:part0:1.0 [current_project]
