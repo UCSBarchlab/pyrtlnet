@@ -19,8 +19,8 @@ Main features include:
   resulting inference network is fully quantized, so all inference calculations are done
   with integers.
 
-* Three different quantized inference implementations operating at different levels of
-  abstraction. All three implementations produce the same output in the same format and,
+* Four different quantized inference implementations operating at different levels of
+  abstraction. All four implementations produce the same output in the same format and,
   in doing so, provide a useful framework to extend either from the top-down or the
   bottom-up.
 
@@ -33,6 +33,9 @@ Main features include:
 
   1. A [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware implementation of
      quantized inference that is simulated right at the logic gate level.
+
+  1. A deployment of the PyRTL hardware design to a
+     [Pynq Z2 FPGA](https://www.amd.com/en/corporate/university-program/aup-boards/pynq-z2.html).
 
 * A new [PyRTL](https://github.com/UCSBarchlab/PyRTL) linear algebra library, including
   a composable `WireMatrix2D` matrix abstraction and an output-stationary [systolic
@@ -235,6 +238,11 @@ Main features include:
 
 ### Next Steps
 
+See
+[`fpga/README.md`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/README.md)
+for instructions on running `pyrtlnet` inference on a
+[Pynq Z2 FPGA](https://www.amd.com/en/corporate/university-program/aup-boards/pynq-z2.html).
+
 The [reference
 documentation](https://pyrtlnet.readthedocs.io/en/latest/index.html) has more
 information on how these scripts work and their main interfaces.
@@ -276,13 +284,6 @@ simulation can be repeated with Verilator.
 * Add an `inference_util` to collect image input data directly from the user. It would
   be cool to draw a digit with a mouse or touch screen, and see the prediction generated
   by one of the inference implementations.
-
-* Add FPGA suppport:
-
-  * Synthesize the exported Verilog design and run it on a FPGA. This could
-    involve tools like [icestorm](https://github.com/YosysHQ/icestorm) or
-    [Vivado](https://www.amd.com/en/products/software/adaptive-socs-and-fpgas/vivado.html),
-    depending on the type of FPGA.
 
 * Support more advanced neural network architectures, like [convolutional neural
   networks](https://en.wikipedia.org/wiki/Convolutional_neural_network) or

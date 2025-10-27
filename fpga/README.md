@@ -2,14 +2,13 @@
 ===============
 
 Documentation for running `pyrtlnet` inference on a
-[Pynq Z2](https://www.amd.com/en/corporate/university-program/aup-boards/pynq-z2.html)
-FPGA.
+[Pynq Z2 FPGA](https://www.amd.com/en/corporate/university-program/aup-boards/pynq-z2.html).
 
 ### Requirements
 
 A
-[Pynq Z2](https://www.amd.com/en/corporate/university-program/aup-boards/pynq-z2.html)
-FPGA is required. With some modifications, these instructions may work with
+[Pynq Z2 FPGA](https://www.amd.com/en/corporate/university-program/aup-boards/pynq-z2.html)
+is required. With some modifications, these instructions may work with
 other FPGAs, but these instructions have only been tested with a Pynq Z2.
 
 The scripts in this directory currently expect to be run on Linux. These
@@ -112,11 +111,11 @@ $ ls -l pyrtlnet.bit pyrtlnet.hwh
 Many assets are required to run `pyrtlnet` on the Pynq Z2:
 
 1. The generated bitstream (`pyrtlnet.bit`)
-2. The generated hardware handoff file (`pyrtlnet.hwh`)
-3. The `pyrtlnet` FPGA driver script (`pyrtlnet.py`)
-4. `pyrtlnet` Python libraries (`pyrtlnet/`)
-5. Trained quantized neural network weights (`quantized.npz`)
-6. MNIST test data (`mnist_test_data.npz`)
+1. The generated hardware handoff file (`pyrtlnet.hwh`)
+1. The `pyrtlnet` FPGA driver script ([`pyrtlnet.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet.py))
+1. `pyrtlnet` Python libraries (`pyrtlnet/`)
+1. Trained quantized neural network weights (`quantized.npz`)
+1. MNIST test data (`mnist_test_data.npz`)
 
 Run `make deploy` to copy all these assets to the Pynq Z2, using
 [rsync](https://rsync.samba.org/) over `ssh`:
@@ -183,14 +182,20 @@ Successfully installed fxpmath-0.4.9 pyrtl-0.12
 ```
 
 > [!NOTE]
-> `fxpmath` is not actually required by the `pyrtlnet` FPGA driver script. This
-> false dependency should be removed in a future update. `pyrtl` is required to
-> convert raw bits to signed integers with
-> [`val_to_signed_integer`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.val_to_signed_integer).
+> [`pyrtlnet.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet.py)
+> requires `pyrtl` only for
+> [`pyrtl.val_to_signed_integer`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.val_to_signed_integer),
+> to convert the raw bits received from the FPGA to signed integers. This
+> dependency could be removed by reimplementing `val_to_signed_integer`.
+>
+> `fxpmath` is not actually required. This false dependency should be removed
+> in a future update.
 
 ### Run `pyrtlnet` FPGA Inference
 
-Run the `pyrtlnet.py` FPGA driver script, which loads the `pynq` runtime
+Run the
+[`pyrtlnet.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet.py)
+FPGA driver script, which loads the `pynq` runtime
 environment, copies the `pyrtlnet` bitstream to the FPGA, transmits the MNIST
 test image data to the FPGA via DMA, and retrieves the inference results:
 
