@@ -107,9 +107,10 @@ $ ls -l pyrtlnet.bit pyrtlnet.hwh
 > recommend running the previous step explicitly, to understand where problems
 > occur.
 
-### Deploy assets to the Pynq Z2.
+### Deploy assets to the Pynq Z2
 
-Copy:
+Many assets are required to run `pyrtlnet` on the Pynq Z2:
+
 1. The generated bitstream (`pyrtlnet.bit`)
 2. The generated hardware handoff file (`pyrtlnet.hwh`)
 3. The `pyrtlnet` FPGA driver script (`pyrtlnet.py`)
@@ -117,7 +118,8 @@ Copy:
 5. Trained quantized neural network weights (`quantized.npz`)
 6. MNIST test data (`mnist_test_data.npz`)
 
-To the Pynq Z2, using [rsync](https://rsync.samba.org/) over `ssh`, by running:
+Run `make deploy` to copy all these assets to the Pynq Z2, using
+[rsync](https://rsync.samba.org/) over `ssh`:
 
 ```
 $ make deploy
@@ -151,7 +153,7 @@ total size is 5,723,218  speedup is 1.00
 
 ```
 $ ssh xilinx@pynq
-```
+...
 Welcome to PYNQ Linux, based on Ubuntu 22.04 (GNU/Linux 6.6.10-xilinx-v2024.1-gb36799f4e960 armv7l)
 
 Last login: Fri Oct 24 21:58:37 2025
