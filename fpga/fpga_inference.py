@@ -89,7 +89,7 @@ def main() -> None:
 
     # Load the test image data in a Pynq buffer.
     buffer = pynq.allocate(shape=(buffer_size,), dtype=np.uint8)
-    buffer[:len(flat_image)] = flat_image
+    buffer[: len(flat_image)] = flat_image
 
     print("Sending image data via Pynq DMA")
     overlay.dma.sendchannel.transfer(buffer)
