@@ -3,7 +3,8 @@
 # Tested with Vivado 2024.1
 
 set ip_project_dir [file normalize "pyrtlnet_ip"]
-# This `ip_repo_dir` must be consistent with `pyrtlnet_pynq.tcl`'s `ip_repo_dir`.
+# This `ip_repo_dir` must be consistent with `pyrtlnet_pynq.tcl`'s
+# `ip_repo_dir`.
 set ip_repo_dir [file normalize "pyrtlnet_ip_repo"]
 set verilog_source [file normalize "pyrtl_inference_axi.v"]
 

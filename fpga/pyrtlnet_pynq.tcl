@@ -1,4 +1,4 @@
-# Link the pyrtlnet IP created by pyrtlnet_ip.tcl with the Zynq Processing
+# Link the pyrtlnet IP created by `pyrtlnet_ip.tcl` with the Zynq Processing
 # System, via AXI DMA.
 #
 # Tested with Vivado 2024.1
@@ -58,6 +58,7 @@ startgroup
 create_bd_cell -type ip -vlnv ucsb.edu:ucsbarchlab:pyrtlnet:1.0 pyrtlnet
 endgroup
 
+# Connect pyrtlnet to the Zynq Processing System.
 startgroup
 apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config { Clk_master {/processing_system7_0/FCLK_CLK0 (25 MHz)} Clk_slave {Auto} Clk_xbar {/processing_system7_0/FCLK_CLK0 (25 MHz)} Master {/processing_system7_0/M_AXI_GP0} Slave {/pyrtlnet/s0_axi} ddr_seg {Auto} intc_ip {/ps7_0_axi_periph} master_apm {0}}  [get_bd_intf_pins pyrtlnet/s0_axi]
 apply_bd_automation -rule xilinx.com:bd_rule:clkrst -config { Clk {/processing_system7_0/FCLK_CLK0 (25 MHz)} Freq {25} Ref_Clk0 {} Ref_Clk1 {} Ref_Clk2 {}}  [get_bd_pins pyrtlnet/s0_axi_clk]

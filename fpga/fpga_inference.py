@@ -16,10 +16,12 @@ from pyrtlnet.numpy_inference import NumPyInference
 
 
 def main() -> None:
-    """Run pyrtlnet on a Pynq Z2 FPGA board.
+    """Run pyrtlnet quantized inference on a Pynq Z2 FPGA board.
 
-    This script should be copied to the board, with ``make deploy``. Then this script
-    can be run on the board.
+    This script should be copied to the board, along with all other required assets,
+    with ``make deploy``. Then this script can be run on the board with::
+
+        $ python fpga_inference.py
     """
     # Importing pynq currently takes ~8 seconds on a Pynq Z2, so let the user know.
     start = time.time()
@@ -28,7 +30,7 @@ def main() -> None:
 
     print(f"done ({time.time() - start:.1f} seconds)")
 
-    parser = argparse.ArgumentParser(prog="pyrtlnet.py")
+    parser = argparse.ArgumentParser(prog="fpga_inference.py")
     parser.add_argument("--start_image", type=int, default=0)
     parser.add_argument("--tensor_path", type=str, default=".")
     args = parser.parse_args()
@@ -60,7 +62,7 @@ def main() -> None:
 
     test_index = args.start_image
 
-    # Print the test image.
+    # Display the test image.
     test_image = test_images[test_index]
     print(f"PyRTL network input (#{test_index}):")
     display_image(test_image)
@@ -77,11 +79,17 @@ def main() -> None:
     # Prepare the test image.
     flat_image = numpy_inference.preprocess_image(test_image)
     # Convert the signed image data to raw byte values.
-    flat_image = [int(data) & 0xFF for data in flat_image]
+    flat_image = [
+        pyrtl.infer_val_and_bitwidth(int(data), bitwidth=8, signed=True).value
+        for data in flat_image
+    ]
+
+    # Find the smallest power of 2 that's larger than `len(flat_image)`.
+    buffer_size = 2 ** (len(flat_image).bit_length())
 
     # Load the test image data in a Pynq buffer.
-    buffer = pynq.allocate(shape=(256,), dtype=np.uint8)
-    buffer[:144] = flat_image
+    buffer = pynq.allocate(shape=(buffer_size,), dtype=np.uint8)
+    buffer[:len(flat_image)] = flat_image
 
     print("Sending image data via Pynq DMA")
     overlay.dma.sendchannel.transfer(buffer)

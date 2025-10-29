@@ -14,6 +14,45 @@ other FPGAs, but these instructions have only been tested with a Pynq Z2.
 The scripts in this directory currently expect to be run on Linux. These
 scripts have only been tested on Ubuntu 25.04.
 
+### About the Pynq Z2
+
+The Pynq Z2 has an unusual architecture. It is effectively a single-board
+computer, like a
+[Raspberry Pi](https://www.raspberrypi.com/), with an attached FPGA. The board
+has a hardware ARM core, which boots Linux from a SD card, and some onboard
+DDR3 memory. It connects to a network via Ethernet. Users typically interact
+with the board over the network, usually by opening a Jupyter Notebook or
+`ssh`ing to the board. This hardware ARM core running Linux is called the
+Processing System. In the Pynq documentation, the Processing System is usually
+abbreviated as "PS". The attached FPGA is called the Programmable Logic,
+usually abbreviated as "PL" in Pynq documentation.
+
+The FPGA is typicaly accessed from this Processing System, instead of accessing
+the FPGA directly from a host computer. So to deploy a bitstream on the Z2, we
+first build the bitstream on a host computer with
+[Vivado](https://www.amd.com/en/products/software/adaptive-socs-and-fpgas/vivado.html),
+then copy the bitstream to Processing System over the network, with `scp` for
+example. Then we instruct the Processing System to load the bitstream on the
+FPGA, with
+[`pynq.Overlay`](https://pynq.readthedocs.io/en/latest/pynq_overlays/loading_an_overlay.html).
+
+Keep this architecture in mind as you read through these instructions. Some
+commands are run on the host computer, while others are run on the Pynq Z2's
+Processing System, which can be confusing. In these instructions, host computer
+commands will look like this:
+
+```shell
+$ echo "This is running on the host computer (where you run Vivado)."
+```
+
+While commands running on the Pynq Z2's Processing System will look like this:
+
+```shell
+xilinx@pynq:~$ echo "This is running on the Pynq Z2 as the `xilinx` user."
+
+root@pynq:/home/xilinx# echo "This is running on the Pynq Z2 as `root`."
+```
+
 ### Pynq Z2 Set Up
 
 Follow the
@@ -115,7 +154,7 @@ Many assets are required to run `pyrtlnet` on the Pynq Z2:
 
 1. The generated bitstream (`pyrtlnet.bit`)
 1. The generated hardware handoff file (`pyrtlnet.hwh`)
-1. The `pyrtlnet` FPGA driver script ([`pyrtlnet.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet.py))
+1. The FPGA driver script ([`fpga_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/fpga_inference.py))
 1. `pyrtlnet` Python libraries ([`pyrtlnet/`](https://github.com/UCSBarchlab/pyrtlnet/tree/main/pyrtlnet))
 1. Trained quantized neural network weights (`quantized.npz`)
 1. MNIST test data (`mnist_test_data.npz`)
@@ -130,7 +169,7 @@ sending incremental file list
 mnist_test_data.npz
 pyrtlnet.bit
 pyrtlnet.hwh
-pyrtlnet.py
+fpga_inference.py
 quantized.npz
 pyrtlnet/
 pyrtlnet/__init__.py
@@ -149,7 +188,7 @@ sent 5,725,817 bytes  received 332 bytes  1,272,477.56 bytes/sec
 total size is 5,723,218  speedup is 1.00
 ```
 
-### Prepare the Pynq Z2's Runtime Environment
+### Prepare the Pynq Z2's Processing System
 
 `ssh` to the Pynq Z2:
 
@@ -185,11 +224,14 @@ Successfully installed fxpmath-0.4.9 pyrtl-0.12
 ```
 
 > [!NOTE]
-> [`pyrtlnet.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet.py)
+> [`fpga_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/fpga_inference.py)
 > requires `pyrtl` only for
+> [`pyrtl.infer_val_and_bitwidth`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.infer_val_and_bitwidth),
+> and
 > [`pyrtl.val_to_signed_integer`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.val_to_signed_integer),
-> to convert the raw bits received from the FPGA to signed integers. This
-> dependency could be removed by reimplementing `val_to_signed_integer`.
+> to convert signed integers to raw bits to send to the FPGA, and to convert
+> the raw bits received from the FPGA to signed integers. The dependency on
+> `pyrtl` could be removed by reimplementing these functions.
 >
 > `fxpmath` is not actually required. This false dependency should be removed
 > in a future update.
@@ -197,40 +239,39 @@ Successfully installed fxpmath-0.4.9 pyrtl-0.12
 ### Run `pyrtlnet` FPGA Inference
 
 Run the
-[`pyrtlnet.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet.py)
-FPGA driver script, which loads the `pynq` runtime
+[`fpga_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/fpga_inference.py)
+driver script on the Pynq Z2, which loads the `pynq` runtime
 environment, copies the `pyrtlnet` bitstream to the FPGA, transmits the MNIST
 test image data to the FPGA via DMA, and retrieves the inference results:
 
-![pyrtlnet.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/pyrtlnet.png?raw=true)
+![fpga_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/fpga_inference.png?raw=true)
 
-The tensors output by this script should exactly match the tensors output by 
+The tensors output by this script should exactly match the tensors output by
 [`pyrtl_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py)
 
 Other test images can be run on the FPGA by setting
-[`pyrtlnet.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet.py)'s
+[`fpga_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/fpga_inference.py)'s
 `--start_image` flag.
 
 ### Modifying The Design
 
-The 
+The
 [`pyrtlnet_pynq.tcl`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet_pynq.tcl)
-build script creates a Vivado project file named 
-`fpga/pyrtlnet_pynq/pyrtlnet_pynq.xpr`. This project file can be opened and 
-modified in Vivado. For example, you could connect the `pyrtlnet` IP block's 
-`argmax` output to the board's LEDs, to have the board display the most 
-likely digit, in binary.
+build script creates a Vivado project file named
+`fpga/pyrtlnet_pynq/pyrtlnet_pynq.xpr`. This project file can be opened and
+modified in Vivado. For example, you could connect the `pyrtlnet` IP block's
+`argmax` output to the board's LEDs, to have the board display the most likely
+digit, in binary.
 
-Most of the design is in the `pyrtlnet` IP block. The rest of the Vivado
-block design just connects the `pyrtlnet` IP block to the Zynq Processing
-System, via AXI.
+Most of the design is in the `pyrtlnet` IP block. The rest of the Vivado block
+design just connects the `pyrtlnet` IP block to the Zynq Processing System, via
+AXI.
 
-The `pyrtlnet` IP block is just a wrapper around `pyrtl_inference_axi.v`, 
-which is Verilog code generated by PyRTL
+The `pyrtlnet` IP block is just a wrapper around `pyrtl_inference_axi.v`, which
+is Verilog code generated by PyRTL
 ([`pyrtl_inference.py --axi --verilog`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py)).
-Instead of modifying the generated Verilog code directly, it's better to 
-modify the PyRTL code itself, then regenerate the Verilog code. The
-provided 
+Instead of modifying the generated Verilog code directly, it's better to modify
+the PyRTL code itself, then regenerate the Verilog code. The provided
 [`Makefile`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/Makefile)
-is useful for automating the process of regenerating
-the Verilog code and building a new bitstream.
+automates the process of regenerating the Verilog code, building a new
+bitstream, and deploying it to the Pynq Z2.
