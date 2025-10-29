@@ -70,7 +70,10 @@ $ ssh xilinx@pynq
 Welcome to PYNQ Linux, based on Ubuntu 22.04 (GNU/Linux 6.6.10-xilinx-v2024.1-gb36799f4e960 armv7l)
 
 Last login: Fri Oct 24 21:58:37 2025
-xilinx@pynq:~$
+xilinx@pynq:~$ exit
+logout
+Connection to pynq closed.
+$
 ```
 
 Verify that you can
@@ -131,10 +134,24 @@ Generate a bitstream and hardware handoff file from `pyrtl_inference_axi.v`:
 $ make pyrtlnet.bit pyrtlnet.hwh
 ```
 
-This step takes some time, about 5 minutes on my computer.
+This step runs Vivado on the
+[`pyrtlnet_ip.tcl`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet_ip.tcl)
+and
+[`pyrtlnet_pynq.tcl`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet_pynq.tcl)
+scripts.
+This takes some time, about 5 minutes on my computer.
 
-If successful, you should see a bitstream named `pyrtlnet.bit`, and a hardware
-handoff file named `pyrtlnet.hwh`:
+The
+[`pyrtlnet_ip.tcl`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet_ip.tcl)
+script just packages `pyrtl_inference_axi.v` in a new `pyrtlnet` IP block.
+
+The
+[`pyrtlnet_pynq.tcl`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet_pynq.tcl)
+script instantiates the new `pyrtlnet` IP block, and connects it to the Zynq
+Processing System via AXI.
+
+When successful, this step generates a bitstream file named `pyrtlnet.bit`, and
+a hardware handoff file named `pyrtlnet.hwh`:
 
 ```shell
 $ ls -l pyrtlnet.bit pyrtlnet.hwh
@@ -145,10 +162,10 @@ $ ls -l pyrtlnet.bit pyrtlnet.hwh
 > [!NOTE]
 > This step implicitly runs `make pyrtl_inference_axi.v` from the previous
 > step, so the previous step is not strictly necessary. For your first time, we
-> recommend running the previous step explicitly, to understand where problems
-> occur.
+> recommend running the previous step explicitly anyway, to understand where
+> problems occur.
 
-### Deploy assets to the Pynq Z2
+### Deploy assets to the Pynq Z2's Processing System
 
 Many assets are required to run `pyrtlnet` on the Pynq Z2:
 
@@ -240,9 +257,14 @@ Successfully installed fxpmath-0.4.9 pyrtl-0.12
 
 Run the
 [`fpga_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/fpga_inference.py)
-driver script on the Pynq Z2, which loads the `pynq` runtime
-environment, copies the `pyrtlnet` bitstream to the FPGA, transmits the MNIST
-test image data to the FPGA via DMA, and retrieves the inference results:
+driver script on the Pynq Z2, which:
+1. Loads the `pynq` runtime environment
+1. Copies the `pyrtlnet` bitstream to the FPGA
+1. Loads the MNIST test image in a
+   [Pynq `Buffer`](https://pynq.readthedocs.io/en/latest/pynq_libraries/allocate.html#allocate)
+1. Transmits the `Buffer` to the FPGA via
+   [AXI DMA](https://discuss.pynq.io/t/tutorial-pynq-dma-part-1-hardware-design/3133)
+1. Retrieves the inference results via AXI
 
 ![fpga_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/fpga_inference.png?raw=true)
 
@@ -259,9 +281,9 @@ The
 [`pyrtlnet_pynq.tcl`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet_pynq.tcl)
 build script creates a Vivado project file named
 `fpga/pyrtlnet_pynq/pyrtlnet_pynq.xpr`. This project file can be opened and
-modified in Vivado. For example, you could connect the `pyrtlnet` IP block's
-`argmax` output to the board's LEDs, to have the board display the most likely
-digit, in binary.
+modified in the Vivado GUI. For example, you could connect the `pyrtlnet` IP
+block's `argmax` output to the board's LEDs, to have the board display the most
+likely digit, in binary.
 
 Most of the design is in the `pyrtlnet` IP block. The rest of the Vivado block
 design just connects the `pyrtlnet` IP block to the Zynq Processing System, via
