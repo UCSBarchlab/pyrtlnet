@@ -213,7 +213,7 @@ class NumPyInference:
         :returns: Flattened batch data, adjusted by the quantized neural network's
                   ``input_scale`` and ``input_zero``.
         """
-        # Flatten the image and add the batch dimension.
+        # Adjust batch image data to range [-128,127]
         test_image = (test_image / self.input_scale + self.input_zero).astype(np.int8)
 
         # The MNIST image data contains pixel values in the range [0, 255]. The neural
@@ -229,6 +229,8 @@ class NumPyInference:
         #
         # Adding input_zero_point (-128) effectively converts the uint8 image data to
         # int8, by shifting the range [0, 255] to [-128, 127].
+
+        #Flatten 2D -> 1D
         return test_image.reshape(test_image.shape[0], -1).T
 
     def run(self, test_image: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
