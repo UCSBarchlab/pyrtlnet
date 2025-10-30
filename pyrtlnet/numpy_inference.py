@@ -200,8 +200,8 @@ class NumPyInference:
         )
         return layer_output.astype(np.int8)
 
-    def preprocess_image(self, test_image: np.ndarray) -> np.ndarray:
-        """Preprocess the raw image data, as required by the quantized neural network.
+    def preprocess_image(self, test_batch: np.ndarray) -> np.ndarray:
+        """Preprocess the raw image data in the batch, as required by the quantized neural network.
 
         This flattens the 2D image data into 1D, adds a batch dimension, and adjusts the
         image data by ``input_scale`` and ``input_zero``.
@@ -214,8 +214,7 @@ class NumPyInference:
                   ``input_scale`` and ``input_zero``.
         """
         # Flatten the image and add the batch dimension.
-        batch_size = 1
-        flat_shape = (test_image.shape[0] * test_image.shape[1], batch_size)
+        test_batch = (test_batch / self.input_scale + self.input_zero).astype(np.int8)
 
         # The MNIST image data contains pixel values in the range [0, 255]. The neural
         # network was trained by first converting these values to floating point, in the
@@ -230,17 +229,17 @@ class NumPyInference:
         #
         # Adding input_zero_point (-128) effectively converts the uint8 image data to
         # int8, by shifting the range [0, 255] to [-128, 127].
-        return np.reshape(
-            test_image / self.input_scale + self.input_zero, newshape=flat_shape
-        ).astype(np.int8)
 
-    def run(self, test_image: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
-        """Run quantized inference on a single image.
+        return test_batch.reshape(test_batch.shape[0],-1).T
+
+    def run(self, test_batch: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
+        """Run quantized inference on a batch.
 
         All calculations are done with NumPy and fxpmath.
 
-        :param test_image: An image to run through the NumPy inference implementation.
+        :param test_batch: A batch of images to run through the NumPy inference implementation.
 
+        TODO change the return value to match batch output
         :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
                   ``layer0_output`` is the first layer's raw tensor output, with shape
                   ``(18, 1)``. ``layer1_output`` is the second layer's raw tensor
@@ -249,13 +248,10 @@ class NumPyInference:
                   is the actual predicted digit. ``predicted_digit`` is equivalent to
                   ``layer1_output.flatten().argmax()``.
         """
-        flat_image = self.preprocess_image(test_image)
-
-        layer0_output = self._run_layer(0, flat_image, self.input_zero, run_relu=True)
-        layer1_output = self._run_layer(
-            1, layer0_output, self.layer[0].zero, run_relu=False
+        flat_batch = self.preprocess_image(test_batch)
+        layer0_outputs = self._run_layer(0, flat_batch, self.input_zero, run_relu=True)
+        layer1_outputs = self._run_layer(
+            1, layer0_outputs, self.layer[0].zero, run_relu=False
         )
-
-        actual = layer1_output.argmax()
-
-        return layer0_output, layer1_output, actual
+        actuals = layer1_outputs.argmax(axis = 0)
+        return layer0_outputs, layer1_outputs, actuals
