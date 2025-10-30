@@ -2,7 +2,6 @@ import argparse
 import pathlib
 import shutil
 import sys
-from datetime import datetime
 
 import numpy as np
 
@@ -15,14 +14,12 @@ from pyrtlnet.numpy_inference import NumPyInference
 
 
 def main() -> None:
-    #TODO add logic for making sure numimages is >= batchsize, ensure num images <= training size, etc.
     parser = argparse.ArgumentParser(prog="numpy_inference.py")
     parser.add_argument("--start_image", type=int, default=0)
     parser.add_argument("--num_images", type=int, default=1)
+    parser.add_argument("--batch_size", type=int, default=1)
     parser.add_argument("--tensor_path", type=str, default=".")
-    parser.add_argument("--batch_size", type = int, default = 1)
-    #fast? enable np multiplication instead of element wise in quant multiply
-    parser.add_argument("--verbose", action = argparse.BooleanOptionalAction)
+    parser.add_argument("--verbose", action=argparse.BooleanOptionalAction)
     args = parser.parse_args()
 
     terminal_columns = shutil.get_terminal_size((80, 24)).columns
@@ -37,7 +34,15 @@ def main() -> None:
     test_images = mnist_test_data.get("test_images")
     test_labels = mnist_test_data.get("test_labels")
 
-    #alvin: form a batch from test_images
+    # Correct arguments if needed.
+    if args.batch_size > args.num_images:
+        args.num_images = args.batch_size
+
+    if args.num_images > len(test_images):
+        args.num_images = len(test_images)
+
+    if args.num_images == 1:
+        args.verbose = True
 
     tensor_file = pathlib.Path(args.tensor_path) / f"{quantized_model_prefix}.npz"
     if not tensor_file.exists():
@@ -46,52 +51,60 @@ def main() -> None:
     numpy_inference = NumPyInference(quantized_model_name=tensor_file)
 
     correct = 0
-    #alvin: for batch in totalTest Size / batch_size
-    #alvin: once batching is done, maybe add option for quick summary of stuff
-    # for b in range(len(test_images) / batch_size):
-    #     test_batch = np.zeros((test_images[0].shape[0] * test_images[0].shape[1], batch_size))
-    #     test_batch = 
-    #     # test_batch = [test_images[i] for i in range(batch_size)]
-
-    #     layer0_output, layer1_output, actual = numpy_inference.run(test_batch)
-    print(datetime.now())
-    for batch_index in range(args.start_image, args.start_image + args.num_images, args.batch_size):
+    actual_tested_image_count = 0
+    for index in range(
+        args.start_image, args.start_image + args.num_images, args.batch_size
+    ):
         # Run inference on batches
-        vanilla_batch = [test_images[i] for i in range(batch_index,batch_index+args.batch_size)]
+
+        batch_index = min(index, len(test_images) - 1)
+        batch_end_index = min(batch_index + args.batch_size, len(test_images))
+        vanilla_batch = test_images[batch_index:batch_end_index]
+
         test_batch = np.array(vanilla_batch)
         layer0_outputs, layer1_outputs, actuals = numpy_inference.run(test_batch)
-        #TODO fix the indexing here
-        for test_index in range(len(actuals)):
+
+        layer0_outputs = layer0_outputs.transpose()
+        layer1_outputs = layer1_outputs.transpose()
+
+        for test_index in range(len(vanilla_batch)):
             test_image = vanilla_batch[test_index]
-            expected = test_labels[batch_index+test_index]
-            if args.verbose == True:
+            expected = test_labels[batch_index + test_index]
+            if args.verbose:
                 print(f"NumPy network input (#{test_index}):")
                 display_image(test_image)
                 print("test_image", test_image.shape, test_image.dtype, "\n")
 
                 print(
-                    "NumPy layer0 output (transposed)", layer0_outputs[test_index].shape, layer0_outputs[test_index].dtype
+                    "NumPy layer0 output (transposed)",
+                    layer0_outputs[test_index].shape,
+                    layer0_outputs[test_index].dtype,
                 )
-                print(layer0_outputs.transpose()[test_index], "\n")
-
+                print(layer0_outputs[test_index], "\n")
+                print(layer1_outputs.shape)
                 print(
-                    "NumPy layer1 output (transposed)", layer1_outputs[test_index].shape, layer1_outputs[test_index].dtype
+                    "NumPy layer1 output (transposed)",
+                    layer1_outputs[test_index].shape,
+                    layer1_outputs[test_index].dtype,
                 )
-                print(layer1_outputs.transpose()[test_index], "\n")
-
+                print(layer1_outputs[test_index], "\n")
                 print(f"NumPy network output (#{test_index}):")
-                display_outputs(layer1_outputs.transpose()[test_index], expected=expected, actual=actuals[test_index])
+                display_outputs(
+                    layer1_outputs[test_index],
+                    expected=expected,
+                    actual=actuals[test_index],
+                )
                 if test_index < args.num_images - 1:
                     print()
 
             if actuals[test_index] == expected:
                 correct += 1
+            actual_tested_image_count += 1
 
-    print(datetime.now())
     if args.num_images > 1:
         print(
-            f"{correct}/{args.num_images} correct predictions, "
-            f"{100.0 * correct / args.num_images:.0f}% accuracy"
+            f"{correct}/{actual_tested_image_count} correct predictions, "
+            f"{100.0 * correct / actual_tested_image_count:.0f}% accuracy"
         )
 
 

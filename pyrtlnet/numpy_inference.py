@@ -66,7 +66,6 @@ def quantized_matmul(q1: np.ndarray, z1: int, q2: np.ndarray, z2: int) -> np.nda
     q1 = q1.astype(np.int32)
     q2 = q2.astype(np.int32)
     inner_dim = q1.shape[1]
-
     output = np.zeros((q1.shape[0], q2.shape[1]), dtype=np.int32)
     assert q1.shape[1] == q2.shape[0]
     z1 = np.broadcast_to(z1, [inner_dim])
@@ -165,7 +164,7 @@ def normalize(
 
 
 class NumPyInference:
-    """Run quantized inference on an input image with NumPy and fxpmath."""
+    """Run quantized inference on an input batch with NumPy and fxpmath."""
 
     def __init__(self, quantized_model_name: str) -> None:
         """Collect weights, biases, and quantization metadata from a ``.npz`` file
@@ -200,21 +199,22 @@ class NumPyInference:
         )
         return layer_output.astype(np.int8)
 
-    def preprocess_image(self, test_batch: np.ndarray) -> np.ndarray:
-        """Preprocess the raw image data in the batch, as required by the quantized neural network.
+    def preprocess_image(self, test_image: np.ndarray) -> np.ndarray:
+        """Preprocess the raw image data in the batch.
+        This is required by the quantized neural network.
 
-        This flattens the 2D image data into 1D, adds a batch dimension, and adjusts the
-        image data by ``input_scale`` and ``input_zero``.
+        This adjusts the batch image data by ``input_scale`` and ``input_zero``.
+        Then, it flattens the 2D image(s) into 1D and adds the batch dimension.
 
-        :param test_image: Image data to preprocess. This data should have already been
+        :param test_batch: Batch data to preprocess. This data should have already been
             normalized to [0.0, 1.0] and resized to 12×12, usually by
             :func:`~pyrtlnet.mnist_util.load_mnist_images`.
 
-        :returns: Flattened image data, adjusted by the quantized neural network's
+        :returns: Flattened batch data, adjusted by the quantized neural network's
                   ``input_scale`` and ``input_zero``.
         """
         # Flatten the image and add the batch dimension.
-        test_batch = (test_batch / self.input_scale + self.input_zero).astype(np.int8)
+        test_image = (test_image / self.input_scale + self.input_zero).astype(np.int8)
 
         # The MNIST image data contains pixel values in the range [0, 255]. The neural
         # network was trained by first converting these values to floating point, in the
@@ -229,29 +229,34 @@ class NumPyInference:
         #
         # Adding input_zero_point (-128) effectively converts the uint8 image data to
         # int8, by shifting the range [0, 255] to [-128, 127].
+        return test_image.reshape(test_image.shape[0], -1).T
 
-        return test_batch.reshape(test_batch.shape[0],-1).T
-
-    def run(self, test_batch: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
+    def run(self, test_image: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
         """Run quantized inference on a batch.
 
         All calculations are done with NumPy and fxpmath.
 
-        :param test_batch: A batch of images to run through the NumPy inference implementation.
+        :param test_batch: A batch to run through the NumPy inference implementation.
 
-        TODO change the return value to match batch output
-        :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
-                  ``layer0_output`` is the first layer's raw tensor output, with shape
-                  ``(18, 1)``. ``layer1_output`` is the second layer's raw tensor
-                  output, with shape ``(10, 1)``. Note that these layer outputs are
-                  transposed compared to :func:`.run_tflite_model`. ``predicted_digit``
-                  is the actual predicted digit. ``predicted_digit`` is equivalent to
-                  ``layer1_output.flatten().argmax()``.
+        :returns: ``(layer0_outputs, layer1_outputs, actuals)``, where
+                  ``layer0_outputs`` is the first layer's raw tensor output,
+                    with shape ``(18, batch_size)``.
+                    ``layer1_outputs`` is the second layer's raw tensor output,
+                    with shape ``(10, batch_size)``.
+                    Note that these layer outputs are transposed
+                    compared to :func:`.run_tflite_model`.
+                    ``actuals`` is an np.ndarray of predicted digits.
         """
-        flat_batch = self.preprocess_image(test_batch)
+
+        # Convert single image to batchable shape
+        if test_image.ndim == 2:
+            test_image = np.expand_dims(test_image, axis=0)
+
+        flat_batch = self.preprocess_image(test_image)
         layer0_outputs = self._run_layer(0, flat_batch, self.input_zero, run_relu=True)
         layer1_outputs = self._run_layer(
             1, layer0_outputs, self.layer[0].zero, run_relu=False
         )
-        actuals = layer1_outputs.argmax(axis = 0)
+
+        actuals = layer1_outputs.argmax(axis=0)
         return layer0_outputs, layer1_outputs, actuals
