@@ -6,6 +6,7 @@ import numpy as np
 import pyrtl
 
 from pyrtlnet.constants import quantized_model_prefix
+from pyrtlnet.inference_util import batched_images
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.numpy_inference import NumPyInference
 from pyrtlnet.pyrtl_inference import PyRTLInference
@@ -88,6 +89,7 @@ class TestPyRTLInference(unittest.TestCase):
 
     def test_pyrtl_inference_axi(self) -> None:
         """Check that NumPyInference and PyRTLInference produce the same results.
+        PyrtlInference uses AXI-Lite in this test.
 
         This runs a batch through both inference systems and compares the tensor
         outputs from each layer.
@@ -121,6 +123,112 @@ class TestPyRTLInference(unittest.TestCase):
         )
         # Also verify that the actual predicted digits match.
         np.testing.assert_array_equal(pyrtl_actual, numpy_actual, strict=True)
+
+    def test_pyrtl_inference_uneven_batch(self) -> None:
+        """
+        Check that NumPyInference and PyRTLInference produce the same results,
+        using uneven batches.
+
+        This runs a two batches of different sizes
+        through both inference systems and compares the tensor
+        outputs from each layer.
+        """
+
+        start_image = 17
+        batch_size = 5
+        num_images = 7
+
+        pyrtl_inference = PyRTLInference(
+            tensor_path=self.temp_dir.name,
+            input_bitwidth=8,
+            accumulator_bitwidth=32,
+            axi=False,
+            batch_size=batch_size,
+        )
+
+        for _batch_number, (_batch_start_index, test_batch) in enumerate(
+            batched_images(self.test_images, start_image, num_images, batch_size)
+        ):
+            # Always pad test_batch, in case last test_batch size < batch_size
+            compensation = batch_size - test_batch.shape[0]
+            padded_batch = np.append(
+                test_batch,
+                np.zeros((compensation, test_batch.shape[1], test_batch.shape[2])),
+                axis=0,
+            )
+
+            numpy_layer0_output, numpy_layer1_output, numpy_actual = (
+                self.numpy_inference.run(test_batch=padded_batch)
+            )
+
+            pyrtl_layer0_output, pyrtl_layer1_output, pyrtl_actual = (
+                pyrtl_inference.simulate(test_batch=padded_batch)
+            )
+
+            # Check the first layer's outputs.
+            np.testing.assert_array_equal(
+                pyrtl_layer0_output, numpy_layer0_output, strict=True
+            )
+
+            # Check the second layer's outputs.
+            np.testing.assert_array_equal(
+                pyrtl_layer1_output, numpy_layer1_output, strict=True
+            )
+            # Also verify that the actual predicted digits match.
+            np.testing.assert_array_equal(pyrtl_actual, numpy_actual, strict=True)
+
+    def test_pyrtl_inference_axi_uneven_batch(self) -> None:
+        """
+        Check that NumPyInference and PyRTLInference produce the same results,
+        using uneven batches. PyrtlInference uses AXI-Lite in this test.
+
+        This runs a two batches of different sizes
+        through both inference systems and compares the tensor
+        outputs from each layer.
+        """
+
+        start_image = 17
+        batch_size = 5
+        num_images = 7
+
+        pyrtl_inference = PyRTLInference(
+            tensor_path=self.temp_dir.name,
+            input_bitwidth=8,
+            accumulator_bitwidth=32,
+            axi=True,
+            batch_size=batch_size,
+        )
+
+        for _batch_number, (_batch_start_index, test_batch) in enumerate(
+            batched_images(self.test_images, start_image, num_images, batch_size)
+        ):
+            # Always pad test_batch, in case last test_batch size < batch_size
+            compensation = batch_size - test_batch.shape[0]
+            padded_batch = np.append(
+                test_batch,
+                np.zeros((compensation, test_batch.shape[1], test_batch.shape[2])),
+                axis=0,
+            )
+
+            numpy_layer0_output, numpy_layer1_output, numpy_actual = (
+                self.numpy_inference.run(test_batch=padded_batch)
+            )
+
+            pyrtl_layer0_output, pyrtl_layer1_output, pyrtl_actual = (
+                pyrtl_inference.simulate(test_batch=padded_batch)
+            )
+
+            # Check the first layer's outputs.
+            np.testing.assert_array_equal(
+                pyrtl_layer0_output, numpy_layer0_output, strict=True
+            )
+
+            # Check the second layer's outputs.
+            np.testing.assert_array_equal(
+                pyrtl_layer1_output, numpy_layer1_output, strict=True
+            )
+            # Also verify that the actual predicted digits match.
+            np.testing.assert_array_equal(pyrtl_actual, numpy_actual, strict=True)
 
 
 if __name__ == "__main__":

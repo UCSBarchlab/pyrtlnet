@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 
 from pyrtlnet.constants import quantized_model_prefix
+from pyrtlnet.inference_util import batched_images
 from pyrtlnet.litert_inference import load_tflite_model, run_tflite_model
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.numpy_inference import NumPyInference
@@ -57,6 +58,7 @@ class TestNumPyInference(unittest.TestCase):
         This runs one image through both inference systems and compares the tensor
         outputs from each layer.
         """
+
         test_batch = np.array([self.test_images[0]])
 
         litert_layer0_output, litert_layer1_output, litert_actual = run_tflite_model(
@@ -81,6 +83,7 @@ class TestNumPyInference(unittest.TestCase):
         This runs a batch of 10 images through both inference systems and compares the
         tensor outputs from each layer.
         """
+
         start_image = 1
         batch_size = 10
 
@@ -105,6 +108,42 @@ class TestNumPyInference(unittest.TestCase):
         )
         # Also verify that the actual predicted digits match.
         self.assertTrue(np.array_equal(litert_actual_batch, numpy_actual_batch))
+
+    def test_numpy_inference_uneven_batch(self) -> None:
+        """Check that LiteRT Interpreter and NumPyInference produce the same results.
+
+        This runs uneven batches of 10 images then 7 images
+        through both inference systems and compares the tensor outputs from each layer.
+        """
+
+        start_image = 20
+        batch_size = 10
+        num_images = 17
+
+        for _batch_number, (_batch_start_index, test_batch) in enumerate(
+            batched_images(self.test_images, start_image, num_images, batch_size)
+        ):
+            (
+                litert_layer0_batch_output,
+                litert_layer1_batch_output,
+                litert_actual_batch,
+            ) = run_tflite_model(interpreter=self.interpreter, test_batch=test_batch)
+
+            numpy_layer0_batch_output, numpy_layer1_batch_output, numpy_actual_batch = (
+                self.numpy_inference.run(test_batch=test_batch)
+            )
+
+            # Check the first layer's outputs.
+            np.testing.assert_allclose(
+                numpy_layer0_batch_output, litert_layer0_batch_output, atol=1
+            )
+
+            # Check the second layer's outputs.
+            np.testing.assert_allclose(
+                numpy_layer1_batch_output, litert_layer1_batch_output, atol=1
+            )
+            # Also verify that the actual predicted digits match.
+            self.assertTrue(np.array_equal(litert_actual_batch, numpy_actual_batch))
 
 
 if __name__ == "__main__":
