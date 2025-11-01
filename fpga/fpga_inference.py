@@ -87,7 +87,7 @@ def main() -> None:
         ]
 
         # Find the smallest power of 2 that's larger than `len(flat_image)`.
-        buffer_size = 2 ** (len(flat_batch[0]).bit_length())
+        buffer_size = 2 ** (len(flat_image).bit_length())
 
         # Load the test image data in a Pynq buffer.
         buffer = pynq.allocate(shape=(buffer_size,), dtype=np.uint8)

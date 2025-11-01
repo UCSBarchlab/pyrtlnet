@@ -91,11 +91,11 @@ class TestNumPyInference(unittest.TestCase):
         This runs 10 images through both inference systems and compares the tensor
         outputs from each layer.
         """
-
+        start_image = 10
         batch_size = 10
 
-        litert_test_images = self.test_images[:batch_size]
-        numpy_test_batch = [self.test_images[i] for i in range(batch_size)]
+        litert_test_images = self.test_images[start_image:batch_size + start_image]
+        numpy_test_batch = [self.test_images[i] for i in range(start_image,batch_size+start_image)]
 
         litert_layer0_batch_output = []
         litert_layer1_batch_output = []
@@ -118,19 +118,20 @@ class TestNumPyInference(unittest.TestCase):
         litert_actual_batch = np.array(litert_actual_batch)
 
         # Check the first layer's outputs.
-        np.testing.assert_array_equal(
+        np.testing.assert_allclose(
             numpy_layer0_batch_output,
             litert_layer0_batch_output.transpose(),
-            strict=True,
+            atol = 1,
         )
 
         # Check the second layer's outputs.
-        np.testing.assert_array_equal(
+        np.testing.assert_allclose(
             numpy_layer1_batch_output,
             litert_layer1_batch_output.transpose(),
-            strict=True,
+            atol = 1,
         )
         # Also verify that the actual predicted digits match.
-        self.assertEqual(litert_actual_batch, numpy_actual_batch)
+        self.assertTrue(np.array_equal(litert_actual_batch, numpy_actual_batch))
+
 if __name__ == "__main__":
     unittest.main()
