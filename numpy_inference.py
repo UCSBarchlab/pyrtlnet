@@ -17,7 +17,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="numpy_inference.py")
     parser.add_argument("--start_image", type=int, default=0)
     parser.add_argument("--num_images", type=int, default=1)
-    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=1,
+        help="Number of images to process per batch. "
+        "If batch_size > num_images, the model will process up to num_images. "
+        "If num_images mod batch_size != 0, the last batch will be of size"
+        " num_images mod batch_size.",
+    )
     parser.add_argument("--tensor_path", type=str, default=".")
     parser.add_argument("--verbose", action=argparse.BooleanOptionalAction)
     args = parser.parse_args()
@@ -34,12 +42,17 @@ def main() -> None:
     test_images = mnist_test_data.get("test_images")
     test_labels = mnist_test_data.get("test_labels")
 
-    # Correct arguments if needed.
-    if args.batch_size > args.num_images:
-        args.num_images = args.batch_size
-
-    if args.num_images > len(test_images):
-        args.num_images = len(test_images)
+    # Validate arguments.
+    if args.batch_size <= 0:
+        sys.exit("batch_size must be greater than 0.")
+    if args.num_images + args.start_image > len(test_images):
+        print(
+            f"Couldn't start at image {args.start_image} \
+              and run {args.num_images} tests."
+        )
+        print(f"Test data set is {len(test_images)} images long.")
+        args.num_images = len(test_images) - args.start_image
+        print(f"Running {args.num_images} images instead.")
 
     if args.num_images == 1:
         args.verbose = True
@@ -51,26 +64,28 @@ def main() -> None:
     numpy_inference = NumPyInference(quantized_model_name=tensor_file)
 
     correct = 0
-    actual_tested_image_count = 0
-    for index in range(
+    for batch_start_index in range(
         args.start_image, args.start_image + args.num_images, args.batch_size
     ):
         # Run inference on batches
+        batch_end_index = min(batch_start_index + args.batch_size, len(test_images))
 
-        batch_index = min(index, len(test_images) - 1)
-        batch_end_index = min(batch_index + args.batch_size, len(test_images))
-        vanilla_batch = test_images[batch_index:batch_end_index]
+        if batch_end_index > args.start_image + args.num_images:
+            batch_end_index = args.start_image + args.num_images
 
-        test_batch = np.array(vanilla_batch)
+        test_batch = test_images[batch_start_index:batch_end_index]
+
         layer0_outputs, layer1_outputs, actuals = numpy_inference.run(test_batch)
 
         layer0_outputs = layer0_outputs.transpose()
         layer1_outputs = layer1_outputs.transpose()
 
-        for test_index in range(len(vanilla_batch)):
-            test_image = vanilla_batch[test_index]
-            expected = test_labels[batch_index + test_index]
+        for test_index in range(len(test_batch)):
+            test_image = test_batch[test_index]
+            expected = test_labels[batch_start_index + test_index]
             if args.verbose:
+                if test_index >= 0:
+                    print()
                 print(f"NumPy network input (#{test_index}):")
                 display_image(test_image)
                 print("test_image", test_image.shape, test_image.dtype, "\n")
@@ -81,7 +96,6 @@ def main() -> None:
                     layer0_outputs[test_index].dtype,
                 )
                 print(layer0_outputs[test_index], "\n")
-                print(layer1_outputs.shape)
                 print(
                     "NumPy layer1 output (transposed)",
                     layer1_outputs[test_index].shape,
@@ -94,17 +108,14 @@ def main() -> None:
                     expected=expected,
                     actual=actuals[test_index],
                 )
-                if test_index < args.num_images - 1:
-                    print()
 
             if actuals[test_index] == expected:
                 correct += 1
-            actual_tested_image_count += 1
 
     if args.num_images > 1:
         print(
-            f"{correct}/{actual_tested_image_count} correct predictions, "
-            f"{100.0 * correct / actual_tested_image_count:.0f}% accuracy"
+            f"{correct}/{args.num_images} correct predictions, "
+            f"{100.0 * correct / args.num_images:.0f}% accuracy"
         )
 
 

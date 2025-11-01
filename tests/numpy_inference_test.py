@@ -59,13 +59,14 @@ class TestNumPyInference(unittest.TestCase):
         outputs from each layer.
         """
         test_image = self.test_images[0]
+        test_batch = [self.test_images[0]]
 
         litert_layer0_output, litert_layer1_output, litert_actual = run_tflite_model(
             interpreter=self.interpreter, test_image=test_image
         )
 
         numpy_layer0_output, numpy_layer1_output, numpy_actual = (
-            self.numpy_inference.run(test_image=test_image)
+            self.numpy_inference.run(test_batch=test_batch)
         )
 
         # Check the first layer's outputs.
@@ -84,6 +85,52 @@ class TestNumPyInference(unittest.TestCase):
         # Also verify that the actual predicted digits match.
         self.assertEqual(litert_actual, numpy_actual)
 
+    def test_numpy_inference_batch(self) -> None:
+        """Check that LiteRT Interpreter and NumPyInference produce the same results.
 
+        This runs 10 images through both inference systems and compares the tensor
+        outputs from each layer.
+        """
+
+        batch_size = 10
+
+        litert_test_images = self.test_images[:batch_size]
+        numpy_test_batch = [self.test_images[i] for i in range(batch_size)]
+
+        litert_layer0_batch_output = []
+        litert_layer1_batch_output = []
+        litert_actual_batch = []
+
+        for test_image in litert_test_images:
+            litert_layer0_output, litert_layer1_output, litert_actual = run_tflite_model(
+                interpreter=self.interpreter, test_image=test_image
+            )
+            litert_layer0_batch_output.append(litert_layer0_output)
+            litert_layer1_batch_output.append(litert_layer1_output)
+            litert_actual_batch.append(litert_actual)
+
+        numpy_layer0_batch_output, numpy_layer1_batch_output, numpy_actual_batch = (
+            self.numpy_inference.run(test_batch=numpy_test_batch)
+        )
+
+        litert_layer0_batch_output = np.squeeze(np.array(litert_layer0_batch_output), axis = 1)
+        litert_layer1_batch_output = np.squeeze(np.array(litert_layer1_batch_output), axis = 1)
+        litert_actual_batch = np.array(litert_actual_batch)
+
+        # Check the first layer's outputs.
+        np.testing.assert_array_equal(
+            numpy_layer0_batch_output,
+            litert_layer0_batch_output.transpose(),
+            strict=True,
+        )
+
+        # Check the second layer's outputs.
+        np.testing.assert_array_equal(
+            numpy_layer1_batch_output,
+            litert_layer1_batch_output.transpose(),
+            strict=True,
+        )
+        # Also verify that the actual predicted digits match.
+        self.assertEqual(litert_actual_batch, numpy_actual_batch)
 if __name__ == "__main__":
     unittest.main()

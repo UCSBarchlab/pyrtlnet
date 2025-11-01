@@ -199,22 +199,24 @@ class NumPyInference:
         )
         return layer_output.astype(np.int8)
 
-    def preprocess_image(self, test_image: np.ndarray) -> np.ndarray:
+    def preprocess_image(self, test_batch: np.ndarray) -> np.ndarray:
         """Preprocess the raw image data in the batch.
         This is required by the quantized neural network.
 
         This adjusts the batch image data by ``input_scale`` and ``input_zero``.
-        Then, it flattens the 2D image(s) into 1D and adds the batch dimension.
+        Then, it flattens each 2D image into a 1D column vector and stores them
+        in a matrix of shape (144, batch_size).
 
         :param test_batch: Batch data to preprocess. This data should have already been
-            normalized to [0.0, 1.0] and resized to 12×12, usually by
+            normalized to [0.0, 1.0] and resized to (batch_size, 12, 12), usually by
             :func:`~pyrtlnet.mnist_util.load_mnist_images`.
 
-        :returns: Flattened batch data, adjusted by the quantized neural network's
+        :returns: Flattened batch data of shape (144, batch_size),
+                  adjusted by the quantized neural network's
                   ``input_scale`` and ``input_zero``.
         """
         # Adjust batch image data to range [-128,127]
-        test_image = (test_image / self.input_scale + self.input_zero).astype(np.int8)
+        test_batch = (test_batch / self.input_scale + self.input_zero).astype(np.int8)
 
         # The MNIST image data contains pixel values in the range [0, 255]. The neural
         # network was trained by first converting these values to floating point, in the
@@ -230,15 +232,22 @@ class NumPyInference:
         # Adding input_zero_point (-128) effectively converts the uint8 image data to
         # int8, by shifting the range [0, 255] to [-128, 127].
 
-        #Flatten 2D -> 1D
-        return test_image.reshape(test_image.shape[0], -1).T
+        """Taking test_batch of shape (batch_size, 12, 12), each 2D matrix
+        of shape (12,12) is flattened to a 1D column vector of shape (144,),
+        resulting in test_batch's shape becoming (batch_size, 144). Then, we
+        transpose, returning the final shape (144, batch_size), where there
+        are batch_size amount of column vectors of shape (144,), each representing
+        one image.
+        """
+        return test_batch.reshape(test_batch.shape[0], -1).transpose()
 
-    def run(self, test_image: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
+    def run(self, test_batch: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
         """Run quantized inference on a batch.
 
         All calculations are done with NumPy and fxpmath.
 
-        :param test_batch: A batch to run through the NumPy inference implementation.
+        :param test_batch: A batch of shape (batch_size, 12, 12)
+        to run through the NumPy inference implementation.
 
         :returns: ``(layer0_outputs, layer1_outputs, actuals)``, where
                   ``layer0_outputs`` is the first layer's raw tensor output,
@@ -247,18 +256,16 @@ class NumPyInference:
                     with shape ``(10, batch_size)``.
                     Note that these layer outputs are transposed
                     compared to :func:`.run_tflite_model`.
-                    ``actuals`` is an np.ndarray of predicted digits.
+                    ``actuals`` is an np.ndarray of predicted digits
+                    with shape ``(batch_size,)``
         """
 
-        # Convert single image to batchable shape
-        if test_image.ndim == 2:
-            test_image = np.expand_dims(test_image, axis=0)
-
-        flat_batch = self.preprocess_image(test_image)
+        flat_batch = self.preprocess_image(test_batch)
         layer0_outputs = self._run_layer(0, flat_batch, self.input_zero, run_relu=True)
         layer1_outputs = self._run_layer(
             1, layer0_outputs, self.layer[0].zero, run_relu=False
         )
 
         actuals = layer1_outputs.argmax(axis=0)
+
         return layer0_outputs, layer1_outputs, actuals
