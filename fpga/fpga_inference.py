@@ -80,7 +80,8 @@ def main() -> None:
     # Prepare the test image.
     flat_batch = numpy_inference.preprocess_image(test_batch)
     # Convert the signed image data to raw byte values.
-    for flat_image in flat_batch.transpose():
+    for image_index in flat_batch.transpose():
+        flat_image = flat_batch[image_index]
         flat_image = [
             pyrtl.infer_val_and_bitwidth(int(data), bitwidth=8, signed=True).value
             for data in flat_image
@@ -102,12 +103,12 @@ def main() -> None:
         actual = overlay.pyrtlnet.read(0)
         print("pyrtlnet FPGA layer1 argmax:", actual, "\n")
 
-        # Layer 0 outputs are in AXI-Lite registers 1-18. AXI registers are 32 bits, and AXI
-        # addresses are byte addresses, so we multiply by 4.
+        # Layer 0 outputs are in AXI-Lite registers 1-18. AXI registers are 32 bits,
+        # and AXI addresses are byte addresses, so we multiply by 4.
         #
         # The values stored in each register are raw bit patterns, each representing an
-        # 8-bit signed integer, so we call `val_to_signed_integer` to reinterpret them as
-        # 8-bit signed integers.
+        # 8-bit signed integer, so we call `val_to_signed_integer`
+        # to reinterpret them as 8-bit signed integers.
         layer0_output = np.array(
             [
                 [pyrtl.val_to_signed_integer(overlay.pyrtlnet.read(4 * i), bitwidth=8)]
