@@ -64,6 +64,7 @@ def main() -> None:
 
     # Display the test image.
     test_image = test_images[test_index]
+    test_batch = [test_image]
     print(f"PyRTL network input (#{test_index}):")
     display_image(test_image)
     print("test_image", test_image.shape, test_image.dtype, "\n")
@@ -77,67 +78,68 @@ def main() -> None:
     print(f"done ({time.time() - start:.1f} seconds)")
 
     # Prepare the test image.
-    flat_image = numpy_inference.preprocess_image(test_image)
+    flat_batch = numpy_inference.preprocess_image(test_batch)
     # Convert the signed image data to raw byte values.
-    flat_image = [
-        pyrtl.infer_val_and_bitwidth(int(data), bitwidth=8, signed=True).value
-        for data in flat_image
-    ]
+    for flat_image in flat_batch.transpose():
+        flat_image_bytes = [
+            pyrtl.infer_val_and_bitwidth(int(data), bitwidth=8, signed=True).value
+            for data in flat_image
+        ]
 
-    # Find the smallest power of 2 that's larger than `len(flat_image)`.
-    buffer_size = 2 ** (len(flat_image).bit_length())
+        # Find the smallest power of 2 that's larger than `len(flat_image)`.
+        buffer_size = 2 ** (len(flat_image_bytes).bit_length())
 
-    # Load the test image data in a Pynq buffer.
-    buffer = pynq.allocate(shape=(buffer_size,), dtype=np.uint8)
-    buffer[: len(flat_image)] = flat_image
+        # Load the test image data in a Pynq buffer.
+        buffer = pynq.allocate(shape=(buffer_size,), dtype=np.uint8)
+        buffer[: len(flat_image_bytes)] = flat_image_bytes
 
-    print("Sending image data via Pynq DMA")
-    overlay.dma.sendchannel.transfer(buffer)
+        print("Sending image data via Pynq DMA")
+        overlay.dma.sendchannel.transfer(buffer)
 
-    # Retrieve layer1's argmax, which is stored in AXI-Lite register 0. The register
-    # mapping is defined in `PyRTLInference._make_inference()`.
-    print("Retrieving results\n")
-    actual = overlay.pyrtlnet.read(0)
-    print("pyrtlnet FPGA layer1 argmax:", actual, "\n")
+        # Retrieve layer1's argmax, which is stored in AXI-Lite register 0. The register
+        # mapping is defined in `PyRTLInference._make_inference()`.
+        print("Retrieving results\n")
+        actual = overlay.pyrtlnet.read(0)
+        print("pyrtlnet FPGA layer1 argmax:", actual, "\n")
 
-    # Layer 0 outputs are in AXI-Lite registers 1-18. AXI registers are 32 bits, and AXI
-    # addresses are byte addresses, so we multiply by 4.
-    #
-    # The values stored in each register are raw bit patterns, each representing an
-    # 8-bit signed integer, so we call `val_to_signed_integer` to reinterpret them as
-    # 8-bit signed integers.
-    layer0_output = np.array(
-        [
-            [pyrtl.val_to_signed_integer(overlay.pyrtlnet.read(4 * i), bitwidth=8)]
-            for i in range(1, 19)
-        ],
-        dtype=np.int8,
-    )
-    print(
-        "pyrtlnet FPGA layer0 output (transposed)",
-        layer0_output.shape,
-        layer0_output.dtype,
-    )
-    print(layer0_output.transpose(), "\n")
+        # Layer 0 outputs are in AXI-Lite registers 1-18. AXI registers are 32 bits,
+        # and AXI addresses are byte addresses, so we multiply by 4.
+        #
+        # The values stored in each register are raw bit patterns, each representing an
+        # 8-bit signed integer, so we call `val_to_signed_integer`
+        # to reinterpret them as 8-bit signed integers.
+        layer0_output = np.array(
+            [
+                [pyrtl.val_to_signed_integer(overlay.pyrtlnet.read(4 * i), bitwidth=8)]
+                for i in range(1, 19)
+            ],
+            dtype=np.int8,
+        )
+        print(
+            "pyrtlnet FPGA layer0 output (transposed)",
+            layer0_output.shape,
+            layer0_output.dtype,
+        )
+        print(layer0_output.transpose(), "\n")
 
-    # Layer 1 outputs are in AXI-Lite registers 19-28.
-    layer1_output = np.array(
-        [
-            [pyrtl.val_to_signed_integer(overlay.pyrtlnet.read(4 * i), bitwidth=8)]
-            for i in range(19, 29)
-        ],
-        dtype=np.int8,
-    )
-    print(
-        "pyrtlnet FPGA layer1 output (transposed)",
-        layer1_output.shape,
-        layer1_output.dtype,
-    )
-    print(layer1_output.transpose(), "\n")
+        # Layer 1 outputs are in AXI-Lite registers 19-28.
+        layer1_output = np.array(
+            [
+                [pyrtl.val_to_signed_integer(overlay.pyrtlnet.read(4 * i), bitwidth=8)]
+                for i in range(19, 29)
+            ],
+            dtype=np.int8,
+        )
+        print(
+            "pyrtlnet FPGA layer1 output (transposed)",
+            layer1_output.shape,
+            layer1_output.dtype,
+        )
+        print(layer1_output.transpose(), "\n")
 
-    print(f"pyrtlnet FPGA network output (#{test_index}):")
-    expected = test_labels[test_index]
-    display_outputs(layer1_output, expected=expected, actual=actual)
+        print(f"pyrtlnet FPGA network output (#{test_index}):")
+        expected = test_labels[test_index]
+        display_outputs(layer1_output, expected=expected, actual=actual)
 
 
 if __name__ == "__main__":
