@@ -80,8 +80,7 @@ def main() -> None:
     # Prepare the test image.
     flat_batch = numpy_inference.preprocess_image(test_batch)
     # Convert the signed image data to raw byte values.
-    for image_index in range(len(flat_batch.transpose())):
-        flat_image = flat_batch[image_index]
+    for flat_image in flat_batch.transpose():
         flat_image_bytes = [
             pyrtl.infer_val_and_bitwidth(int(data), bitwidth=8, signed=True).value
             for data in flat_image

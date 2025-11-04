@@ -84,14 +84,17 @@ def main() -> None:
         for batch_index in range(len(test_batch)):
             test_image = test_batch[batch_index]
             expected = test_labels[batch_start_index + batch_index]
+
             if batch_index > 0:
                 print()
+
+            print(
+                f"NumPy network input (#{batch_start_index + batch_index}, ",
+                f"batch {int(np.floor(batch_start_index / args.batch_size))}, ",
+                f"batch_index {batch_index})",
+            )
+
             if args.verbose:
-                print(
-                    f"NumPy network input (#{batch_start_index + batch_index}, ",
-                    f"batch {int(np.floor(batch_start_index / args.batch_size))}, ",
-                    f"batch_index {batch_index})"
-                )
                 display_image(test_image)
                 print("test_image", test_image.shape, test_image.dtype, "\n")
 
@@ -114,15 +117,11 @@ def main() -> None:
                     actual=actuals[batch_index],
                 )
             else:
-                print(
-                    f"NumPy network input (#{batch_start_index + batch_index}, ",
-                    f"batch {int(np.floor(batch_start_index / args.batch_size))}, ",
-                    f"batch_index {batch_index})"
-                )
                 print(f"Expected: {expected} | Actual: {actuals[batch_index]}")
 
             if actuals[batch_index] == expected:
                 correct += 1
+
         print()
     if args.num_images > 1:
         print(
