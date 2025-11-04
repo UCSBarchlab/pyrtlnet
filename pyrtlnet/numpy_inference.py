@@ -247,7 +247,7 @@ class NumPyInference:
         All calculations are done with NumPy and fxpmath.
 
         :param test_batch: A batch of shape (batch_size, 12, 12)
-        to run through the NumPy inference implementation.
+            to run through the NumPy inference implementation.
 
         :returns: ``(layer0_outputs, layer1_outputs, actuals)``, where
                   ``layer0_outputs`` is the first layer's raw tensor output,

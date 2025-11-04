@@ -80,19 +80,19 @@ def main() -> None:
     # Prepare the test image.
     flat_batch = numpy_inference.preprocess_image(test_batch)
     # Convert the signed image data to raw byte values.
-    for image_index in flat_batch.transpose():
+    for image_index in range(len(flat_batch.transpose())):
         flat_image = flat_batch[image_index]
-        flat_image = [
+        flat_image_bytes = [
             pyrtl.infer_val_and_bitwidth(int(data), bitwidth=8, signed=True).value
             for data in flat_image
         ]
 
         # Find the smallest power of 2 that's larger than `len(flat_image)`.
-        buffer_size = 2 ** (len(flat_image).bit_length())
+        buffer_size = 2 ** (len(flat_image_bytes).bit_length())
 
         # Load the test image data in a Pynq buffer.
         buffer = pynq.allocate(shape=(buffer_size,), dtype=np.uint8)
-        buffer[: len(flat_image)] = flat_image
+        buffer[: len(flat_image_bytes)] = flat_image_bytes
 
         print("Sending image data via Pynq DMA")
         overlay.dma.sendchannel.transfer(buffer)

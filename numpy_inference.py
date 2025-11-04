@@ -68,10 +68,11 @@ def main() -> None:
         args.start_image, args.start_image + args.num_images, args.batch_size
     ):
         # Run inference on batches
-        batch_end_index = min(batch_start_index + args.batch_size, len(test_images))
-
-        if batch_end_index > args.start_image + args.num_images:
-            batch_end_index = args.start_image + args.num_images
+        batch_end_index = min(
+            batch_start_index + args.batch_size,
+            len(test_images),
+            args.start_image + args.num_images,
+        )
 
         test_batch = test_images[batch_start_index:batch_end_index]
 
@@ -80,38 +81,49 @@ def main() -> None:
         layer0_outputs = layer0_outputs.transpose()
         layer1_outputs = layer1_outputs.transpose()
 
-        for test_index in range(len(test_batch)):
-            test_image = test_batch[test_index]
-            expected = test_labels[batch_start_index + test_index]
+        for batch_index in range(len(test_batch)):
+            test_image = test_batch[batch_index]
+            expected = test_labels[batch_start_index + batch_index]
+            if batch_index > 0:
+                print()
             if args.verbose:
-                if test_index >= 0:
-                    print()
-                print(f"NumPy network input (#{test_index}):")
+                print(
+                    f"NumPy network input (#{batch_start_index + batch_index}, ",
+                    f"batch {int(np.floor(batch_start_index / args.batch_size))}, ",
+                    f"batch_index {batch_index})"
+                )
                 display_image(test_image)
                 print("test_image", test_image.shape, test_image.dtype, "\n")
 
                 print(
                     "NumPy layer0 output (transposed)",
-                    layer0_outputs[test_index].shape,
-                    layer0_outputs[test_index].dtype,
+                    layer0_outputs[batch_index].shape,
+                    layer0_outputs[batch_index].dtype,
                 )
-                print(layer0_outputs[test_index], "\n")
+                print(layer0_outputs[batch_index], "\n")
                 print(
                     "NumPy layer1 output (transposed)",
-                    layer1_outputs[test_index].shape,
-                    layer1_outputs[test_index].dtype,
+                    layer1_outputs[batch_index].shape,
+                    layer1_outputs[batch_index].dtype,
                 )
-                print(layer1_outputs[test_index], "\n")
-                print(f"NumPy network output (#{test_index}):")
+                print(layer1_outputs[batch_index], "\n")
+                print(f"NumPy network output (#{batch_start_index + batch_index}):")
                 display_outputs(
-                    layer1_outputs[test_index],
+                    layer1_outputs[batch_index],
                     expected=expected,
-                    actual=actuals[test_index],
+                    actual=actuals[batch_index],
                 )
+            else:
+                print(
+                    f"NumPy network input (#{batch_start_index + batch_index}, ",
+                    f"batch {int(np.floor(batch_start_index / args.batch_size))}, ",
+                    f"batch_index {batch_index})"
+                )
+                print(f"Expected: {expected} | Actual: {actuals[batch_index]}")
 
-            if actuals[test_index] == expected:
+            if actuals[batch_index] == expected:
                 correct += 1
-
+        print()
     if args.num_images > 1:
         print(
             f"{correct}/{args.num_images} correct predictions, "
