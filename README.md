@@ -263,8 +263,8 @@ simulation can be repeated with Verilator.
 * Many TODOs are scattered throughout this code base. If one speaks to you, try
   addressing it! Some notable TODOs:
 
-  * Support input batching, so the various inference systems can process more than one
-    image at a time.
+  * [Support input batching](https://github.com/UCSBarchlab/pyrtlnet/issues/4),
+    so the various inference systems can process more than one image at a time.
 
   * Extend `WireMatrix2D` to support an arbitrary number of dimensions, not just two.
     Extend the systolic array to support multiplying matrices with more dimensions. This

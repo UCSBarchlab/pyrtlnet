@@ -211,7 +211,7 @@ class NumPyInference:
             normalized to ``[0.0, 1.0]`` and resized to ``(batch_size, 12, 12)``,
             usually by :func:`~pyrtlnet.mnist_util.load_mnist_images`.
 
-        :returns: Flattened batch data of shape (144, batch_size), adjusted by the
+        :returns: Flattened batch data of shape ``(144, batch_size)``, adjusted by the
                   quantized neural network's ``input_scale`` and ``input_zero``.
         """
         # The MNIST image data contains pixel values in the range [0, 255]. The neural
@@ -249,8 +249,8 @@ class NumPyInference:
                   ``(18, batch_size)``. ``layer1_outputs`` is the second layer's raw
                   tensor output, with shape ``(10, batch_size)``. Note that these layer
                   outputs are transposed compared to :func:`.run_tflite_model`.
-                  ``actuals`` is an np.ndarray of predicted digits with shape
-                  ``(batch_size,)``
+                  ``actuals`` is an :class:`numpy.ndarray` of predicted digits with
+                  shape ``(batch_size,)``
         """
 
         flat_batch = self.preprocess_image(test_batch)
