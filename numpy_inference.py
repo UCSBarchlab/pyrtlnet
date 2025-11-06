@@ -21,10 +21,9 @@ def main() -> None:
         "--batch_size",
         type=int,
         default=1,
-        help="Number of images to process per batch. "
-        "If batch_size > num_images, the model will process up to num_images. "
-        "If num_images mod batch_size != 0, the last batch will be of size"
-        " num_images mod batch_size.",
+        help="Number of images to process per batch. If batch_size > num_images, the "
+        "model will process up to num_images. If num_images mod batch_size != 0, the "
+        "last batch will be of size num_images mod batch_size.",
     )
     parser.add_argument("--tensor_path", type=str, default=".")
     parser.add_argument("--verbose", action=argparse.BooleanOptionalAction)
@@ -47,10 +46,9 @@ def main() -> None:
         sys.exit("batch_size must be greater than 0.")
     if args.num_images + args.start_image > len(test_images):
         print(
-            f"Couldn't start at image {args.start_image} \
-              and run {args.num_images} tests."
+            f"Test data set contains {len(test_images)} images. Can't start at image "
+            f"{args.start_image} and run {args.num_images} images."
         )
-        print(f"Test data set is {len(test_images)} images long.")
         args.num_images = len(test_images) - args.start_image
         print(f"Running {args.num_images} images instead.")
 
@@ -90,7 +88,7 @@ def main() -> None:
 
             print(
                 f"NumPy network input (#{batch_start_index + batch_index}, ",
-                f"batch {int(np.floor(batch_start_index / args.batch_size))}, ",
+                f"batch {(batch_start_index - args.start_image) // args.batch_size}, ",
                 f"batch_index {batch_index})",
             )
 
