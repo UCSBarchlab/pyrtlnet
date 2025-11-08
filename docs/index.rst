@@ -81,6 +81,7 @@ Contents
    litert_inference
    numpy_inference
    pyrtl_inference
+   inference_util
    matrix
    pyrtl_axi
    pyrtlnet on GitHub <https://github.com/UCSBarchlab/pyrtlnet>

@@ -231,13 +231,13 @@ root@pynq:/home/xilinx# . /etc/profile.d/pynq_venv.sh
 This lets us use Pynq from the command line, rather than using the slower
 Jupyter Notebook interface.
 
-Install required `pip` packages:
+Install required `pip` package:
 
 ```shell
-(pynq-venv) root@pynq:/home/xilinx# pip install pyrtl fxpmath
+(pynq-venv) root@pynq:/home/xilinx# pip install pyrtl
 ...
-Installing collected packages: pyrtl, fxpmath
-Successfully installed fxpmath-0.4.9 pyrtl-0.12
+Installing collected packages: pyrtl
+Successfully installed pyrtl-0.12
 ```
 
 > [!NOTE]
@@ -246,12 +246,9 @@ Successfully installed fxpmath-0.4.9 pyrtl-0.12
 > [`pyrtl.infer_val_and_bitwidth`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.infer_val_and_bitwidth),
 > and
 > [`pyrtl.val_to_signed_integer`](https://pyrtl.readthedocs.io/en/latest/helpers.html#pyrtl.val_to_signed_integer),
-> to convert signed integers to raw bits to send to the FPGA, and to convert
-> the raw bits received from the FPGA to signed integers. The dependency on
-> `pyrtl` could be removed by reimplementing these functions.
->
-> `fxpmath` is not actually required. This false dependency should be removed
-> in a future update.
+> to reinterpret signed integers as raw bits to send to the FPGA, and to
+> reinterpret the raw bits received from the FPGA as signed integers. This
+> dependency on `pyrtl` could be removed by reimplementing these functions.
 
 ### Run `pyrtlnet` FPGA Inference
 

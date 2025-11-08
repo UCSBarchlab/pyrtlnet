@@ -5,11 +5,8 @@ import sys
 
 import numpy as np
 
-from pyrtlnet.inference_util import (
-    display_image,
-    display_outputs,
-    quantized_model_prefix,
-)
+from pyrtlnet.cli_util import display_image, display_outputs
+from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.pyrtl_inference import PyRTLInference
 
 
@@ -56,14 +53,14 @@ def main() -> None:
     correct = 0
     for test_index in range(args.start_image, args.start_image + args.num_images):
         # Print the test image.
-        test_image = test_images[test_index]
+        test_batch = np.array([test_images[test_index]])
         print(f"PyRTL network input (#{test_index}):")
-        display_image(test_image)
-        print("test_image", test_image.shape, test_image.dtype, "\n")
+        display_image(test_batch[0])
+        print("test_image", test_batch[0].shape, test_batch.dtype, "\n")
 
         # Run PyRTL inference on the test image.
         layer0_output, layer1_output, actual = pyrtl_inference.simulate(
-            test_image, args.verilog
+            test_batch, args.verilog
         )
 
         # Print results.

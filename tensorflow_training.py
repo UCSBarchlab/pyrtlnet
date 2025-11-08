@@ -5,7 +5,7 @@ import random
 import numpy as np
 import tensorflow as tf
 
-from pyrtlnet.inference_util import quantized_model_prefix
+from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.tensorflow_training import (
     evaluate_model,

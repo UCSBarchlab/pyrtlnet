@@ -187,7 +187,8 @@ def num_systolic_array_cycles(
     """Return the cycles needed to multiply ``a`` and ``b`` with the systolic array.
 
     When using :func:`make_systolic_array` with a :class:`~pyrtl.MemBlock` as input,
-    this function is useful for calculating the ``MemBlock``'s ``addrwidth``.
+    this function is useful for calculating the :class:`~pyrtl.MemBlock`'s
+    ``addrwidth``.
 
     :param a_shape: Shape of matrix ``a``.
     :param b_shape: Shape of matrix ``b``.
@@ -385,7 +386,9 @@ def make_systolic_array(
 
     The trace shows how the systolic array multiplies and accumulates to execute this
     matrix multiplication over time. For example, the trace for ``mm0.output[0][0]``
-    shows::
+    shows:
+
+    .. code-block:: text
 
          7 in cycle 3, which is 1 * 7.
         29 in cycle 4, which is 1 * 7 + 2 * 11.

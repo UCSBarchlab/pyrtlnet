@@ -1,3 +1,7 @@
+# This is a `Makefile` rather than `justfile` because we want incremental
+# builds. For example, we only want to re-run `tensorflow_training.py` if the
+# training scripts have been modified.
+
 VIVADO_BATCH=vivado -mode batch -nolog -nojournal
 
 all: pyrtlnet.bit pyrtlnet.hwh

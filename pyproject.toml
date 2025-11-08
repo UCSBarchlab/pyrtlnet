@@ -9,6 +9,7 @@ dependencies = [
     "fxpmath>=0.4.9",
     "numpy>=1.26.4",
     "pyrtl>=0.12",
+    "rust-just>=1.43.0",
     "tensorflow>=2.18.1",
     "tensorflow-model-optimization>=0.8.0",
     "tf-keras>=2.18.0",

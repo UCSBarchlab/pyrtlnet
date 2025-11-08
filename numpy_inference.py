@@ -5,11 +5,8 @@ import sys
 
 import numpy as np
 
-from pyrtlnet.inference_util import (
-    display_image,
-    display_outputs,
-    quantized_model_prefix,
-)
+from pyrtlnet.cli_util import display_image, display_outputs
+from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.numpy_inference import NumPyInference
 
 
