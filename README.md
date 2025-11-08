@@ -298,41 +298,15 @@ Contributions are welcome! Please check a few things before sending a pull reque
    discussion](https://github.com/UCSBarchlab/pyrtlnet/discussions) and
    describe your proposed change.
 
-1. Ensure that all tests pass, and that new features are tested. Tests are run with
-   [`pytest`](https://docs.pytest.org/en/stable/):
+1. Ensure that all presubmit checks pass:
 
    ```shell
-   $ uv run pytest
-   ============================ test session starts ============================
-   ...
-   collected 20 items
-
-   tests/litert_inference_test.py .                                      [  5%]
-   tests/numpy_inference_test.py .                                       [ 10%]
-   tests/pyrtl_inference_test.py .                                       [ 15%]
-   tests/pyrtl_matrix_test.py ..........                                 [ 65%]
-   tests/tensorflow_training_test.py ..                                  [ 75%]
-   tests/wire_matrix_2d_test.py .....                                    [100%]
-
-   ============================ 20 passed in 15.75s ============================
+   $ uv run just presubmit
    ```
 
-   [`pytest-xdist`](https://github.com/pytest-dev/pytest-xdist) is also installed, so
-   testing can be accelerated by running the tests in parallel with `pytest -n auto`.
-
-1. Ensure that [`ruff`](https://docs.astral.sh/ruff/) lint checks pass:
-
-   ```shell
-   $ uv run ruff check
-   All checks passed!
-   ```
-
-1. Apply `ruff` automatic code formatting:
-
-   ```shell
-   $ uv run ruff format
-   22 files left unchanged
-   ```
+   This will run all tests with `pytest`, check code formatting with `ruff
+   format`, check for lint errors with `ruff check`, and verify that Sphinx
+   documentation can be generated.
 
 ### Maintenance
 

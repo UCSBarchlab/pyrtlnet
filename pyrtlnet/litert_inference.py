@@ -20,7 +20,7 @@ from ai_edge_litert.interpreter import Interpreter
 def load_tflite_model(quantized_model_name: str) -> Interpreter:
     """Load the quantized model and return an initialized LiteRT ``Interpreter``.
 
-    The quantized model should be produced by :func:`quantize_model`.
+    The quantized model should be produced by :func:`.quantize_model`.
 
     :param quantized_model_name: Name of the ``.tflite`` file created by
             ``tensorflow_training.py``.

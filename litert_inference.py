@@ -5,11 +5,8 @@ import sys
 
 import numpy as np
 
-from pyrtlnet.inference_util import (
-    display_image,
-    display_outputs,
-    quantized_model_prefix,
-)
+from pyrtlnet.cli_util import display_image, display_outputs
+from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.litert_inference import load_tflite_model, run_tflite_model
 
 

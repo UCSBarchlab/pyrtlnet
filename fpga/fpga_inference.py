@@ -7,12 +7,9 @@ import time
 import numpy as np
 import pyrtl
 
-from pyrtlnet.inference_util import (
-    display_image,
-    display_outputs,
-    quantized_model_prefix,
-)
-from pyrtlnet.numpy_inference import NumPyInference
+from pyrtlnet.cli_util import display_image, display_outputs
+from pyrtlnet.constants import quantized_model_prefix
+from pyrtlnet.inference_util import preprocess_image
 
 
 def main() -> None:
@@ -57,8 +54,11 @@ def main() -> None:
             "first."
         )
 
-    # Load quantization metadata.
-    numpy_inference = NumPyInference(quantized_model_name=tensor_file)
+    # Load quantization metadata. This loads the required metadata directly, instead of
+    # using `SavedTensors`, to avoid a false dependency on `fxpmath`.
+    tensors = np.load(tensor_file)
+    input_scale = tensors.get("input.scale")
+    input_zero = tensors.get("input.zero")
 
     test_index = args.start_image
 
@@ -78,7 +78,7 @@ def main() -> None:
     print(f"done ({time.time() - start:.1f} seconds)")
 
     # Prepare the test image.
-    flat_batch = numpy_inference.preprocess_image(test_batch)
+    flat_batch = preprocess_image(test_batch, input_scale, input_zero)
     # Convert the signed image data to raw byte values.
     for flat_image in flat_batch.transpose():
         flat_image_bytes = [

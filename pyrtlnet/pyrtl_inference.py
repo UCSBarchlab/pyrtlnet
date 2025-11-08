@@ -18,7 +18,8 @@ import pyrtl
 
 import pyrtlnet.pyrtl_axi as pyrtl_axi
 import pyrtlnet.pyrtl_matrix as pyrtl_matrix
-from pyrtlnet.inference_util import SavedTensors
+from pyrtlnet.inference_util import preprocess_image
+from pyrtlnet.saved_tensors import SavedTensors
 from pyrtlnet.wire_matrix_2d import WireMatrix2D
 
 
@@ -119,7 +120,7 @@ class PyRTLInference:
           output values with bitwidth ``input_bitwidth``.
 
         :param quantized_model_name: Name of the ``.npz`` file created by
-            ``tensorflow_training.py``.
+             :func:`.quantize_model`.
         :param input_bitwidth: Bitwidth of each element in the input matrix. This should
             generally be ``8``.
         :param accumulator_bitwidth: Bitwidth of accumulator registers in the systolic
@@ -314,26 +315,7 @@ class PyRTLInference:
         :param test_image: A resized MNIST image to convert to MemBlock data.
         :returns: Image data that can be loaded into :attr:`flat_image_memblock`.
         """
-        layer0_weight_shape = self.layer[0].weight.shape
-        batch_size = 1
-        input_shape = (layer0_weight_shape[1], batch_size)
-
-        # The MNIST image data contains pixel values in the range [0, 255]. The neural
-        # network was trained by first converting these values to floating point, in the
-        # range [0, 1.0]. Dividing by input_scale below undoes this conversion,
-        # converting the range from [0, 1.0] back to [0, 255].
-        #
-        # We could avoid these back-and-forth conversions by modifying
-        # `load_mnist_images()` to skip the first conversion, and returning `x +
-        # input_zero_point` below to skip the second conversion, but we do them anyway
-        # to simplify the code and make it more consistent with existing sample code
-        # like https://ai.google.dev/edge/litert/models/post_training_integer_quant
-        #
-        # Adding input_zero_point (-128) effectively converts the uint8 image data to
-        # int8, by shifting the range [0, 255] to [-128, 127].
-        flat_image = np.reshape(
-            test_image / self.input_scale + self.input_zero, newshape=input_shape
-        ).astype(np.int8)
+        flat_image = preprocess_image(test_image, self.input_scale, self.input_zero)
 
         # Convert the flattened image data to a dictionary for use in Simulation's
         # `memory_value_map`. The `flat_image` is transposed because this data will be
