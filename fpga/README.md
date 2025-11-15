@@ -27,14 +27,15 @@ Processing System. In the Pynq documentation, the Processing System is usually
 abbreviated as "PS". The attached FPGA is called the Programmable Logic,
 usually abbreviated as "PL" in Pynq documentation.
 
-The FPGA is typicaly accessed from this Processing System, instead of accessing
+The FPGA is typically accessed from this Processing System, instead of accessing
 the FPGA directly from a host computer. So to deploy a bitstream on the Z2, we
 first build the bitstream on a host computer with
 [Vivado](https://www.amd.com/en/products/software/adaptive-socs-and-fpgas/vivado.html),
 then copy the bitstream to Processing System over the network, with `scp` for
 example. Then we instruct the Processing System to load the bitstream on the
-FPGA, with
-[`pynq.Overlay`](https://pynq.readthedocs.io/en/latest/pynq_overlays/loading_an_overlay.html).
+FPGA, with the
+[`pynq.Overlay`](https://pynq.readthedocs.io/en/latest/pynq_overlays/loading_an_overlay.html)
+Python library.
 
 Keep this architecture in mind as you read through these instructions. Some
 commands are run on the host computer, while others are run on the Pynq Z2's
@@ -78,7 +79,8 @@ $
 
 Verify that you can
 [connect to the Serial Console](https://pynq.readthedocs.io/en/latest/getting_started/pynq_z2_setup.html#opening-a-usb-serial-terminal).
-This is not strictly necessary, but very useful for debugging.
+This is not strictly necessary, but very useful for debugging, especially if
+you are having trouble connecting the Pynq Z2 to your network.
 
 ### Install Vivado
 
@@ -147,8 +149,8 @@ script just packages `pyrtl_inference_axi.v` in a new `pyrtlnet` IP block.
 
 The
 [`pyrtlnet_pynq.tcl`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/pyrtlnet_pynq.tcl)
-script instantiates the new `pyrtlnet` IP block, and connects it to the Zynq
-Processing System via AXI.
+script instantiates the new `pyrtlnet` IP block, connects it to the Zynq
+Processing System via AXI, and generates a bitstream.
 
 When successful, this step generates a bitstream file named `pyrtlnet.bit`, and
 a hardware handoff file named `pyrtlnet.hwh`:
@@ -231,7 +233,7 @@ root@pynq:/home/xilinx# . /etc/profile.d/pynq_venv.sh
 This lets us use Pynq from the command line, rather than using the slower
 Jupyter Notebook interface.
 
-Install required `pip` package:
+Install `pyrtl` on the Pynq Z2:
 
 ```shell
 (pynq-venv) root@pynq:/home/xilinx# pip install pyrtl
