@@ -23,7 +23,7 @@ def load_tflite_model(quantized_model_name: str) -> Interpreter:
     The quantized model should be produced by :func:`.quantize_model`.
 
     :param quantized_model_name: Name of the ``.tflite`` file created by
-            ``tensorflow_training.py``.
+        :func:`.quantize_model`.
 
     :returns: An initialized LiteRT ``Interpreter``.
     """
