@@ -1,4 +1,3 @@
-import pathlib
 import tempfile
 import unittest
 
@@ -6,6 +5,7 @@ import numpy as np
 
 from pyrtlnet import inference_util
 from pyrtlnet.mnist_util import load_mnist_images
+from pyrtlnet.training_util import save_mnist_data
 
 
 class TestInferenceUtil(unittest.TestCase):
@@ -15,24 +15,22 @@ class TestInferenceUtil(unittest.TestCase):
         (_, _), (cls.test_images, cls.test_labels) = load_mnist_images()
 
         cls.temp_dir = tempfile.TemporaryDirectory()
-        cls.test_data_npz = pathlib.Path(cls.temp_dir.name) / "mnist_test_data.npz"
-        np.savez_compressed(
-            file=cls.test_data_npz,
+        save_mnist_data(
+            tensor_path=cls.temp_dir.name,
             test_images=cls.test_images,
             test_labels=cls.test_labels,
         )
 
     def test_load_mnist_data(self) -> None:
-        test_images, test_labels = inference_util.load_mnist_data(
-            TestInferenceUtil.temp_dir.name
-        )
+        """Load the resized MNIST test data written by :func:`.save_mnist_data`."""
+        test_images, test_labels = inference_util.load_mnist_data(self.temp_dir.name)
 
         self.assertEqual(test_images.shape, (10000, 12, 12))
         self.assertEqual(test_labels.shape, (10000,))
 
     def test_batched_images_batch_size_1(self) -> None:
         iterator = inference_util.batched_images(
-            TestInferenceUtil.test_images, start_image=0, num_images=2, batch_size=1
+            self.test_images, start_image=0, num_images=2, batch_size=1
         )
 
         batch_start_index, test_batch = next(iterator, (None, None))
@@ -49,7 +47,7 @@ class TestInferenceUtil(unittest.TestCase):
 
     def test_batched_images_even_batch_size_2(self) -> None:
         iterator = inference_util.batched_images(
-            TestInferenceUtil.test_images, start_image=0, num_images=2, batch_size=2
+            self.test_images, start_image=0, num_images=2, batch_size=2
         )
 
         batch_start_index, test_batch = next(iterator, (None, None))
@@ -62,7 +60,7 @@ class TestInferenceUtil(unittest.TestCase):
 
     def test_batched_images_uneven_batch_size_2(self) -> None:
         iterator = inference_util.batched_images(
-            TestInferenceUtil.test_images, start_image=0, num_images=3, batch_size=2
+            self.test_images, start_image=0, num_images=3, batch_size=2
         )
 
         batch_start_index, test_batch = next(iterator, (None, None))
@@ -81,12 +79,9 @@ class TestInferenceUtil(unittest.TestCase):
         """Test requesting more images than available."""
         # This iterator starts at the last image, and requests two images. It should
         # yield one image.
-        last_image_index = len(TestInferenceUtil.test_images) - 1
+        last_image_index = len(self.test_images) - 1
         iterator = inference_util.batched_images(
-            TestInferenceUtil.test_images,
-            start_image=last_image_index,
-            num_images=2,
-            batch_size=1,
+            self.test_images, start_image=last_image_index, num_images=2, batch_size=1
         )
 
         batch_start_index, test_batch = next(iterator, (None, None))
@@ -102,9 +97,9 @@ class TestInferenceUtil(unittest.TestCase):
         # This iterator starts at the third-from-last image, and requests five images in
         # batches of 2. It should yield three images in two batches, and the last batch
         # should be a partial batch.
-        third_from_last_image_index = len(TestInferenceUtil.test_images) - 3
+        third_from_last_image_index = len(self.test_images) - 3
         iterator = inference_util.batched_images(
-            TestInferenceUtil.test_images,
+            self.test_images,
             start_image=third_from_last_image_index,
             num_images=5,
             batch_size=2,
@@ -124,10 +119,7 @@ class TestInferenceUtil(unittest.TestCase):
 
     def test_batched_images_invalid_start_image(self) -> None:
         iterator = inference_util.batched_images(
-            TestInferenceUtil.test_images,
-            start_image=999999,
-            num_images=1,
-            batch_size=1,
+            self.test_images, start_image=999999, num_images=1, batch_size=1
         )
 
         with self.assertRaises(ValueError):
@@ -135,10 +127,7 @@ class TestInferenceUtil(unittest.TestCase):
 
     def test_batched_images_invalid_batch_size(self) -> None:
         iterator = inference_util.batched_images(
-            TestInferenceUtil.test_images,
-            start_image=0,
-            num_images=1,
-            batch_size=0,
+            self.test_images, start_image=0, num_images=1, batch_size=0
         )
         with self.assertRaises(ValueError):
             next(iterator)

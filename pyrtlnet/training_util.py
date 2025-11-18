@@ -1,5 +1,9 @@
+import pathlib
+
 import numpy as np
 from ai_edge_litert.interpreter import Interpreter
+
+from pyrtlnet.constants import test_data_file
 
 
 def get_tensor_scale_zero(
@@ -107,3 +111,18 @@ def save_tensors(interpreter: Interpreter, quantized_model_prefix: str) -> None:
     )
 
     np.savez_compressed(file=f"{quantized_model_prefix}.npz", **tensors)
+
+
+def save_mnist_data(
+    tensor_path: str, test_images: np.ndarray, test_labels: np.ndarray
+) -> None:
+    """Save the resized MNIST test data so the inference scripts can use it without
+    importing `tensorflow`.
+
+    Importing `tensorflow` is slow and the inference scripts should not depend on
+    `tensorflow`.
+    """
+    mnist_test_data_file = pathlib.Path(tensor_path) / test_data_file
+    np.savez_compressed(
+        file=mnist_test_data_file, test_images=test_images, test_labels=test_labels
+    )

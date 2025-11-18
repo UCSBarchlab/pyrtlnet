@@ -5,13 +5,14 @@ import random
 import numpy as np
 import tensorflow as tf
 
-from pyrtlnet.constants import quantized_model_prefix
+from pyrtlnet.constants import quantized_model_prefix, test_data_file
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.tensorflow_training import (
     evaluate_model,
     quantize_model,
     train_unquantized_model,
 )
+from pyrtlnet.training_util import save_mnist_data
 
 
 def main() -> None:
@@ -57,13 +58,9 @@ def main() -> None:
     print("Evaluating quantized model.")
     evaluate_model(model=model, test_images=test_images, test_labels=test_labels)
 
-    # Save the preprocessed MNIST test data so the inference scripts can use it without
-    # importing tensorflow. Importing tensorflow is slow and prints a bunch of debug
-    # output.
-    mnist_test_data_file = pathlib.Path(args.tensor_path) / "mnist_test_data.npz"
-    print(f"Writing {mnist_test_data_file}")
-    np.savez_compressed(
-        file=mnist_test_data_file, test_images=test_images, test_labels=test_labels
+    print(f"Saving MNIST test data to {test_data_file}")
+    save_mnist_data(
+        tensor_path=args.tensor_path, test_images=test_images, test_labels=test_labels
     )
 
 

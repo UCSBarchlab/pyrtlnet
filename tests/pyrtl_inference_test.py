@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 import pyrtl
 
+from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.numpy_inference import NumPyInference
 from pyrtlnet.pyrtl_inference import PyRTLInference
@@ -20,7 +21,9 @@ class TestPyRTLInference(unittest.TestCase):
         )
 
         cls.temp_dir = tempfile.TemporaryDirectory()
-        cls.quantized_model_prefix = str(pathlib.Path(cls.temp_dir.name) / "quantized")
+        cls.quantized_model_prefix = str(
+            pathlib.Path(cls.temp_dir.name) / quantized_model_prefix
+        )
 
         learning_rate = 0.001
         epochs = 1
@@ -44,9 +47,7 @@ class TestPyRTLInference(unittest.TestCase):
         """Prepare NumPyInference for a comparison test against PyRTLInference."""
         pyrtl.reset_working_block()
 
-        self.numpy_inference = NumPyInference(
-            quantized_model_name=str(self.quantized_model_prefix) + ".npz"
-        )
+        self.numpy_inference = NumPyInference(tensor_path=self.temp_dir.name)
 
     def test_pyrtl_inference(self) -> None:
         """Check that NumPyInference and PyRTLInference produce the same results.
@@ -55,7 +56,7 @@ class TestPyRTLInference(unittest.TestCase):
         outputs from each layer.
         """
         pyrtl_inference = PyRTLInference(
-            quantized_model_name=str(self.quantized_model_prefix) + ".npz",
+            tensor_path=self.temp_dir.name,
             input_bitwidth=8,
             accumulator_bitwidth=32,
             axi=False,
@@ -94,7 +95,7 @@ class TestPyRTLInference(unittest.TestCase):
         outputs from each layer.
         """
         pyrtl_inference = PyRTLInference(
-            quantized_model_name=str(self.quantized_model_prefix) + ".npz",
+            tensor_path=self.temp_dir.name,
             input_bitwidth=8,
             accumulator_bitwidth=32,
             axi=True,

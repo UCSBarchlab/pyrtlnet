@@ -36,9 +36,9 @@ def main() -> None:
     add_common_arguments(parser)
     args = parser.parse_args()
 
+    # Validate arguments.
     assert args.batch_size == 1
 
-    # Validate arguments.
     if args.num_images == 1:
         args.verbose = True
 

@@ -1,3 +1,4 @@
+quantized_model_prefix = "quantized"
 """
 ``quantized_model_prefix`` is the file name prefix for the quantized saved model file.
 
@@ -10,4 +11,12 @@ metadata to a NumPy ``.npz`` file, which is easier to work with than the ``.tfli
 file. The ``.npz`` file can be loaded with :class:`.SavedTensors`.
 """
 
-quantized_model_prefix = "quantized"
+test_data_file = "mnist_test_data.npz"
+"""
+Name of the ``.npz`` file containing resized MNIST test image data and the corresponding
+labels.
+
+This file is written by :func:`.save_mnist_data` and loaded by :func:`.load_mnist_data`.
+Loading this file is much faster than importing `tensorflow` and re-sizing the MNIST
+test data with :func:`.load_mnist_images`.
+"""
