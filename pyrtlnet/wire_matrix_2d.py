@@ -23,17 +23,54 @@ class WireMatrix2D:
        :class:`~pyrtl.MemBlock` or :class:`~pyrtl.RomBlock`. This representation is
        currently experimental and not completely supported. This representation is used
        when the ``WireMatrix2D`` is constructed with a :class:`~pyrtl.MemBlock`.
+
+    .. _ready_valid_protocol:
+
+    :attr:`ready`/:attr:`valid` protocol
+    ------------------------------------
+
+    ``WireMatrix2D`` serves as a shared buffer between an upstream `producer` that
+    writes data into the ``WireMatrix2D``, and a downstream `consumer` that reads data
+    from the ``WireMatrix2D``. The `producer` and `consumer` must coordinate their usage
+    to avoid corrupting this shared resource. For example:
+
+    1. While the `producer` is writing data to the ``WireMatrix2D``, it is not safe for
+       the `consumer` to read data from the ``WireMatrix2D``.
+
+    1. While the `consumer` is reading data from the ``WireMatrix2D``, it is not safe
+       for the `producer` to write new data into the ``WireMatrix2D``.
+
+    ``WireMatrix2D`` provides :attr:`ready` and :attr:`valid` signals to help the
+    `producer` and `consumer` coordinate. :attr:`ready` indicates when it is safe for
+    the `producer` to write new data to the ``WireMatrix2D``, and :attr:`valid`
+    indicates when it is safe for the `consumer` to read data from the ``WireMatrix2D``.
+
+    .. note::
+
+        :attr:`ready` and :attr:`valid` are undriven
+        :class:`WireVectors<pyrtl.WireVector>` provided as a convenience.
+        ``WireMatrix2D`` itself does not assign any values to these wires or inspect the
+        values on these wires. The `producer` and `consumer` must set and check these
+        signals appropriately.
     """
 
     shape: tuple[int, int]
     """Matrix's shape, as a tuple of integers ``(num_rows, num_columns)``."""
 
     ready: pyrtl.WireVector
-    """A 1-bit signal indicating if the downstream operation is ready for input."""
+    """
+    A 1-bit signal indicating if the ``WireMatrix2D`` can be safely written by the
+    upstream `producer`.
+
+    See :ref:`ready_valid_protocol`.
+    """
 
     valid: pyrtl.WireVector
     """
-    A 1-bit signal indicating if the upstream operation has finished writing its output.
+    A 1-bit signal indicating if the ``WireMatrix2D`` can be safely read by the
+    downstream `consumer`.
+
+    See :ref:`ready_valid_protocol`.
     """
 
     bitwidth: int
@@ -65,10 +102,10 @@ class WireMatrix2D:
         :param name: Names for all elements in the ``WireMatrix2D`` will be generated
             based on this prefix. For example, if ``name`` is ``foo`` then the top left
             element will be named ``foo[0][0]``.
-        :param ready: 1-bit signal indicating if the consumer of this ``WireMatrix2D``
-            is ready to read the data in the matrix.
-        :param valid: 1-bit signal indicating if the producer of this ``WireMatrix2D``
-            has finished writing the data in the matrix.
+        :param ready: A 1-bit signal indicating if the ``WireMatrix2D`` can be safely
+            written by the upstream `producer`.
+        :param valid: A 1-bit signal indicating if the ``WireMatrix2D`` can be safely
+            read by the downstream `consumer`.
         """
         if isinstance(values, np.ndarray):
             shape = values.shape
