@@ -1,12 +1,9 @@
 import argparse
-import pathlib
 import shutil
-import sys
 
 import numpy as np
 
 from pyrtlnet.cli_util import Accuracy, display_image, display_outputs
-from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.inference_util import (
     add_common_arguments,
     batched_images,
@@ -30,12 +27,8 @@ def main() -> None:
     # Load MNIST test data.
     test_images, test_labels = load_mnist_data(args.tensor_path)
 
-    tensor_file = pathlib.Path(args.tensor_path) / f"{quantized_model_prefix}.npz"
-    if not tensor_file.exists():
-        sys.exit(f"{tensor_file} not found. Run tensorflow_training.py first.")
-
     # Collect weights, biases, and quantization metadata.
-    numpy_inference = NumPyInference(quantized_model_name=tensor_file)
+    numpy_inference = NumPyInference(tensor_path=args.tensor_path)
 
     accuracy = Accuracy()
     for batch_number, (batch_start_index, test_batch) in enumerate(

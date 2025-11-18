@@ -21,9 +21,12 @@ inference with `NumPy`_.
 .. _numpy_inference demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py
 """  # noqa: E501
 
+import pathlib
+
 import numpy as np
 from fxpmath import Fxp
 
+from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.inference_util import preprocess_image
 from pyrtlnet.saved_tensors import SavedTensors
 
@@ -167,14 +170,21 @@ def normalize(
 class NumPyInference:
     """Run quantized inference on an input batch with NumPy and fxpmath."""
 
-    def __init__(self, quantized_model_name: str) -> None:
+    def __init__(self, tensor_path: str) -> None:
         """Collect weights, biases, and quantization metadata from a ``.npz`` file
         created by :func:`.quantize_model`.
 
-        :param quantized_model_name: Name of the ``.npz`` file created by
-             :func:`.quantize_model`.
+        :raise FileNotFoundError: If the ``.npz`` file is not found.
+
+        :param tensor_path: Path to the ``.npz`` file created by
+            :func:`.quantize_model`.
         """
-        saved_tensors = SavedTensors(quantized_model_name)
+        tensor_file = pathlib.Path(tensor_path) / f"{quantized_model_prefix}.npz"
+        if not tensor_file.exists():
+            msg = f"{tensor_file} not found. Run tensorflow_training.py first."
+            raise FileNotFoundError(msg)
+
+        saved_tensors = SavedTensors(tensor_file)
         self.input_scale = saved_tensors.input_scale
         self.input_zero = saved_tensors.input_zero
         self.layer = saved_tensors.layer

@@ -1,12 +1,10 @@
 import argparse
-import pathlib
 import shutil
 import sys
 
 import numpy as np
 
 from pyrtlnet.cli_util import Accuracy, display_image, display_outputs
-from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.inference_util import (
     add_common_arguments,
     batched_images,
@@ -23,12 +21,12 @@ def main() -> None:
     parser.add_argument("--initial_delay_cycles", type=int, default=0)
     args = parser.parse_args()
 
+    # Validate arguments.
     assert args.batch_size == 1
 
     if args.verilog and args.num_images != 1:
         sys.exit("--verilog can only be used with one image (--num_images=1)")
 
-    # Validate arguments.
     if args.num_images == 1:
         args.verbose = True
 
@@ -38,15 +36,11 @@ def main() -> None:
     # Load MNIST test data.
     test_images, test_labels = load_mnist_data(args.tensor_path)
 
-    tensor_file = pathlib.Path(args.tensor_path) / f"{quantized_model_prefix}.npz"
-    if not tensor_file.exists():
-        sys.exit(f"{tensor_file} not found. Run tensorflow_training.py first.")
-
     # Create PyRTL inference hardware.
     input_bitwidth = 8
     accumulator_bitwidth = 32
     pyrtl_inference = PyRTLInference(
-        quantized_model_name=tensor_file,
+        tensor_path=args.tensor_path,
         input_bitwidth=input_bitwidth,
         accumulator_bitwidth=accumulator_bitwidth,
         axi=args.axi,

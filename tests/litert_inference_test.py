@@ -2,6 +2,7 @@ import pathlib
 import tempfile
 import unittest
 
+from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.litert_inference import load_tflite_model, run_tflite_model
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.tensorflow_training import quantize_model, train_unquantized_model
@@ -16,7 +17,9 @@ class TestLiteRTInference(unittest.TestCase):
         )
 
         cls.temp_dir = tempfile.TemporaryDirectory()
-        cls.quantized_model_prefix = pathlib.Path(cls.temp_dir.name) / "quantized"
+        cls.quantized_model_prefix = str(
+            pathlib.Path(cls.temp_dir.name) / quantized_model_prefix
+        )
 
         learning_rate = 0.001
         epochs = 1
@@ -37,9 +40,7 @@ class TestLiteRTInference(unittest.TestCase):
         )
 
     def setUp(self) -> None:
-        self.interpreter = load_tflite_model(
-            quantized_model_name=str(self.quantized_model_prefix) + ".tflite"
-        )
+        self.interpreter = load_tflite_model(tensor_path=self.temp_dir.name)
 
     def test_litert_inference(self) -> None:
         """Run the LiteRT Interpreter on several images and check its accuracy."""

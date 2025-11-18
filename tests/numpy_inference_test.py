@@ -4,6 +4,7 @@ import unittest
 
 import numpy as np
 
+from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.litert_inference import load_tflite_model, run_tflite_model
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.numpy_inference import NumPyInference
@@ -19,7 +20,9 @@ class TestNumPyInference(unittest.TestCase):
         )
 
         cls.temp_dir = tempfile.TemporaryDirectory()
-        cls.quantized_model_prefix = str(pathlib.Path(cls.temp_dir.name) / "quantized")
+        cls.quantized_model_prefix = str(
+            pathlib.Path(cls.temp_dir.name) / quantized_model_prefix
+        )
 
         learning_rate = 0.001
         epochs = 1
@@ -45,12 +48,8 @@ class TestNumPyInference(unittest.TestCase):
         The trained model is loaded in the LiteRT Interpreter, and an instance of
         NumPyInference.
         """
-        self.interpreter = load_tflite_model(
-            quantized_model_name=str(self.quantized_model_prefix) + ".tflite"
-        )
-        self.numpy_inference = NumPyInference(
-            quantized_model_name=str(self.quantized_model_prefix) + ".npz"
-        )
+        self.interpreter = load_tflite_model(tensor_path=self.temp_dir.name)
+        self.numpy_inference = NumPyInference(tensor_path=self.temp_dir.name)
 
     def test_numpy_inference(self) -> None:
         """Check that LiteRT Interpreter and NumPyInference produce the same results.

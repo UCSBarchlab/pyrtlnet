@@ -13,11 +13,14 @@ inference with `PyRTL`_.
 .. _pyrtl_inference demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py
 """
 
+import pathlib
+
 import numpy as np
 import pyrtl
 
 import pyrtlnet.pyrtl_axi as pyrtl_axi
 import pyrtlnet.pyrtl_matrix as pyrtl_matrix
+from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.inference_util import preprocess_image
 from pyrtlnet.saved_tensors import SavedTensors
 from pyrtlnet.wire_matrix_2d import WireMatrix2D
@@ -31,7 +34,7 @@ class PyRTLInference:
 
     def __init__(
         self,
-        quantized_model_name: str,
+        tensor_path: str,
         input_bitwidth: int,
         accumulator_bitwidth: int,
         axi: bool,
@@ -119,8 +122,8 @@ class PyRTLInference:
           intermediate values with bitwidth ``accumulator_bitwidth`` to each layer's
           output values with bitwidth ``input_bitwidth``.
 
-        :param quantized_model_name: Name of the ``.npz`` file created by
-             :func:`.quantize_model`.
+        :param tensor_path: Path to the ``.npz`` file created by
+            :func:`.quantize_model`.
         :param input_bitwidth: Bitwidth of each element in the input matrix. This should
             generally be ``8``.
         :param accumulator_bitwidth: Bitwidth of accumulator registers in the systolic
@@ -139,7 +142,12 @@ class PyRTLInference:
         self.axi = axi
         self.initial_delay_cycles = initial_delay_cycles
 
-        saved_tensors = SavedTensors(quantized_model_name)
+        tensor_file = pathlib.Path(tensor_path) / f"{quantized_model_prefix}.npz"
+        if not tensor_file.exists():
+            msg = f"{tensor_file} not found. Run tensorflow_training.py first."
+            raise FileNotFoundError(msg)
+
+        saved_tensors = SavedTensors(tensor_file)
         self.input_scale = saved_tensors.input_scale
         self.input_zero = saved_tensors.input_zero
         self.layer = saved_tensors.layer
