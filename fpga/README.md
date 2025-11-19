@@ -265,6 +265,10 @@ driver script on the Pynq Z2, which:
    [AXI DMA](https://discuss.pynq.io/t/tutorial-pynq-dma-part-1-hardware-design/3133)
 1. Retrieves the inference results via AXI
 
+```shell
+(pynq-venv) root@pynq:/home/xilinx# python fpga_inference.py
+```
+
 ![fpga_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/fpga_inference.png?raw=true)
 
 The tensors output by this script should exactly match the tensors output by
