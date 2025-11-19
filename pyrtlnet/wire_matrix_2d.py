@@ -37,7 +37,7 @@ class WireMatrix2D:
     1. While the `producer` is writing data to the ``WireMatrix2D``, it is not safe for
        the `consumer` to read data from the ``WireMatrix2D``.
 
-    1. While the `consumer` is reading data from the ``WireMatrix2D``, it is not safe
+    2. While the `consumer` is reading data from the ``WireMatrix2D``, it is not safe
        for the `producer` to write new data into the ``WireMatrix2D``.
 
     ``WireMatrix2D`` provides :attr:`ready` and :attr:`valid` signals to help the

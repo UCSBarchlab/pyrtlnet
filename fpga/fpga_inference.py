@@ -2,12 +2,11 @@ import argparse
 import pathlib
 import shutil
 import sys
-import time
 
 import numpy as np
 import pyrtl
 
-from pyrtlnet.cli_util import Accuracy, display_image, display_outputs
+from pyrtlnet.cli_util import Accuracy, PrintElapsedTime, display_image, display_outputs
 from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.inference_util import (
     add_common_arguments,
@@ -25,12 +24,10 @@ def main() -> None:
 
         $ python fpga_inference.py
     """
-    # Importing pynq currently takes ~8 seconds on a Pynq Z2, so let the user know.
-    start = time.time()
-    print("Importing pynq... ", end="", flush=True)
-    import pynq  # noqa: PLC0415
-
-    print(f"done ({time.time() - start:.1f} seconds)")
+    # Importing pynq currently takes ~8 seconds on a Pynq Z2, so let the user know
+    # what's happening.
+    with PrintElapsedTime(message="Importing pynq"):
+        import pynq  # noqa: PLC0415
 
     parser = argparse.ArgumentParser(prog="fpga_inference.py")
     add_common_arguments(parser)
@@ -82,10 +79,8 @@ def main() -> None:
         #
         # TODO: Improve the hardware design so it can run multiple images without a full
         # reset.
-        print("Loading bitstream... ", end="", flush=True)
-        start = time.time()
-        overlay = pynq.Overlay("pyrtlnet.bit")
-        print(f"done ({time.time() - start:.1f} seconds)")
+        with PrintElapsedTime(message="Loading bitstream"):
+            overlay = pynq.Overlay("pyrtlnet.bit")
 
         # Prepare the test image.
         flat_batch = preprocess_image(test_batch, input_scale, input_zero)
