@@ -1,4 +1,5 @@
 import math
+import time
 from numbers import Number
 
 import numpy as np
@@ -284,3 +285,39 @@ class Accuracy:
                 f"{self.correct}/{self.num_updates} correct predictions, "
                 f"{100.0 * self.correct / self.num_updates:.1f}% accuracy"
             )
+
+
+class PrintElapsedTime:
+    """Report how long it takes to run the code in a ``with`` statement.
+
+    This context manager first prints a ``message``, then runs the code in the ``with``
+    statement, then prints a ``"done"`` message followed by the elapsed time. All output
+    is printed on one line.
+
+    When an interactive script pauses for more than a second, users will start to wonder
+    if something is wrong. So use ``PrintElapsedTime`` to let the user know what's going
+    on before starting an operation that's expected to take more than a second.
+
+    Example::
+
+        with PrintElapsedTime(message="Sleeping"):
+            time.sleep(2)
+
+    Example output::
+
+        Sleeping... done (2.0 seconds)
+    """
+
+    def __init__(self, message: str) -> None:
+        """
+        :param message: Message to print before running the code in the ``with``
+            statement.
+        """
+        self.message = message
+
+    def __enter__(self) -> None:
+        self.start = time.time()
+        print(f"{self.message}... ", end="", flush=True)
+
+    def __exit__(self, *exception_info) -> None:  #  noqa: ANN002
+        print(f"done ({time.time() - self.start:.1f} seconds)")
