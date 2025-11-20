@@ -102,12 +102,12 @@ def main() -> None:
         actual = overlay.pyrtlnet.read(0)
         print("pyrtlnet FPGA layer1 argmax:", actual, "\n")
 
-        # Layer 0 outputs are in AXI-Lite registers 1-18. AXI registers are 32 bits, and
-        # AXI addresses are byte addresses, so we multiply by 4.
+        # Layer 0 outputs are in AXI-Lite registers 1-18. AXI registers are 32 bits,
+        # and AXI addresses are byte addresses, so we multiply by 4.
         #
         # The values stored in each register are raw bit patterns, each representing an
-        # 8-bit signed integer, so we call `val_to_signed_integer` to reinterpret them
-        # as 8-bit signed integers.
+        # 8-bit signed integer, so we call `val_to_signed_integer`
+        # to reinterpret them as 8-bit signed integers.
         layer0_output = np.array(
             [
                 [pyrtl.val_to_signed_integer(overlay.pyrtlnet.read(4 * i), bitwidth=8)]
