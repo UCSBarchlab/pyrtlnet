@@ -13,25 +13,33 @@ to implement quantized inference with `LiteRT`_.
 .. _litert_inference demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py
 """
 
+import pathlib
+
 import numpy as np
 from ai_edge_litert.interpreter import Interpreter
 
+from pyrtlnet.constants import quantized_model_prefix
 
-def load_tflite_model(quantized_model_name: str) -> Interpreter:
+
+def load_tflite_model(tensor_path: str) -> Interpreter:
     """Load the quantized model and return an initialized LiteRT ``Interpreter``.
 
-    The quantized model should be produced by :func:`quantize_model`.
+    The quantized model should be produced by :func:`.quantize_model`.
 
     :param quantized_model_name: Name of the ``.tflite`` file created by
-            ``tensorflow_training.py``.
+        :func:`.quantize_model`.
 
     :returns: An initialized LiteRT ``Interpreter``.
     """
+    tflite_file = pathlib.Path(tensor_path) / f"{quantized_model_prefix}.tflite"
+    if not tflite_file.exists():
+        msg = f"{tflite_file} not found. Run tensorflow_training.py first."
+        raise FileNotFoundError(msg)
+
     # Set preserve_all_tensors so we can inspect intermediate tensor values.
     # Intermediate values help when debugging other quantized inference implementations.
     interpreter = Interpreter(
-        model_path=quantized_model_name,
-        experimental_preserve_all_tensors=True,
+        model_path=tflite_file, experimental_preserve_all_tensors=True
     )
     interpreter.allocate_tensors()
     return interpreter

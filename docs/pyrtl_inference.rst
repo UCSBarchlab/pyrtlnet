@@ -14,9 +14,3 @@ It produces the same output tensors as :ref:`litert_inference` and
 .. automodule:: pyrtlnet.pyrtl_inference
     :members:
     :special-members: __init__
-
-Inference Utilities
--------------------
-
-.. automodule:: pyrtlnet.inference_util
-    :members:

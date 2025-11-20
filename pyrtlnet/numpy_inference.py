@@ -21,10 +21,14 @@ inference with `NumPy`_.
 .. _numpy_inference demo: https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py
 """  # noqa: E501
 
+import pathlib
+
 import numpy as np
 from fxpmath import Fxp
 
-from pyrtlnet.inference_util import SavedTensors
+from pyrtlnet.constants import quantized_model_prefix
+from pyrtlnet.inference_util import preprocess_image
+from pyrtlnet.saved_tensors import SavedTensors
 
 
 def relu(x: np.ndarray) -> np.ndarray:
@@ -166,14 +170,21 @@ def normalize(
 class NumPyInference:
     """Run quantized inference on an input batch with NumPy and fxpmath."""
 
-    def __init__(self, quantized_model_name: str) -> None:
+    def __init__(self, tensor_path: str) -> None:
         """Collect weights, biases, and quantization metadata from a ``.npz`` file
-        created by ``tensorflow_training.py``.
+        created by :func:`.quantize_model`.
 
-        :param quantized_model_name: Name of the ``.npz`` file created by
-            ``tensorflow_training.py``.
+        :raise FileNotFoundError: If the ``.npz`` file is not found.
+
+        :param tensor_path: Path to the ``.npz`` file created by
+            :func:`.quantize_model`.
         """
-        saved_tensors = SavedTensors(quantized_model_name)
+        tensor_file = pathlib.Path(tensor_path) / f"{quantized_model_prefix}.npz"
+        if not tensor_file.exists():
+            msg = f"{tensor_file} not found. Run tensorflow_training.py first."
+            raise FileNotFoundError(msg)
+
+        saved_tensors = SavedTensors(tensor_file)
         self.input_scale = saved_tensors.input_scale
         self.input_zero = saved_tensors.input_zero
         self.layer = saved_tensors.layer
@@ -199,48 +210,6 @@ class NumPyInference:
         )
         return layer_output.astype(np.int8)
 
-    def preprocess_image(self, test_batch: np.ndarray) -> np.ndarray:
-        """Preprocess the raw image data in the batch.
-        This is required by the quantized neural network.
-
-        This adjusts the batch image data by ``input_scale`` and ``input_zero``.
-        Then, it flattens each 2D image into a 1D column vector and stores them
-        in a matrix of shape (144, batch_size).
-
-        :param test_batch: Batch data to preprocess. This data should have already been
-            normalized to [0.0, 1.0] and resized to (batch_size, 12, 12), usually by
-            :func:`~pyrtlnet.mnist_util.load_mnist_images`.
-
-        :returns: Flattened batch data of shape (144, batch_size),
-                  adjusted by the quantized neural network's
-                  ``input_scale`` and ``input_zero``.
-        """
-        # Adjust batch image data to range [-128,127]
-        test_batch = (test_batch / self.input_scale + self.input_zero).astype(np.int8)
-
-        # The MNIST image data contains pixel values in the range [0, 255]. The neural
-        # network was trained by first converting these values to floating point, in the
-        # range [0, 1.0]. Dividing by input_scale below undoes this conversion,
-        # converting the range from [0, 1.0] back to [0, 255].
-        #
-        # We could avoid these back-and-forth conversions by modifying
-        # `load_mnist_images()` to skip the first conversion, and returning `x +
-        # input_zero_point` below to skip the second conversion, but we do them anyway
-        # to simplify the code and make it more consistent with existing sample code
-        # like https://ai.google.dev/edge/litert/models/post_training_integer_quant
-        #
-        # Adding input_zero_point (-128) effectively converts the uint8 image data to
-        # int8, by shifting the range [0, 255] to [-128, 127].
-
-        """Taking test_batch of shape (batch_size, 12, 12), each 2D matrix
-        of shape (12,12) is flattened to a 1D column vector of shape (144,),
-        resulting in test_batch's shape becoming (batch_size, 144). Then, we
-        transpose, returning the final shape (144, batch_size), where there
-        are batch_size amount of column vectors of shape (144,), each representing
-        one image.
-        """
-        return test_batch.reshape(test_batch.shape[0], -1).transpose()
-
     def run(self, test_batch: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
         """Run quantized inference on a batch.
 
@@ -260,7 +229,7 @@ class NumPyInference:
                     with shape ``(batch_size,)``
         """
 
-        flat_batch = self.preprocess_image(test_batch)
+        flat_batch = preprocess_image(test_batch, self.input_scale, self.input_zero)
         layer0_outputs = self._run_layer(0, flat_batch, self.input_zero, run_relu=True)
         layer1_outputs = self._run_layer(
             1, layer0_outputs, self.layer[0].zero, run_relu=False

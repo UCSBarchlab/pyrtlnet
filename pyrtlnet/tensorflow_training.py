@@ -184,7 +184,7 @@ def quantize_model(
         quantized_tflite_model = converter.convert()
 
         # Save the quantized model.
-        tflite_model_quant_file = pathlib.Path(".") / f"{quantized_model_prefix}.tflite"
+        tflite_model_quant_file = pathlib.Path(f"{quantized_model_prefix}.tflite")
         tflite_model_quant_file.write_bytes(quantized_tflite_model)
 
         # Save the quantized model's tensors to a NumPy .npz file.
