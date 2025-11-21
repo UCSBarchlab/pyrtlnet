@@ -93,14 +93,13 @@ class TestNumPyInference(unittest.TestCase):
         start_image = 10
         batch_size = 10
 
-        test_batch = np.array([
-            self.test_images[i] for i in range(start_image, batch_size + start_image)
-        ])
+        test_batch = np.array(
+            [self.test_images[i] for i in range(start_image, batch_size + start_image)]
+        )
 
-        litert_layer0_batch_output, \
-        litert_layer1_batch_output, \
-        litert_actual_batch = run_tflite_model(interpreter=self.interpreter,
-                                               test_batch=test_batch)
+        litert_layer0_batch_output, litert_layer1_batch_output, litert_actual_batch = (
+            run_tflite_model(interpreter=self.interpreter, test_batch=test_batch)
+        )
 
         numpy_layer0_batch_output, numpy_layer1_batch_output, numpy_actual_batch = (
             self.numpy_inference.run(test_batch=test_batch)

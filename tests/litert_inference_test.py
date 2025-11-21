@@ -64,19 +64,20 @@ class TestLiteRTInference(unittest.TestCase):
         start_image = 10
         batch_size = 10
         correct = 0
-        test_batch = np.array([
-            self.test_images[i] for i in range(start_image, batch_size + start_image)
-        ])
-
-        _litert_layer0_batch_output, _litert_layer1_batch_output, \
-        litert_actual_batch = run_tflite_model(interpreter=self.interpreter,
-                                                test_batch=test_batch)
-
+        test_batch = np.array(
+            [self.test_images[i] for i in range(start_image, batch_size + start_image)]
+        )
+        (
+            _litert_layer0_batch_output,
+            _litert_layer1_batch_output,
+            litert_actual_batch,
+        ) = run_tflite_model(interpreter=self.interpreter, test_batch=test_batch)
         for batch_index in range(batch_size):
-            if litert_actual_batch[batch_index] == self.test_labels[10+batch_index]:
-                correct +=1
+            if litert_actual_batch[batch_index] == self.test_labels[10 + batch_index]:
+                correct += 1
         accuracy = correct / batch_size
         self.assertTrue(accuracy > 0.75)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -133,4 +133,4 @@ def run_tflite_model(
 
     # Second layer's flattened output should be the model's output.
     assert np.logical_and.reduce(layer1_output.flatten() == output.flatten())
-    return layer0_output, layer1_output, output.argmax(axis = 1)
+    return layer0_output, layer1_output, output.argmax(axis=1)

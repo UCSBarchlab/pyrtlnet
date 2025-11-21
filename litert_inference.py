@@ -67,5 +67,6 @@ def main() -> None:
 
     accuracy.display()
 
+
 if __name__ == "__main__":
     main()
