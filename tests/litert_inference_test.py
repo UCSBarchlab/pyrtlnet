@@ -48,9 +48,17 @@ class TestLiteRTInference(unittest.TestCase):
         """Run the LiteRT Interpreter on several images and check its accuracy."""
         num_images = 10
         correct = 0
+
+        input_details = self.interpreter.get_input_details()[0]
+        output_details = self.interpreter.get_output_details()[0]
+        self.interpreter.resize_tensor_input(input_details["index"], (1, 12, 12))
+        self.interpreter.resize_tensor_input(output_details["index"], ((1, 10)))
+        self.interpreter.allocate_tensors()
+
         for test_index in range(num_images):
             _, _, actual = run_tflite_model(
-                interpreter=self.interpreter, test_batch=self.test_images[test_index]
+                interpreter=self.interpreter,
+                test_batch=np.array([self.test_images[test_index]]),
             )
             expected = self.test_labels[test_index]
 
@@ -64,6 +72,17 @@ class TestLiteRTInference(unittest.TestCase):
         start_image = 10
         batch_size = 10
         correct = 0
+
+        input_details = self.interpreter.get_input_details()[0]
+        output_details = self.interpreter.get_output_details()[0]
+        self.interpreter.resize_tensor_input(
+            input_details["index"], (batch_size, 12, 12)
+        )
+        self.interpreter.resize_tensor_input(
+            output_details["index"], ((batch_size), 10)
+        )
+        self.interpreter.allocate_tensors()
+
         test_batch = np.array(
             [self.test_images[i] for i in range(start_image, batch_size + start_image)]
         )

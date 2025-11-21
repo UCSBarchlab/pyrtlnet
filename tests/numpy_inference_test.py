@@ -57,11 +57,16 @@ class TestNumPyInference(unittest.TestCase):
         This runs one image through both inference systems and compares the tensor
         outputs from each layer.
         """
-        test_image = self.test_images[0]
-        test_batch = [self.test_images[0]]
+        test_batch = np.array([self.test_images[0]])
+
+        # input_details = self.interpreter.get_input_details()[0]
+        # output_details = self.interpreter.get_output_details()[0]
+        # self.interpreter.resize_tensor_input(input_details["index"], (1,12,12))
+        # self.interpreter.resize_tensor_input(output_details["index"], ((1, 10)))
+        # self.interpreter.allocate_tensors()
 
         litert_layer0_output, litert_layer1_output, litert_actual = run_tflite_model(
-            interpreter=self.interpreter, test_batch=test_image
+            interpreter=self.interpreter, test_batch=test_batch
         )
 
         numpy_layer0_output, numpy_layer1_output, numpy_actual = (
@@ -96,6 +101,16 @@ class TestNumPyInference(unittest.TestCase):
         test_batch = np.array(
             [self.test_images[i] for i in range(start_image, batch_size + start_image)]
         )
+
+        input_details = self.interpreter.get_input_details()[0]
+        output_details = self.interpreter.get_output_details()[0]
+        self.interpreter.resize_tensor_input(
+            input_details["index"], (batch_size, 12, 12)
+        )
+        self.interpreter.resize_tensor_input(
+            output_details["index"], ((batch_size), 10)
+        )
+        self.interpreter.allocate_tensors()
 
         litert_layer0_batch_output, litert_layer1_batch_output, litert_actual_batch = (
             run_tflite_model(interpreter=self.interpreter, test_batch=test_batch)

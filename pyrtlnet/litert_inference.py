@@ -85,14 +85,8 @@ def run_tflite_model(
                 ``predicted_digit`` is the actual predicted digit.
     """
 
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
-    interpreter.resize_tensor_input(input_details[0]["index"], test_batch.shape)
-    interpreter.resize_tensor_input(output_details[0]["index"], ((len(test_batch), 10)))
-    interpreter.allocate_tensors()
     input_details = interpreter.get_input_details()[0]
     output_details = interpreter.get_output_details()[0]
-    interpreter.reset_all_variables()
 
     # If the input type is quantized, rescale input data.
     if input_details["dtype"] == np.int8:

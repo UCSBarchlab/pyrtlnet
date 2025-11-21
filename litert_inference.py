@@ -26,15 +26,34 @@ def main() -> None:
     test_images, test_labels = load_mnist_data(args.tensor_path)
 
     interpreter = load_tflite_model(tensor_path=args.tensor_path)
+    input_details = interpreter.get_input_details()[0]
+    output_details = interpreter.get_output_details()[0]
+
+    if args.batch_size > 1:
+        interpreter.resize_tensor_input(
+            input_details["index"], (args.batch_size, 12, 12)
+        )
+        interpreter.resize_tensor_input(
+            output_details["index"], ((args.batch_size), 10)
+        )
+        interpreter.allocate_tensors()
 
     accuracy = Accuracy()
     for batch_number, (batch_start_index, test_batch) in enumerate(
         batched_images(test_images, args.start_image, args.num_images, args.batch_size)
     ):
         # Run LiteRT inference on the test batch
+        if len(test_batch) != args.batch_size:
+            interpreter.resize_tensor_input(input_details["index"], test_batch.shape)
+            interpreter.resize_tensor_input(
+                output_details["index"], ((len(test_batch), 10))
+            )
+            interpreter.allocate_tensors()
+
         layer0_outputs, layer1_outputs, actuals = run_tflite_model(
             interpreter=interpreter, test_batch=test_batch
         )
+
         # Print results.
         expected = test_labels[batch_start_index]
         for batch_index in range(len(test_batch)):
