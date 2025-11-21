@@ -59,12 +59,6 @@ class TestNumPyInference(unittest.TestCase):
         """
         test_batch = np.array([self.test_images[0]])
 
-        # input_details = self.interpreter.get_input_details()[0]
-        # output_details = self.interpreter.get_output_details()[0]
-        # self.interpreter.resize_tensor_input(input_details["index"], (1,12,12))
-        # self.interpreter.resize_tensor_input(output_details["index"], ((1, 10)))
-        # self.interpreter.allocate_tensors()
-
         litert_layer0_output, litert_layer1_output, litert_actual = run_tflite_model(
             interpreter=self.interpreter, test_batch=test_batch
         )

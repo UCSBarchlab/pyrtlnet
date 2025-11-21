@@ -49,12 +49,6 @@ class TestLiteRTInference(unittest.TestCase):
         num_images = 10
         correct = 0
 
-        input_details = self.interpreter.get_input_details()[0]
-        output_details = self.interpreter.get_output_details()[0]
-        self.interpreter.resize_tensor_input(input_details["index"], (1, 12, 12))
-        self.interpreter.resize_tensor_input(output_details["index"], ((1, 10)))
-        self.interpreter.allocate_tensors()
-
         for test_index in range(num_images):
             _, _, actual = run_tflite_model(
                 interpreter=self.interpreter,
