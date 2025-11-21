@@ -51,6 +51,7 @@ def _normalize_input(interpreter: Interpreter, input: np.ndarray) -> np.ndarray:
     This effectively shifts the input data from ``[0, 255]`` to ``[-128, 127]``.
     """
     input_details = interpreter.get_input_details()[0]
+    # input_details = interpreter.get_input_details()
 
     input_scale, input_zero_point = input_details["quantization"]
     # The MNIST image data contains pixel values in the range [0, 255]. The neural
@@ -70,49 +71,54 @@ def _normalize_input(interpreter: Interpreter, input: np.ndarray) -> np.ndarray:
 
 
 def run_tflite_model(
-    interpreter: Interpreter, test_image: np.ndarray
+    interpreter: Interpreter, test_batch: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, int]:
-    """Run quantized inference on a single image with a TFLite ``Interpreter``.
+    """Run quantized inference on an image batch with a TFLite ``Interpreter``.
 
     :param interpreter: An initialized TFLite ``Interpreter``, produced by
         :func:`load_tflite_model`.
-    :param test_image: An image to run through the ``Interpreter``.
+    :param test_batch: An image batch to run through the ``Interpreter``.
 
     :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
-              ``layer0_output`` is the first layer's raw tensor output, with shape ``(1,
-              18)``. ``layer1_output`` is the second layer's raw tensor output, with
-              shape ``(1, 10)``. ``predicted_digit`` is the actual predicted digit.
-              ``predicted_digit`` is equivalent to ``layer1_output.flatten().argmax()``.
+              ``layer0_output`` is the first layer's raw tensor output, with shape ``
+                (batch_size, 18)``. ``layer1_output`` is the second layer's raw tensor
+                output, with shape ``(batch_size, 10)``.
+                ``predicted_digit`` is the actual predicted digit.
     """
+
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    interpreter.resize_tensor_input(input_details[0]["index"], test_batch.shape)
+    interpreter.resize_tensor_input(output_details[0]["index"], ((len(test_batch), 10)))
+    interpreter.allocate_tensors()
     input_details = interpreter.get_input_details()[0]
     output_details = interpreter.get_output_details()[0]
-
     interpreter.reset_all_variables()
 
     # If the input type is quantized, rescale input data.
     if input_details["dtype"] == np.int8:
-        test_image = _normalize_input(interpreter, test_image)
+        test_batch = _normalize_input(interpreter, test_batch)
 
-    # Add the batch dimension and convert from float32 to the actual input type.
-    test_image = np.expand_dims(test_image, axis=0).astype(input_details["dtype"])
-    interpreter.set_tensor(input_details["index"], test_image)
+    # Convert from float32 to the actual input type.
+    test_batch = test_batch.astype(input_details["dtype"])
+    interpreter.set_tensor(input_details["index"], test_batch)
     interpreter.invoke()
 
     # Tensor metadata, from the Model Explorer
     # (https://github.com/google-ai-edge/model-explorer):
     #
-    # tensor 0: input          int8[1, 12, 12]
+    # tensor 0: input          int8[batch_size, 12, 12]
     #
     # tensor 1: reshape shape  int32[2]
-    # tensor 2: reshape output int8[1, 144]
+    # tensor 2: reshape output int8[batch_size, 144]
     #
     # tensor 3: layer 0 weight int8[18, 144]
     # tensor 4: layer 0 bias   int32[18]
-    # tensor 5: layer 0 output int8[1, 18]
+    # tensor 5: layer 0 output int8[batch_size, 18]
     #
     # tensor 6: layer 1 weight int8[10, 18]
     # tensor 7: layer 1 bias   int32[10]
-    # tensor 8: layer 1 output int8[1, 10]
+    # tensor 8: layer 1 output int8[batch_size, 10]
 
     # Retrieve and display the first layer's output. This is not necessary for
     # correctness, but useful for debugging differences between inference
@@ -123,10 +129,8 @@ def run_tflite_model(
     # Retrieve and display the second layer's output.
     layer1_output_index = 8
     layer1_output = interpreter.get_tensor(layer1_output_index)
-
-    output = interpreter.get_tensor(output_details["index"])[0]
+    output = interpreter.get_tensor(output_details["index"])
 
     # Second layer's flattened output should be the model's output.
-    assert np.logical_and.reduce(layer1_output.flatten() == output)
-
-    return layer0_output, layer1_output, output.argmax()
+    assert np.logical_and.reduce(layer1_output.flatten() == output.flatten())
+    return layer0_output, layer1_output, output.argmax(axis = 1)
