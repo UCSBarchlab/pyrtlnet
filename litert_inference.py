@@ -61,7 +61,7 @@ def main() -> None:
                 transposed_outputs=True,
             )
 
-        accuracy.update(actual=actual, expected=expected)
+            accuracy.update(actual=actual, expected=expected)
 
         print()
 
