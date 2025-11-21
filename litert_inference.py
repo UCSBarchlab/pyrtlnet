@@ -31,7 +31,6 @@ def main() -> None:
     for batch_number, (batch_start_index, test_batch) in enumerate(
         batched_images(test_images, args.start_image, args.num_images, args.batch_size)
     ):
-
         # Run LiteRT inference on the test image
         layer0_outputs, layer1_outputs, actuals = run_tflite_model(
             interpreter=interpreter, test_batch=test_batch
