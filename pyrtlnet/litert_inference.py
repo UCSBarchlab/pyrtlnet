@@ -51,7 +51,6 @@ def _normalize_input(interpreter: Interpreter, input: np.ndarray) -> np.ndarray:
     This effectively shifts the input data from ``[0, 255]`` to ``[-128, 127]``.
     """
     input_details = interpreter.get_input_details()[0]
-    # input_details = interpreter.get_input_details()
 
     input_scale, input_zero_point = input_details["quantization"]
     # The MNIST image data contains pixel values in the range [0, 255]. The neural
