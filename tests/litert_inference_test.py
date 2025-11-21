@@ -2,6 +2,8 @@ import pathlib
 import tempfile
 import unittest
 
+import numpy as np
+
 from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.litert_inference import load_tflite_model, run_tflite_model
 from pyrtlnet.mnist_util import load_mnist_images
@@ -46,9 +48,11 @@ class TestLiteRTInference(unittest.TestCase):
         """Run the LiteRT Interpreter on several images and check its accuracy."""
         num_images = 10
         correct = 0
+
         for test_index in range(num_images):
             _, _, actual = run_tflite_model(
-                interpreter=self.interpreter, test_image=self.test_images[test_index]
+                interpreter=self.interpreter,
+                test_batch=np.array([self.test_images[test_index]]),
             )
             expected = self.test_labels[test_index]
 
@@ -56,6 +60,35 @@ class TestLiteRTInference(unittest.TestCase):
                 correct += 1
 
         accuracy = correct / num_images
+        self.assertTrue(accuracy > 0.75)
+
+    def test_litert_inference_batch(self) -> None:
+        start_image = 10
+        batch_size = 10
+        correct = 0
+
+        input_details = self.interpreter.get_input_details()[0]
+        output_details = self.interpreter.get_output_details()[0]
+        self.interpreter.resize_tensor_input(
+            input_details["index"], (batch_size, 12, 12)
+        )
+        self.interpreter.resize_tensor_input(
+            output_details["index"], ((batch_size), 10)
+        )
+        self.interpreter.allocate_tensors()
+
+        test_batch = np.array(
+            [self.test_images[i] for i in range(start_image, batch_size + start_image)]
+        )
+        (
+            _litert_layer0_batch_output,
+            _litert_layer1_batch_output,
+            litert_actual_batch,
+        ) = run_tflite_model(interpreter=self.interpreter, test_batch=test_batch)
+        for batch_index in range(batch_size):
+            if litert_actual_batch[batch_index] == self.test_labels[10 + batch_index]:
+                correct += 1
+        accuracy = correct / batch_size
         self.assertTrue(accuracy > 0.75)
 
 
