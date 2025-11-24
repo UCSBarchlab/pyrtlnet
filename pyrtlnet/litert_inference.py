@@ -89,6 +89,11 @@ def run_tflite_model(
     input_details = interpreter.get_input_details()[0]
     output_details = interpreter.get_output_details()[0]
 
+    # Resize and allocate tensors to fit batch.
+    interpreter.resize_tensor_input(input_details["index"], (len(test_batch), 12, 12))
+    interpreter.resize_tensor_input(output_details["index"], (len(test_batch), 10))
+    interpreter.allocate_tensors()
+
     # If the input type is quantized, rescale input data.
     if input_details["dtype"] == np.int8:
         test_batch = _normalize_input(interpreter, test_batch)

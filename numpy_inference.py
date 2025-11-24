@@ -38,6 +38,7 @@ def main() -> None:
 
         layer0_outputs = layer0_outputs.transpose()
         layer1_outputs = layer1_outputs.transpose()
+
         for batch_index in range(len(test_batch)):
             # Display the test image.
             display_image(
