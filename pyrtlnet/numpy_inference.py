@@ -215,18 +215,16 @@ class NumPyInference:
 
         All calculations are done with NumPy and fxpmath.
 
-        :param test_batch: A batch of shape (batch_size, 12, 12)
-            to run through the NumPy inference implementation.
+        :param test_batch: A batch of shape ``(batch_size, 12, 12)`` to run through the
+            NumPy inference implementation.
 
         :returns: ``(layer0_outputs, layer1_outputs, actuals)``, where
-                  ``layer0_outputs`` is the first layer's raw tensor output,
-                    with shape ``(18, batch_size)``.
-                    ``layer1_outputs`` is the second layer's raw tensor output,
-                    with shape ``(10, batch_size)``.
-                    Note that these layer outputs are transposed
-                    compared to :func:`.run_tflite_model`.
-                    ``actuals`` is an np.ndarray of predicted digits
-                    with shape ``(batch_size,)``
+                  ``layer0_outputs`` is the first layer's raw tensor output, with shape
+                  ``(18, batch_size)``. ``layer1_outputs`` is the second layer's raw
+                  tensor output, with shape ``(10, batch_size)``. Note that these layer
+                  outputs are transposed compared to :func:`.run_tflite_model`.
+                  ``actuals`` is an :class:`numpy.ndarray` of predicted digits with
+                  shape ``(batch_size,)``
         """
 
         flat_batch = preprocess_image(test_batch, self.input_scale, self.input_zero)

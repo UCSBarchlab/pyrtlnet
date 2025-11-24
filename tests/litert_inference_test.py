@@ -60,7 +60,7 @@ class TestLiteRTInference(unittest.TestCase):
                 correct += 1
 
         accuracy = correct / num_images
-        self.assertTrue(accuracy > 0.75)
+        self.assertGreater(accuracy, 0.75)
 
     def test_litert_inference_batch(self) -> None:
         start_image = 10
@@ -77,9 +77,7 @@ class TestLiteRTInference(unittest.TestCase):
         )
         self.interpreter.allocate_tensors()
 
-        test_batch = np.array(
-            [self.test_images[i] for i in range(start_image, batch_size + start_image)]
-        )
+        test_batch = self.test_images[start_image : start_image + batch_size]
         (
             _litert_layer0_batch_output,
             _litert_layer1_batch_output,
@@ -89,7 +87,7 @@ class TestLiteRTInference(unittest.TestCase):
             if litert_actual_batch[batch_index] == self.test_labels[10 + batch_index]:
                 correct += 1
         accuracy = correct / batch_size
-        self.assertTrue(accuracy > 0.75)
+        self.assertGreater(accuracy, 0.75)
 
 
 if __name__ == "__main__":

@@ -78,11 +78,12 @@ def run_tflite_model(
         :func:`load_tflite_model`.
     :param test_batch: An image batch to run through the ``Interpreter``.
 
-    :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
+    :returns: ``(layer0_output, layer1_output, output)``, where
               ``layer0_output`` is the first layer's raw tensor output, with shape ``
                 (batch_size, 18)``. ``layer1_output`` is the second layer's raw tensor
                 output, with shape ``(batch_size, 10)``.
-                ``predicted_digit`` is the actual predicted digit.
+                ``output`` is the actual list of predicted digits,
+                with shape (batch_size,)
     """
 
     input_details = interpreter.get_input_details()[0]

@@ -33,9 +33,7 @@ def main() -> None:
         interpreter.resize_tensor_input(
             input_details["index"], (args.batch_size, 12, 12)
         )
-        interpreter.resize_tensor_input(
-            output_details["index"], ((args.batch_size), 10)
-        )
+        interpreter.resize_tensor_input(output_details["index"], (args.batch_size, 10))
         interpreter.allocate_tensors()
 
     accuracy = Accuracy()

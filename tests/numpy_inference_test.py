@@ -92,9 +92,7 @@ class TestNumPyInference(unittest.TestCase):
         start_image = 10
         batch_size = 10
 
-        test_batch = np.array(
-            [self.test_images[i] for i in range(start_image, batch_size + start_image)]
-        )
+        test_batch = self.test_images[start_image : start_image + batch_size]
 
         input_details = self.interpreter.get_input_details()[0]
         output_details = self.interpreter.get_output_details()[0]
