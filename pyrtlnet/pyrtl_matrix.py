@@ -742,6 +742,53 @@ def make_elementwise_relu(name: str, a: WireMatrix2D) -> WireMatrix2D:
     )
 
 
+def saturating_truncate(value: pyrtl.WireVector, bitwidth: int) -> pyrtl.WireVector:
+    """Truncate a signed ``value`` to ``bitwidth``, saturating at the largest and
+    smallest representable values.
+
+    If ``value`` is too large to fit in ``bitwidth`` (overflow), the output
+    ``WireVector`` will have the value ``2 ** (bitwidth - 1) - 1``.
+
+    If ``value`` is too small to fit in ``bitwidth`` (underflow), the output
+    ``WireVector`` will have the value ``-2 ** (bitwidth - 1)``.
+
+    Otherwise, the output ``WireVector`` will have value ``value``.
+
+    :param value: Value to truncate.
+    :param bitwidth: Bitwidth to truncate ``value`` to. Must be less than
+        ``value.bitwidth``.
+
+    :returns: ``value`` truncated to ``bitwidth``, saturating at the largest and
+              smallest representable values if overflow or underflow occur.
+    """
+    assert bitwidth < value.bitwidth
+    is_negative = value[-1]
+    high_bits = value[bitwidth - 1 :]
+
+    # If the value is negative, underflow occurs when the high bits are not all ones.
+    underflow = is_negative & ~pyrtl.and_all_bits(high_bits)
+
+    # If the value is positive, overflow occurs when the high bits are not all zeroes.
+    overflow = ~is_negative & pyrtl.or_all_bits(high_bits)
+
+    output = pyrtl.WireVector(bitwidth=bitwidth)
+    with pyrtl.conditional_assignment:
+        with overflow:
+            output |= pyrtl.Const(
+                2 ** (bitwidth - 1) - 1, bitwidth=bitwidth, signed=True
+            )
+
+        with underflow:
+            output |= pyrtl.Const(
+                -(2 ** (bitwidth - 1)), bitwidth=bitwidth, signed=True
+            )
+
+        with pyrtl.otherwise:
+            output |= value.truncate(bitwidth)
+
+    return output
+
+
 def make_elementwise_normalize(
     name: str,
     a: WireMatrix2D,
@@ -867,11 +914,13 @@ def make_elementwise_normalize(
                 multiplied[row][column][shift_amount:], round_up[row][column]
             )
 
-            # Elementwise add ``z3``, then keep only the low 8 bits of the result. The
-            # high bits may not all be zero, so this truncation may overflow.
-            outputs[row][column] = pyrtl.signed_add(
-                z3[row], shifted[row][column]
-            ).truncate(output_bitwidth)
+            # Elementwise add ``z3`` and keep only the low 8 bits of the result. If
+            # overflow occurs, saturate at the largest possible value, and if underflow
+            # occurs, saturate at the smallest possible value.
+            outputs[row][column] = saturating_truncate(
+                value=pyrtl.signed_add(z3[row], shifted[row][column]),
+                bitwidth=output_bitwidth,
+            )
 
     # Combinational normalize is always ready for input.
     a.ready <<= True

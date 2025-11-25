@@ -4,8 +4,8 @@ PyRTL Inference
 ===============
 
 This is a a hardware re-implementation of :ref:`numpy_inference` in `PyRTL`_.
-It produces the same output tensors as :ref:`litert_inference` and
-:ref:`numpy_inference`.
+It produces nearly the same output tensors as :ref:`litert_inference` and
+exactly the same output tensors as :ref:`numpy_inference`.
 
 .. _PyRTL: https://github.com/UCSBarchlab/PyRTL
 

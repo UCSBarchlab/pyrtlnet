@@ -74,15 +74,15 @@ class TestPyRTLInference(unittest.TestCase):
 
         # Check the first layer's outputs.
         np.testing.assert_array_equal(
-            pyrtl_layer0_output,
-            numpy_layer0_output,
+            pyrtl_layer0_output.transpose(),
+            numpy_layer0_output.transpose(),
             strict=True,
         )
 
         # Check the second layer's outputs.
         np.testing.assert_array_equal(
-            pyrtl_layer1_output,
-            numpy_layer1_output,
+            pyrtl_layer1_output.transpose(),
+            numpy_layer1_output.transpose(),
             strict=True,
         )
         # Also verify that the actual predicted digits match.

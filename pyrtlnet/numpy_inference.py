@@ -130,7 +130,7 @@ def normalize(
     # operations in this function are elementwise, so we can make NumPy broadcasting
     # work for us by transposing the input, performing all operations, then transposing
     # the output.
-    product = Fxp(product.transpose(), signed=True, n_word=32, n_frac=0)
+    product = Fxp(product.transpose(), n_word=32, n_frac=0)
 
     # Multiply by `m0`. The `*` on the next line performs elementwise 32-bit fixed-point
     # multiplication.
@@ -143,28 +143,24 @@ def normalize(
     shifted = multiplied / shift_powers
 
     # Rounding right shift to drop all fractional bits. Fractions are rounded to the
-    # nearest integer:
-    #   100.4 -> 100
-    #   100.5 -> 101
-    #   -10.4 -> -10
-    #   -10.5 -> -11
+    # nearest integer.
     #
     # `round_up` is the value of the most significant fractional bit (0.5). `round_up`
     # indicates if the fractional part is greater than or equal to 0.5 for positive
     # numbers. The value is two's complement encoded, so if the value is negative, this
     # bit will be inverted and indicate if the fractional part is less than 0.5.
     #
-    # See https://github.com/tensorflow/tensorflow/issues/25087#issuecomment-634262762
-    # for more details.
+    # This does not exactly match the LiteRT implementation's rounding behavior, but it
+    # is simple to implement and close enough. See
+    # https://github.com/tensorflow/tensorflow/issues/25087#issuecomment-634262762 for
+    # more details.
     round_up = (shifted.val >> (shifted.n_frac - 1)) & 1
     shifted = (shifted.val >> shifted.n_frac) + round_up
 
-    # Add `z3` and convert to int8. overflow="wrap" makes values larger than 127 or
-    # smaller than -128 wrap around (128 -> -128).
+    # Add `z3` and convert to int8. If this conversion overflows or underflows, it
+    # saturates at +127 or -128.
     added = z3 + shifted
-    return Fxp(
-        added.transpose(), signed=True, n_word=8, n_frac=0, overflow="wrap"
-    ).astype(np.int8)
+    return Fxp(added.transpose(), n_word=8, n_frac=0).astype(np.int8)
 
 
 class NumPyInference:
@@ -215,8 +211,8 @@ class NumPyInference:
 
         All calculations are done with NumPy and fxpmath.
 
-        :param test_batch: A batch of shape ``(batch_size, 12, 12)`` to run through the
-            NumPy inference implementation.
+        :param test_batch: An image batch of shape ``(batch_size, 12, 12)`` to run
+            through the NumPy inference implementation.
 
         :returns: ``(layer0_outputs, layer1_outputs, actuals)``, where
                   ``layer0_outputs`` is the first layer's raw tensor output, with shape
@@ -224,7 +220,7 @@ class NumPyInference:
                   tensor output, with shape ``(10, batch_size)``. Note that these layer
                   outputs are transposed compared to :func:`.run_tflite_model`.
                   ``actuals`` is an :class:`numpy.ndarray` of predicted digits with
-                  shape ``(batch_size,)``
+                  shape ``(batch_size,)``.
         """
 
         flat_batch = preprocess_image(test_batch, self.input_scale, self.input_zero)
