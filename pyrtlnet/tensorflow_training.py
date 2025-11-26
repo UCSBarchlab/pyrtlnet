@@ -54,8 +54,10 @@ The model consists of two dense layers::
 """
 
 import pathlib
+import random
 from collections.abc import Generator
 
+import numpy as np
 import tensorflow as tf
 import tensorflow_model_optimization as tfmot
 from ai_edge_litert.interpreter import Interpreter
@@ -76,6 +78,13 @@ def train_unquantized_model(
 
     :returns: A trained Keras ``Model``.
     """
+    # Set a fixed random seed for deterministic training.
+    seed = 42
+
+    tf.random.set_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+
     # Define the model architecture. This model is unoptimized, so higher accuracy
     # can be achieved by changing the architecture or its hyperparameters.
     model = keras.Sequential(

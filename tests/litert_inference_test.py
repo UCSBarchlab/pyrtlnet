@@ -67,16 +67,6 @@ class TestLiteRTInference(unittest.TestCase):
         batch_size = 10
         correct = 0
 
-        input_details = self.interpreter.get_input_details()[0]
-        output_details = self.interpreter.get_output_details()[0]
-        self.interpreter.resize_tensor_input(
-            input_details["index"], (batch_size, 12, 12)
-        )
-        self.interpreter.resize_tensor_input(
-            output_details["index"], ((batch_size), 10)
-        )
-        self.interpreter.allocate_tensors()
-
         test_batch = self.test_images[start_image : start_image + batch_size]
         (
             _litert_layer0_batch_output,

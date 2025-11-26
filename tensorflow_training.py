@@ -1,9 +1,5 @@
 import argparse
 import pathlib
-import random
-
-import numpy as np
-import tensorflow as tf
 
 from pyrtlnet.constants import quantized_model_prefix, test_data_file
 from pyrtlnet.mnist_util import load_mnist_images
@@ -19,12 +15,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="pyrtl_inference.py")
     parser.add_argument("--tensor_path", type=str, default=".")
     args = parser.parse_args()
-
-    seed = 42
-
-    tf.random.set_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
 
     # Load MNIST dataset.
     (train_images, train_labels), (test_images, test_labels) = load_mnist_images()
