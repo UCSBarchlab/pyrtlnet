@@ -68,14 +68,10 @@ class TestNumPyInference(unittest.TestCase):
         )
 
         # Check the first layer's outputs.
-        np.testing.assert_allclose(
-            numpy_layer0_output.transpose(), litert_layer0_output, atol=1
-        )
+        np.testing.assert_allclose(numpy_layer0_output, litert_layer0_output, atol=1)
 
         # Check the second layer's outputs.
-        np.testing.assert_allclose(
-            numpy_layer1_output.transpose(), litert_layer1_output, atol=1
-        )
+        np.testing.assert_allclose(numpy_layer1_output, litert_layer1_output, atol=1)
         # Also verify that the actual predicted digits match.
         self.assertEqual(litert_actual, numpy_actual)
 
@@ -100,12 +96,12 @@ class TestNumPyInference(unittest.TestCase):
 
         # Check the first layer's outputs.
         np.testing.assert_allclose(
-            numpy_layer0_batch_output.transpose(), litert_layer0_batch_output, atol=1
+            numpy_layer0_batch_output, litert_layer0_batch_output, atol=1
         )
 
         # Check the second layer's outputs.
         np.testing.assert_allclose(
-            numpy_layer1_batch_output.transpose(), litert_layer1_batch_output, atol=1
+            numpy_layer1_batch_output, litert_layer1_batch_output, atol=1
         )
         # Also verify that the actual predicted digits match.
         self.assertTrue(np.array_equal(litert_actual_batch, numpy_actual_batch))

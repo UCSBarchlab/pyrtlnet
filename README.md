@@ -287,8 +287,8 @@ hardware description language. Main features include:
    $ obj_dir/Vpyrtl_inference_test
    ...
    time 1930
-   layer1 output (transposed):
-   [[  33  -48   29   58  -50   31  -87   93    9   49]]
+   layer1 output:
+   [  33  -48   29   58  -50   31  -87   93    9   49]
    argmax: 7
 
    - pyrtl_inference_test.v:858: Verilog $finish

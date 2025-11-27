@@ -12,7 +12,7 @@ from pyrtlnet.training_util import save_mnist_data
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="pyrtl_inference.py")
+    parser = argparse.ArgumentParser(prog="tensorflow_training.py")
     parser.add_argument("--tensor_path", type=str, default=".")
     args = parser.parse_args()
 
