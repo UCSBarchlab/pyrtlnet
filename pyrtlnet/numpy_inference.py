@@ -216,11 +216,10 @@ class NumPyInference:
 
         :returns: ``(layer0_outputs, layer1_outputs, actuals)``, where
                   ``layer0_outputs`` is the first layer's raw tensor output, with shape
-                  ``(18, batch_size)``. ``layer1_outputs`` is the second layer's raw
-                  tensor output, with shape ``(10, batch_size)``. Note that these layer
-                  outputs are transposed compared to :func:`.run_tflite_model`.
-                  ``actuals`` is an :class:`numpy.ndarray` of predicted digits with
-                  shape ``(batch_size,)``.
+                  ``(batch_size, 18)``. ``layer1_outputs`` is the second layer's raw
+                  tensor output, with shape ``(batch_size, 10)``. ``actuals`` is an
+                  :class:`numpy.ndarray` of predicted digits with shape
+                  ``(batch_size,)``.
         """
 
         flat_batch = preprocess_image(test_batch, self.input_scale, self.input_zero)
@@ -231,4 +230,4 @@ class NumPyInference:
 
         actuals = layer1_outputs.argmax(axis=0)
 
-        return layer0_outputs, layer1_outputs, actuals
+        return layer0_outputs.transpose(), layer1_outputs.transpose(), actuals
