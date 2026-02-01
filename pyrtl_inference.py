@@ -22,7 +22,7 @@ def main() -> None:
     args = parser.parse_args()
 
     # Validate arguments.
-    assert args.batch_size == 1
+    # assert args.batch_size == 1
 
     if args.verilog and args.num_images != 1:
         sys.exit("--verilog can only be used with one image (--num_images=1)")
@@ -45,46 +45,67 @@ def main() -> None:
         accumulator_bitwidth=accumulator_bitwidth,
         axi=args.axi,
         initial_delay_cycles=args.initial_delay_cycles,
+        batch_size = args.batch_size
     )
 
     accuracy = Accuracy()
     for batch_number, (batch_start_index, test_batch) in enumerate(
         batched_images(test_images, args.start_image, args.num_images, args.batch_size)
     ):
-        # Display the test image.
-        test_image = test_batch[0]
-        display_image(
-            image=test_image,
-            script_name="PyRTL Inference",
-            image_index=batch_start_index,
-            batch_number=batch_number,
-            batch_index=0,
-            verbose=args.verbose,
-        )
-
         # Run PyRTL inference on the test image.
         layer0_outputs, layer1_outputs, actual = pyrtl_inference.simulate(
             test_batch, args.verilog
         )
+        argmaxesBinString = bin(actual)[2:]
+        actual = []
+        for _ in range(args.batch_size):
+            if len(argmaxesBinString) == 0:
+                actual.append(0)
+            else:
+                colArgMax = int(argmaxesBinString[-4:],2)
+                argmaxesBinString = argmaxesBinString[:-4]
+                actual.append(colArgMax)
+
+            
 
         layer0_outputs = layer0_outputs.transpose()
         layer1_outputs = layer1_outputs.transpose()
 
-        # Display results.
-        expected = test_labels[batch_start_index]
-        display_outputs(
-            script_name="PyRTL Inference",
-            layer0_output=layer0_outputs[0],
-            layer1_output=layer1_outputs[0],
-            expected=expected,
-            actual=actual,
-            verbose=args.verbose,
-            transposed_outputs=True,
-        )
+        # Display the test image.
+        for test_batch_index in range(len(test_batch)):
+            test_image = test_batch[test_batch_index]
+            display_image(
+                image=test_image,
+                script_name="PyRTL Inference",
+                image_index=batch_start_index,
+                batch_number=batch_number,
+                batch_index=test_batch_index,
+                verbose=args.verbose,
+            )
 
-        accuracy.update(actual=actual, expected=expected)
+            # # Run PyRTL inference on the test image.
+            # layer0_outputs, layer1_outputs, actual = pyrtl_inference.simulate(
+            #     test_batch, args.verilog
+            # )
 
-        print()
+            # layer0_outputs = layer0_outputs.transpose()
+            # layer1_outputs = layer1_outputs.transpose()
+
+            # Display results.
+            expected = test_labels[batch_start_index + test_batch_index]
+            display_outputs(
+                script_name="PyRTL Inference",
+                layer0_output=layer0_outputs[test_batch_index],
+                layer1_output=layer1_outputs[test_batch_index],
+                expected=expected,
+                actual=actual[test_batch_index],
+                verbose=args.verbose,
+                transposed_outputs=True,
+            )
+
+            accuracy.update(actual=actual[test_batch_index], expected=expected)
+
+            print()
 
     accuracy.display()
 
