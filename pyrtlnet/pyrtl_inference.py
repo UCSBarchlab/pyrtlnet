@@ -375,9 +375,8 @@ class PyRTLInference:
         :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
                   ``layer0_output`` is the first layer's raw tensor output, with shape
                   ``(1, 18)``. ``layer1_output`` is the second layer's raw tensor
-                  output, with shape ``(1, 10)``. Note that these layer outputs are
-                  transposed compared to :func:`.run_tflite_model`. ``predicted_digit``
-                  is the actual predicted digit. ``predicted_digit`` is equivalent to
+                  output, with shape ``(1, 10)``.``predicted_digit`` is the actual
+                  predicted digit. ``predicted_digit`` is equivalent to
                   ``layer1_output.flatten().argmax()``.
         """
         memblock_data = self._memblock_data(test_image)
