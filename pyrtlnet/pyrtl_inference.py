@@ -183,6 +183,8 @@ class PyRTLInference:
 
         # Create a properly-sized empty MemBlock. The MemBlock's contents will be set
         # at simulation time in `simulate()`.
+
+        #hardware initialization to accomodate batch_size, fill in smaller batch with 0'd images
         _, num_columns = flat_image_shape
         self.flat_image_memblock = pyrtl.MemBlock(
             name="flat_image",
@@ -282,16 +284,18 @@ class PyRTLInference:
         self.layer_outputs = [layer0, layer1]
 
         # Compute argmax for the last layer's output.
-        argmax = pyrtl_matrix.make_argmax(a=layer1) # returns wirevector of concatenated values
+        argmax = pyrtl_matrix.make_argmax(a=layer1)
 
         num_rows, num_columns = layer1.shape
         # assert num_columns == 1
 
-        #when num_images % batch_size != 0, leftover outputs are screwed. need to fill in matrix with zeroes
         argmax_output = pyrtl.Output(
-            name="argmax", bitwidth=pyrtl.infer_val_and_bitwidth(num_rows).bitwidth # modify bitwidth?
+            name="argmax", bitwidth=pyrtl.infer_val_and_bitwidth(num_rows).bitwidth
         )
         argmax_output <<= argmax
+
+        #argmax = [argmax[i*4:i*4+4] for i in range(numimages)] how can i index into the wirevector per 4 bits to access column argmaxes?
+        #assuming argmax pyrtl_matrix function returns wire_struct / indexable wirevector?
 
         # Make a PyRTL Output for the second layer output's `valid` signal. When this
         # signal goes high, inference is complete.
@@ -460,6 +464,7 @@ class PyRTLInference:
         else:
             layer0_output = self.layer_outputs[0].inspect(sim=sim).astype(np.int8)
             layer1_output = self.layer_outputs[1].inspect(sim=sim).astype(np.int8)
+            numimages=  layer1_output.shape[1]
             argmax = sim.inspect("argmax_out")
 
         if verilog:

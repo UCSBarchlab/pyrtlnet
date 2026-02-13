@@ -934,6 +934,11 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.WireVector:
         name = "argmax_out"
     )
     out <<= pyrtl.concat_list([arg.row for arg in argmaxValues])
+
+    #return list of wire vectors instead?
+    #or return a 1 row wirematrix2d, where each specific value of the wirematrix2d is a wirevector
+    #wirevectors each hold the corresponding argmax values
+
     return out
 
 
