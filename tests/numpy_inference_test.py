@@ -89,7 +89,6 @@ class TestNumPyInference(unittest.TestCase):
         litert_layer0_batch_output, litert_layer1_batch_output, litert_actual_batch = (
             run_tflite_model(interpreter=self.interpreter, test_batch=test_batch)
         )
-        self.interpreter.allocate_tensors()
 
         numpy_layer0_batch_output, numpy_layer1_batch_output, numpy_actual_batch = (
             self.numpy_inference.run(test_batch=test_batch)
