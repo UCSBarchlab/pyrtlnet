@@ -746,14 +746,19 @@ def make_elementwise_relu(name: str, a: WireMatrix2D) -> WireMatrix2D:
 def saturating_truncate(value: pyrtl.WireVector, bitwidth: int) -> pyrtl.WireVector:
     """Truncate a signed ``value`` to ``bitwidth``, saturating at the largest and
     smallest representable values.
+
     If ``value`` is too large to fit in ``bitwidth`` (overflow), the output
     ``WireVector`` will have the value ``2 ** (bitwidth - 1) - 1``.
+
     If ``value`` is too small to fit in ``bitwidth`` (underflow), the output
     ``WireVector`` will have the value ``-2 ** (bitwidth - 1)``.
+
     Otherwise, the output ``WireVector`` will have value ``value``.
+
     :param value: Value to truncate.
     :param bitwidth: Bitwidth to truncate ``value`` to. Must be less than
         ``value.bitwidth``.
+
     :returns: ``value`` truncated to ``bitwidth``, saturating at the largest and
               smallest representable values if overflow or underflow occur.
     """
