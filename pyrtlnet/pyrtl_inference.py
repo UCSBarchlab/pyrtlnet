@@ -375,7 +375,7 @@ class PyRTLInference:
         :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
                   ``layer0_output`` is the first layer's raw tensor output, with shape
                   ``(1, 18)``. ``layer1_output`` is the second layer's raw tensor
-                  output, with shape ``(1, 10)``.``predicted_digit`` is the actual
+                  output, with shape ``(1, 10)``. ``predicted_digit`` is the actual
                   predicted digit. ``predicted_digit`` is equivalent to
                   ``layer1_output.flatten().argmax()``.
         """
