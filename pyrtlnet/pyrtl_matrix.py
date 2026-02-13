@@ -962,7 +962,11 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.WireVector:
         row: row_bitwidth
         value: a.bitwidth
 
-    enumerated_values = [EnumeratedValue(row=row, value = a[row][col]) for col in range(num_columns) for row in range(num_rows)]
+    enumerated_values = [
+        EnumeratedValue(row=row, value=a[row][col])
+        for col in range(num_columns)
+        for row in range(num_rows)
+    ]
 
     def argmax2(a: EnumeratedValue, b: EnumeratedValue) -> EnumeratedValue:
         """Two-input argmax."""
@@ -971,39 +975,37 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.WireVector:
         )
 
     # Compose two-input argmaxes into a wider argmax that accepts ``num_rows`` inputs.
-    
+
     argmaxValues = []
     for col in range(num_columns):
-        imgArgmax = argmax2(enumerated_values[col*num_rows], enumerated_values[col*num_rows+1])
-        for valIndex in range(col*num_rows+2, col*num_rows+num_rows):
+        imgArgmax = argmax2(
+            enumerated_values[col * num_rows], enumerated_values[col * num_rows + 1]
+        )
+        for valIndex in range(col * num_rows + 2, col * num_rows + num_rows):
             imgArgmax = argmax2(imgArgmax, enumerated_values[valIndex])
         argmaxValues.append(imgArgmax)
-    out = pyrtl.WireVector(
-        bitwidth=row_bitwidth * num_columns,
-        name = "argmax_out"
-    )
+    out = pyrtl.WireVector(bitwidth=row_bitwidth * num_columns, name="argmax_out")
     out <<= pyrtl.concat_list([arg.row for arg in argmaxValues])
 
-    #return list of wire vectors instead?
-    #or return a 1 row wirematrix2d, where each specific value of the wirematrix2d is a wirevector
-    #wirevectors each hold the corresponding argmax values
-    
-    #wire_matrix
+    # return list of wire vectors instead?
+    # or return a 1 row wirematrix2d, where each specific value of the wirematrix2d is a wirevector
+    # wirevectors each hold the corresponding argmax values
+
+    # wire_matrix
 
     return out
 
 
-
 #     enumerated_values = [
-    #     EnumeratedValue(row=row, value=a[row][0]) for row in range(num_rows)
-    # ]
-    # print(type(enumerated_values[0]))
-    # argmax = argmax2(enumerated_values[0], enumerated_values[1])
-    # print(type(argmax))
-    # for row in range(2, num_rows):
-    #     argmax = argmax2(argmax, enumerated_values[row])
+#     EnumeratedValue(row=row, value=a[row][0]) for row in range(num_rows)
+# ]
+# print(type(enumerated_values[0]))
+# argmax = argmax2(enumerated_values[0], enumerated_values[1])
+# print(type(argmax))
+# for row in range(2, num_rows):
+#     argmax = argmax2(argmax, enumerated_values[row])
 
-    # return argmax.row
+# return argmax.row
 
 
 def minimum_bitwidth(a: np.ndarray) -> int:

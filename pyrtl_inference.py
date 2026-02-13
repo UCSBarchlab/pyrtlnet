@@ -44,10 +44,10 @@ def main() -> None:
         accumulator_bitwidth=accumulator_bitwidth,
         axi=args.axi,
         initial_delay_cycles=args.initial_delay_cycles,
-        batch_size = args.batch_size
+        batch_size=args.batch_size,
     )
-    #matrix gets predefined batch size. even when the batch size doesnt fit cleanly in the num-images, still tries to use batch size
-    #since it was defined here. so fill in small batch with 0'd images
+    # matrix gets predefined batch size. even when the batch size doesnt fit cleanly in the num-images, still tries to use batch size
+    # since it was defined here. so fill in small batch with 0'd images
 
     accuracy = Accuracy()
     # If batch_size doesn't fit cleanly into num_images (i.e, num_images % batch_size != 0), use the compensation amount of np.zero images to fill out the batch for the hardware
@@ -58,13 +58,14 @@ def main() -> None:
         # Run PyRTL inference on the test image.
         compensated = False
         if test_batch.shape[0] < args.batch_size:
-
             """
             different batch sizes and num_images are giving different results, need to investigate
             """
 
-            filler = np.zeros((compensation,test_batch[0].shape[0],test_batch[0].shape[1]))
-            test_batch = np.append(test_batch, filler, axis = 0)
+            filler = np.zeros(
+                (compensation, test_batch[0].shape[0], test_batch[0].shape[1])
+            )
+            test_batch = np.append(test_batch, filler, axis=0)
             compensated = True
 
         layer0_outputs, layer1_outputs, actual = pyrtl_inference.simulate(
@@ -77,16 +78,16 @@ def main() -> None:
             if len(argmaxesBinString) == 0:
                 actual.append(0)
             else:
-                colArgMax = int(argmaxesBinString[-4:],2)
+                colArgMax = int(argmaxesBinString[-4:], 2)
                 argmaxesBinString = argmaxesBinString[:-4]
                 actual.append(colArgMax)
-
-            
 
         layer0_outputs = layer0_outputs.transpose()
         layer1_outputs = layer1_outputs.transpose()
 
-        current_batch_len = len(test_batch) - compensation if compensated else len(test_batch)
+        current_batch_len = (
+            len(test_batch) - compensation if compensated else len(test_batch)
+        )
 
         # Display the test image.
         for test_batch_index in range(current_batch_len):
@@ -116,7 +117,7 @@ def main() -> None:
                 layer1_output=layer1_outputs[test_batch_index],
                 expected=expected,
                 actual=actual[test_batch_index],
-                verbose=args.verbose
+                verbose=args.verbose,
             )
 
             accuracy.update(actual=actual[test_batch_index], expected=expected)

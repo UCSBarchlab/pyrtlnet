@@ -39,7 +39,7 @@ class PyRTLInference:
         accumulator_bitwidth: int,
         axi: bool,
         initial_delay_cycles: int = 0,
-        batch_size: int = 1
+        batch_size: int = 1,
     ) -> None:
         """Convert the quantized model to PyRTL inference hardware.
 
@@ -184,7 +184,7 @@ class PyRTLInference:
         # Create a properly-sized empty MemBlock. The MemBlock's contents will be set
         # at simulation time in `simulate()`.
 
-        #hardware initialization to accomodate batch_size, fill in smaller batch with 0'd images
+        # hardware initialization to accomodate batch_size, fill in smaller batch with 0'd images
         _, num_columns = flat_image_shape
         self.flat_image_memblock = pyrtl.MemBlock(
             name="flat_image",
@@ -223,8 +223,10 @@ class PyRTLInference:
             initial_delay_cycles=self.initial_delay_cycles,
         )
 
-        #placed here for now. ideally, when the class is constructed the biases are cloned immediately by batch_size
-        self.layer[layer_num].bias = np.tile(self.layer[layer_num].bias,(1,input.shape[1]))
+        # placed here for now. ideally, when the class is constructed the biases are cloned immediately by batch_size
+        self.layer[layer_num].bias = np.tile(
+            self.layer[layer_num].bias, (1, input.shape[1])
+        )
 
         # Create a WireMatrix2D for the layer's bias.
         bias_matrix = WireMatrix2D(
@@ -233,7 +235,7 @@ class PyRTLInference:
             name=layer_name + "_bias",
             valid=True,
         )
-        
+
         # Add the bias. This is a 32-bit add.
         sum = pyrtl_matrix.make_elementwise_add(
             name=layer_name + "_add",
@@ -294,16 +296,15 @@ class PyRTLInference:
         )
         argmax_output <<= argmax
 
-        #argmax = [argmax[i*4:i*4+4] for i in range(numimages)] how can i index into the wirevector per 4 bits to access column argmaxes?
-        #wire matrix for indexable?
+        # argmax = [argmax[i*4:i*4+4] for i in range(numimages)] how can i index into the wirevector per 4 bits to access column argmaxes?
+        # wire matrix for indexable?
 
         # Make a PyRTL Output for the second layer output's `valid` signal. When this
         # signal goes high, inference is complete.
         valid = pyrtl.Output(name="valid", bitwidth=1)
         valid <<= layer1.valid
 
-
-        #might need to change this to support batch for fpga
+        # might need to change this to support batch for fpga
         if self.axi:
             # Make an AXI-Lite subordinate. Register map:
             #
