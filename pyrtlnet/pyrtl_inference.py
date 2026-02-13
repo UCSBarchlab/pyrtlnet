@@ -463,7 +463,6 @@ class PyRTLInference:
         else:
             layer0_output = self.layer_outputs[0].inspect(sim=sim).astype(np.int8)
             layer1_output = self.layer_outputs[1].inspect(sim=sim).astype(np.int8)
-            numimages=  layer1_output.shape[1]
             argmax = sim.inspect("argmax_out")
 
         if verilog:
