@@ -333,6 +333,37 @@ class TestPyrtlMatrix(unittest.TestCase):
 
         np.testing.assert_array_equal(relu_actual, relu_expected, strict=True)
 
+    def test_saturating_truncate(self) -> None:
+        input = pyrtl.Input(name="input", bitwidth=9)
+        output = pyrtl_matrix.saturating_truncate(input, bitwidth=8)
+        output.name = "output"
+
+        sim = pyrtl.Simulation()
+
+        def inspect_signed_output() -> int:
+            return pyrtl.val_to_signed_integer(sim.inspect("output"), bitwidth=8)
+
+        sim.step({"input": 42})
+        self.assertEqual(inspect_signed_output(), 42)
+
+        sim.step({"input": 0})
+        self.assertEqual(inspect_signed_output(), 0)
+
+        sim.step({"input": -24})
+        self.assertEqual(inspect_signed_output(), -24)
+
+        sim.step({"input": 127})
+        self.assertEqual(inspect_signed_output(), 127)
+
+        sim.step({"input": 128})
+        self.assertEqual(inspect_signed_output(), 127)
+
+        sim.step({"input": -128})
+        self.assertEqual(inspect_signed_output(), -128)
+
+        sim.step({"input": -129})
+        self.assertEqual(inspect_signed_output(), -128)
+
     def test_normalize(self) -> None:
         a = np.array([[1, -2, 3], [-4, 5, -6]]).astype(np.int32)
 
@@ -341,6 +372,36 @@ class TestPyrtlMatrix(unittest.TestCase):
         m0 = Fxp([0.5, 0.6], signed=False, n_word=input_bitwidth, n_frac=input_bitwidth)
         n = np.array([1, 2])
         z3 = np.array([3, 4])
+
+        a_matrix = self.make_wire_matrix_2d(name="a", array=a, bitwidth=input_bitwidth)
+
+        normal_matrix = pyrtl_matrix.make_elementwise_normalize(
+            name="normalize",
+            a=a_matrix,
+            m0=m0,
+            n=n,
+            z3=z3,
+            output_bitwidth=input_bitwidth,
+        )
+        normal_matrix.ready <<= True
+        normal_matrix.make_outputs("normal_matrix")
+
+        sim = pyrtl.Simulation()
+        sim.step()
+
+        normal_actual = normal_matrix.inspect(sim=sim)
+        normal_expected = numpy_inference.normalize(product=a, m0=m0, n=n, z3=z3)
+
+        np.testing.assert_array_equal(normal_actual, normal_expected, strict=True)
+
+    def test_normalize_overflow(self) -> None:
+        a = np.array([[1, -2, 3], [-4, 5, -6]]).astype(np.int32)
+
+        input_bitwidth = 8
+        # m0 must be in the interval [.5, 1).
+        m0 = Fxp([0.5, 0.6], signed=False, n_word=input_bitwidth, n_frac=input_bitwidth)
+        n = np.array([1, 2])
+        z3 = np.array([127, -128])
 
         a_matrix = self.make_wire_matrix_2d(name="a", array=a, bitwidth=input_bitwidth)
 

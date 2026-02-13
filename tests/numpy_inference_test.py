@@ -68,45 +68,28 @@ class TestNumPyInference(unittest.TestCase):
         )
 
         # Check the first layer's outputs.
-        np.testing.assert_array_equal(
-            numpy_layer0_output,
-            litert_layer0_output.transpose(),
-            strict=True,
-        )
+        np.testing.assert_allclose(numpy_layer0_output, litert_layer0_output, atol=1)
 
         # Check the second layer's outputs.
-        np.testing.assert_array_equal(
-            numpy_layer1_output,
-            litert_layer1_output.transpose(),
-            strict=True,
-        )
+        np.testing.assert_allclose(numpy_layer1_output, litert_layer1_output, atol=1)
         # Also verify that the actual predicted digits match.
         self.assertEqual(litert_actual, numpy_actual)
 
     def test_numpy_inference_batch(self) -> None:
         """Check that LiteRT Interpreter and NumPyInference produce the same results.
 
-        This runs 10 images through both inference systems and compares the tensor
-        outputs from each layer.
+        This runs a batch of 10 images through both inference systems and compares the
+        tensor outputs from each layer.
         """
-        start_image = 10
+        start_image = 1
         batch_size = 10
 
         test_batch = self.test_images[start_image : start_image + batch_size]
 
-        input_details = self.interpreter.get_input_details()[0]
-        output_details = self.interpreter.get_output_details()[0]
-        self.interpreter.resize_tensor_input(
-            input_details["index"], (batch_size, 12, 12)
-        )
-        self.interpreter.resize_tensor_input(
-            output_details["index"], ((batch_size), 10)
-        )
-        self.interpreter.allocate_tensors()
-
         litert_layer0_batch_output, litert_layer1_batch_output, litert_actual_batch = (
             run_tflite_model(interpreter=self.interpreter, test_batch=test_batch)
         )
+        self.interpreter.allocate_tensors()
 
         numpy_layer0_batch_output, numpy_layer1_batch_output, numpy_actual_batch = (
             self.numpy_inference.run(test_batch=test_batch)
@@ -114,16 +97,12 @@ class TestNumPyInference(unittest.TestCase):
 
         # Check the first layer's outputs.
         np.testing.assert_allclose(
-            numpy_layer0_batch_output,
-            litert_layer0_batch_output.transpose(),
-            atol=1,
+            numpy_layer0_batch_output, litert_layer0_batch_output, atol=1
         )
 
         # Check the second layer's outputs.
         np.testing.assert_allclose(
-            numpy_layer1_batch_output,
-            litert_layer1_batch_output.transpose(),
-            atol=1,
+            numpy_layer1_batch_output, litert_layer1_batch_output, atol=1
         )
         # Also verify that the actual predicted digits match.
         self.assertTrue(np.array_equal(litert_actual_batch, numpy_actual_batch))

@@ -74,16 +74,12 @@ class TestPyRTLInference(unittest.TestCase):
 
         # Check the first layer's outputs.
         np.testing.assert_array_equal(
-            pyrtl_layer0_output,
-            numpy_layer0_output,
-            strict=True,
+            pyrtl_layer0_output, numpy_layer0_output, strict=True
         )
 
         # Check the second layer's outputs.
         np.testing.assert_array_equal(
-            pyrtl_layer1_output,
-            numpy_layer1_output,
-            strict=True,
+            pyrtl_layer1_output, numpy_layer1_output, strict=True
         )
         # Also verify that the actual predicted digits match.
         self.assertEqual(numpy_actual, pyrtl_actual)
@@ -113,16 +109,12 @@ class TestPyRTLInference(unittest.TestCase):
 
         # Check the first layer's outputs.
         np.testing.assert_array_equal(
-            pyrtl_layer0_output,
-            numpy_layer0_output,
-            strict=True,
+            pyrtl_layer0_output, numpy_layer0_output, strict=True
         )
 
         # Check the second layer's outputs.
         np.testing.assert_array_equal(
-            pyrtl_layer1_output,
-            numpy_layer1_output,
-            strict=True,
+            pyrtl_layer1_output, numpy_layer1_output, strict=True
         )
         # Also verify that the actual predicted digits match.
         self.assertEqual(numpy_actual, pyrtl_actual)

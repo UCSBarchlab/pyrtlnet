@@ -30,8 +30,7 @@ def main() -> None:
     if args.num_images == 1:
         args.verbose = True
 
-    terminal_columns = shutil.get_terminal_size((80, 24)).columns
-    np.set_printoptions(linewidth=terminal_columns)
+    np.set_printoptions(linewidth=shutil.get_terminal_size((80, 24)).columns)
 
     # Load MNIST test data.
     test_images, test_labels = load_mnist_data(args.tensor_path)
@@ -72,22 +71,16 @@ def main() -> None:
             test_batch, args.verilog
         )
 
-        argmaxesBinString = bin(actual)[2:]
-        actual = []
-        for _ in range(args.batch_size):
-            if len(argmaxesBinString) == 0:
-                actual.append(0)
-            else:
-                colArgMax = int(argmaxesBinString[-4:],2)
-                argmaxesBinString = argmaxesBinString[:-4]
-                actual.append(colArgMax)
-
-            
-
-        layer0_outputs = layer0_outputs.transpose()
-        layer1_outputs = layer1_outputs.transpose()
-
-        current_batch_len = len(test_batch) - compensation if compensated else len(test_batch)
+        # Display results.
+        expected = test_labels[batch_start_index]
+        display_outputs(
+            script_name="PyRTL Inference",
+            layer0_output=layer0_outputs[0],
+            layer1_output=layer1_outputs[0],
+            expected=expected,
+            actual=actual,
+            verbose=args.verbose,
+        )
 
         # Display the test image.
         for test_batch_index in range(current_batch_len):

@@ -162,7 +162,6 @@ def display_outputs(
     expected: int,
     actual: int,
     verbose: bool,
-    transposed_outputs: bool,
 ) -> None:
     """Display the neural network's outputs.
 
@@ -210,25 +209,19 @@ def display_outputs(
     :param verbose: When ``False``, just print a summary of the expected and actual
         predictions. When ``True``, print each layer's output and an annotated bar
         chart.
-    :param transposed_outputs: When ``True``, print ``(transposed)`` to indicate that
-        the outputs have been transposed.
     """
     if not verbose:
         print(f"Expected: {expected} | Actual: {actual}")
         return
 
-    transposed = ""
-    if transposed_outputs:
-        transposed = " (transposed)"
-
     print(
-        f"{script_name} layer0 output{transposed} shape {layer0_output.shape} "
+        f"{script_name} layer0 output shape {layer0_output.shape} "
         f"dtype {layer0_output.dtype}:",
     )
     print(layer0_output, "\n")
 
     print(
-        f"{script_name} layer1 output{transposed} shape {layer1_output.shape} "
+        f"{script_name} layer1 output shape {layer1_output.shape} "
         f"dtype {layer1_output.dtype}:",
     )
     print(layer1_output, "\n")

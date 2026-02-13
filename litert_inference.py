@@ -20,8 +20,7 @@ def main() -> None:
     if args.num_images == 1:
         args.verbose = True
 
-    terminal_columns = shutil.get_terminal_size((80, 24)).columns
-    np.set_printoptions(linewidth=terminal_columns)
+    np.set_printoptions(linewidth=shutil.get_terminal_size((80, 24)).columns)
 
     test_images, test_labels = load_mnist_data(args.tensor_path)
 
@@ -59,7 +58,6 @@ def main() -> None:
                 expected=expected,
                 actual=actual,
                 verbose=args.verbose,
-                transposed_outputs=True,
             )
 
             accuracy.update(actual=actual, expected=expected)

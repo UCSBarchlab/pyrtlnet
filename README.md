@@ -8,21 +8,21 @@ Train it. Quantize it. Synthesize and simulate it — in hardware. All in Python
 
 `pyrtlnet` is a self-contained example of a quantized neural network that runs
 end-to-end in Python. From model training, to software inference, to hardware
-generation, all the way to simulating that custom inference hardware at the logic-gate
-level — you can do it all right from the Python REPL. We hope you will find `pyrtlnet`
-(rhymes with turtle-net) a complete and understandable walkthrough that goes from
-[TensorFlow](https://www.tensorflow.org/) training to bit-accurate hardware simulation,
-with the [PyRTL](https://github.com/UCSBarchlab/PyRTL) hardware description language.
-Main features include:
+generation, all the way to simulating that custom inference hardware at the
+logic-gate level — you can do it all right from the Python REPL. We hope you
+will find `pyrtlnet` (rhymes with turtle-net) a complete and understandable
+walkthrough that goes from [TensorFlow](https://www.tensorflow.org/) training
+to hardware simulation, with the [PyRTL](https://github.com/UCSBarchlab/PyRTL)
+hardware description language. Main features include:
 
 * Quantized neural network training with [TensorFlow](https://www.tensorflow.org/). The
   resulting inference network is fully quantized, so all inference calculations are done
   with integers.
 
-* Four different quantized inference implementations operating at different levels of
-  abstraction. All four implementations produce the same output in the same format and,
-  in doing so, provide a useful framework to extend either from the top-down or the
-  bottom-up.
+* Four different quantized inference implementations operating at different
+  levels of abstraction. All four implementations produce the same output, in
+  the same format, providing a useful framework to extend either from the
+  top-down or the bottom-up.
 
   1. A reference quantized inference implementation, using the standard
      [LiteRT](https://ai.google.dev/edge/litert) `Interpreter`.
@@ -73,14 +73,21 @@ Main features include:
 
 ### Usage
 
-1. Run
-   `uv run` [`tensorflow_training.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/tensorflow_training.py)
-   in this repository's root directory. This trains a quantized neural network
-   with TensorFlow, on the MNIST data set, and produces a quantized `tflite`
-   saved model file, named `quantized.tflite`.
+1. Run:
 
    ```shell
    $ uv run tensorflow_training.py
+   ```
+
+   in this repository's root directory.
+   [`tensorflow_training.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/tensorflow_training.py)
+   trains a quantized neural network with TensorFlow, on the MNIST data set,
+   and produces a quantized `tflite` saved model file, named
+   `quantized.tflite`.
+
+   Sample output:
+
+   ```shell
    Training unquantized model.
    Epoch 1/10
    1875/1875 [==============================] - 1s 350us/step - loss: 0.6532 - accuracy: 0.8202
@@ -128,9 +135,17 @@ Main features include:
    [NumPy saved arrays](https://numpy.org/doc/stable/reference/generated/numpy.savez_compressed.html).
    `quantized.npz` is read by all the provided inference implementations.
 
-1. Run
-   `uv run` [`litert_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py) in this repository's root directory.
-   This runs one test image through the reference LiteRT inference implementation.
+1. Run:
+
+   ```shell
+   $ uv run litert_inference.py
+   ```
+
+   in this repository's root directory.
+   [`litert_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/litert_inference.py)
+   runs one test image through the reference LiteRT inference implementation.
+
+   Sample output:
 
    ![litert_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/litert_inference.png?raw=true)
 
@@ -147,11 +162,11 @@ Main features include:
 
    1. The input's `shape (12, 12)`, and the input's data type `dtype float32`.
 
-   1. The output from the first layer of the network, with `shape (18,)` and `dtype
-      int8`.
+   1. The output from the first layer of the network (`layer0`), with `shape
+      (18,)` and `dtype int8`.
 
-   1. The output from the second layer of the network, with `shape (10,)` and `dtype
-      int8`.
+   1. The output from the second layer of the network (`layer1`), with `shape
+      (10,)` and `dtype int8`.
 
    1. A bar chart displaying the network's final output, which is the data from
       the `layer1 output` above. The bar chart shows the un-normalized
@@ -163,42 +178,45 @@ Main features include:
       network. It is also labeled as `expected` because the labeled test data
       confirms that the image actually depicts the digit `7`.
 
-   The `litert_inference.py` script also supports a `--start_image` command line flag,
-   to run inference on other images from the test data set. There is also a
-   `--num_images` flag, which will run several images from the test data set, one at a
-   time, and print an accuracy score. All of the provided inference scripts accept these
-   command line flags. For example:
+   The `litert_inference.py` script has many command line flags:
+
+   * `--start_image` selects other images to run from the test data set.
+
+   * `--num_images` determines how many consecutive images to run from the test
+     data set. When `--num_images` is greater than one, the script processes
+     several images from the test data set, and prints an overall accuracy
+     score.
+
+   * `--batch_size` determines how many images are processed at once. When
+     `--num_images` is not evenly divisible by `--batch_size`, the last batch
+     will be a partial batch.
+
+   All of the provided inference scripts accept these command line flags. For example:
 
    ```shell
-   $ uv run litert_inference.py --start_image=7 --num_images=10
+   $ uv run litert_inference.py --start_image=7 --num_images=10 --batch_size=3
    LiteRT Inference image_index 7 batch 0 batch_index 0
    Expected: 9 | Actual: 9
-
-   LiteRT Inference image_index 8 batch 1 batch_index 0
+   LiteRT Inference image_index 8 batch 0 batch_index 1
    Expected: 5 | Actual: 6
-
-   LiteRT Inference image_index 9 batch 2 batch_index 0
+   LiteRT Inference image_index 9 batch 0 batch_index 2
    Expected: 9 | Actual: 9
 
-   LiteRT Inference image_index 10 batch 3 batch_index 0
+   LiteRT Inference image_index 10 batch 1 batch_index 0
    Expected: 0 | Actual: 0
-
-   LiteRT Inference image_index 11 batch 4 batch_index 0
+   LiteRT Inference image_index 11 batch 1 batch_index 1
    Expected: 6 | Actual: 6
-
-   LiteRT Inference image_index 12 batch 5 batch_index 0
+   LiteRT Inference image_index 12 batch 1 batch_index 2
    Expected: 9 | Actual: 9
 
-   LiteRT Inference image_index 13 batch 6 batch_index 0
+   LiteRT Inference image_index 13 batch 2 batch_index 0
    Expected: 0 | Actual: 0
-
-   LiteRT Inference image_index 14 batch 7 batch_index 0
+   LiteRT Inference image_index 14 batch 2 batch_index 1
    Expected: 1 | Actual: 1
-
-   LiteRT Inference image_index 15 batch 8 batch_index 0
+   LiteRT Inference image_index 15 batch 2 batch_index 2
    Expected: 5 | Actual: 5
 
-   LiteRT Inference image_index 16 batch 9 batch_index 0
+   LiteRT Inference image_index 16 batch 3 batch_index 0
    Expected: 9 | Actual: 9
 
    9/10 correct predictions, 90.0% accuracy
@@ -207,23 +225,37 @@ Main features include:
    In this case, the model mispredicts `image_index 8`, which is predicted to
    be a `5`, but actually depicts a `6`.
 
-1. Run
-   `uv run` [`numpy_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py) in this repository's root directory.
-   This runs one test image through the software NumPy and fxpmath inference
-   implementation. This implements inference for the quantized neural network as a
-   series of NumPy calls, using the fxpmath fixed-point math library.
+1. Run:
+
+   ```shell
+   $ uv run numpy_inference.py
+   ```
+
+   in this repository's root directory.
+   [`numpy_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/numpy_inference.py)
+   runs one test image through the software NumPy and fxpmath inference
+   implementation. This implements inference for the quantized neural network
+   as a series of NumPy calls, using the fxpmath fixed-point math library.
+
+   Sample output:
 
    ![numpy_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/numpy_inference.png?raw=true)
 
-   The script's layer outputs should exactly match `litert_inference.py`'s layer outputs.
+   The script's layer outputs should be nearly identical to
+   `litert_inference.py`'s layer outputs. Differences of ±1 may occur due to
+   slightly different rounding behavior in `numpy_inference.py`.
 
-1. Run
-   `uv run`
+1. Run:
+
+   ```shell
+   $ uv run pyrtl_inference.py --verilog
+   ```
+
+   in this repository's root directory.
    [`pyrtl_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py)
-   `--verilog` in this repository's root directory.
-   This runs one test image through the hardware PyRTL inference
-   implementation. This implementation converts the quantized neural network
-   into hardware logic, and simulates the hardware with a PyRTL
+   runs one test image through the hardware PyRTL inference implementation.
+   This implementation converts the quantized neural network into hardware
+   logic, and simulates the hardware with a PyRTL
    [`Simulation`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.simulation.Simulation).
 
    ![pyrtl_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/pyrtl_inference.png?raw=true)
@@ -235,7 +267,7 @@ Main features include:
    written to `pyrtl_inference_test.v`. The next step will use these generated
    Verilog files.
 
-1. If `verilator` is installed, run `verilator --trace -j 0 --binary pyrtl_inference_test.v`:
+1. If `verilator` is installed, run:
 
    ```shell
    $ verilator --trace -j 0 --binary pyrtl_inference_test.v
@@ -255,8 +287,8 @@ Main features include:
    $ obj_dir/Vpyrtl_inference_test
    ...
    time 1930
-   layer1 output (transposed):
-   [[  33  -48   29   58  -50   31  -87   93    9   49]]
+   layer1 output:
+   [  33  -48   29   58  -50   31  -87   93    9   49]
    argmax: 7
 
    - pyrtl_inference_test.v:858: Verilog $finish

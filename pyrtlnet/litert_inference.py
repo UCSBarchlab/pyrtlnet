@@ -38,11 +38,7 @@ def load_tflite_model(tensor_path: str) -> Interpreter:
 
     # Set preserve_all_tensors so we can inspect intermediate tensor values.
     # Intermediate values help when debugging other quantized inference implementations.
-    interpreter = Interpreter(
-        model_path=tflite_file, experimental_preserve_all_tensors=True
-    )
-    interpreter.allocate_tensors()
-    return interpreter
+    return Interpreter(model_path=tflite_file, experimental_preserve_all_tensors=True)
 
 
 def _normalize_input(interpreter: Interpreter, input: np.ndarray) -> np.ndarray:
@@ -76,14 +72,14 @@ def run_tflite_model(
 
     :param interpreter: An initialized TFLite ``Interpreter``, produced by
         :func:`load_tflite_model`.
-    :param test_batch: An image batch to run through the ``Interpreter``.
+    :param test_batch: An image batch of shape ``(batch_size, 12, 12)`` to run through
+        the ``Interpreter``.
 
-    :returns: ``(layer0_output, layer1_output, output)``, where
-              ``layer0_output`` is the first layer's raw tensor output, with shape ``
-                (batch_size, 18)``. ``layer1_output`` is the second layer's raw tensor
-                output, with shape ``(batch_size, 10)``.
-                ``output`` is the actual list of predicted digits,
-                with shape (batch_size,)
+    :returns: ``(layer0_output, layer1_output, actuals)``, where ``layer0_output`` is
+              the first layer's raw tensor output, with shape ``(batch_size, 18)``.
+              ``layer1_output`` is the second layer's raw tensor output, with shape
+              ``(batch_size, 10)``. ``actuals`` is the actual list of predicted digits,
+              with shape ``(batch_size,)``.
     """
 
     input_details = interpreter.get_input_details()[0]
