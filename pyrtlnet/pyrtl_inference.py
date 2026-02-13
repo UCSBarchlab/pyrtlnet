@@ -508,4 +508,4 @@ class PyRTLInference:
             for arg in mem_write.args:
                 assert arg.op in "Cr", f"ERROR: async write arg {mem_write}"
 
-        return layer0_output, layer1_output, argmax
+        return layer0_output.transpose(), layer1_output.transpose(), argmax
