@@ -39,6 +39,7 @@ class PyRTLInference:
         accumulator_bitwidth: int,
         axi: bool,
         initial_delay_cycles: int = 0,
+        batch_size: int = 1,
     ) -> None:
         """Convert the quantized model to PyRTL inference hardware.
 
@@ -141,6 +142,7 @@ class PyRTLInference:
         self.accumulator_bitwidth = accumulator_bitwidth
         self.axi = axi
         self.initial_delay_cycles = initial_delay_cycles
+        self.batch_size = batch_size
 
         tensor_file = pathlib.Path(tensor_path) / f"{quantized_model_prefix}.npz"
         if not tensor_file.exists():
@@ -171,7 +173,7 @@ class PyRTLInference:
     def _make_input_memblock(self) -> None:
         """Build the MemBlock that will hold the input image data."""
         weight_shape = self.layer[0].weight.shape
-        batch_size = 1
+        batch_size = self.batch_size
         flat_image_shape = (weight_shape[1], batch_size)
 
         done_cycle = (
@@ -181,6 +183,8 @@ class PyRTLInference:
 
         # Create a properly-sized empty MemBlock. The MemBlock's contents will be set
         # at simulation time in `simulate()`.
+
+        # hardware initialization to accomodate batch_size, fill in smaller batch with 0'd images
         _, num_columns = flat_image_shape
         self.flat_image_memblock = pyrtl.MemBlock(
             name="flat_image",
@@ -219,6 +223,11 @@ class PyRTLInference:
             initial_delay_cycles=self.initial_delay_cycles,
         )
 
+        # placed here for now. ideally, when the class is constructed the biases are cloned immediately by batch_size
+        self.layer[layer_num].bias = np.tile(
+            self.layer[layer_num].bias, (1, input.shape[1])
+        )
+
         # Create a WireMatrix2D for the layer's bias.
         bias_matrix = WireMatrix2D(
             values=self.layer[layer_num].bias,
@@ -226,6 +235,7 @@ class PyRTLInference:
             name=layer_name + "_bias",
             valid=True,
         )
+
         # Add the bias. This is a 32-bit add.
         sum = pyrtl_matrix.make_elementwise_add(
             name=layer_name + "_add",
@@ -279,18 +289,22 @@ class PyRTLInference:
         argmax = pyrtl_matrix.make_argmax(a=layer1)
 
         num_rows, num_columns = layer1.shape
-        assert num_columns == 1
+        # assert num_columns == 1
 
         argmax_output = pyrtl.Output(
             name="argmax", bitwidth=pyrtl.infer_val_and_bitwidth(num_rows).bitwidth
         )
         argmax_output <<= argmax
 
+        # argmax = [argmax[i*4:i*4+4] for i in range(numimages)] how can i index into the wirevector per 4 bits to access column argmaxes?
+        # wire matrix for indexable?
+
         # Make a PyRTL Output for the second layer output's `valid` signal. When this
         # signal goes high, inference is complete.
         valid = pyrtl.Output(name="valid", bitwidth=1)
         valid <<= layer1.valid
 
+        # might need to change this to support batch for fpga
         if self.axi:
             # Make an AXI-Lite subordinate. Register map:
             #
@@ -324,11 +338,11 @@ class PyRTLInference:
         :returns: Image data that can be loaded into :attr:`flat_image_memblock`.
         """
         flat_image = preprocess_image(test_image, self.input_scale, self.input_zero)
-
         # Convert the flattened image data to a dictionary for use in Simulation's
         # `memory_value_map`. The `flat_image` is transposed because this data will be
         # the second input to the first layer's systolic array (`top` inputs to the
         # array).
+
         data = pyrtl_matrix.make_input_memblock_data(
             flat_image.transpose(),
             self.input_bitwidth,
@@ -441,6 +455,7 @@ class PyRTLInference:
             # Registers 1-18 hold the layer0's outputs, and registers 19-28 hold
             # layer1's outputs. Each register is 32-bits wide, and AXI addresses are
             # byte addresses.
+
             layer0_output = retrieve_layer_outputs(start=1 * 4, end=19 * 4)
             layer1_output = retrieve_layer_outputs(start=19 * 4, end=29 * 4)
 
@@ -449,8 +464,7 @@ class PyRTLInference:
         else:
             layer0_output = self.layer_outputs[0].inspect(sim=sim).astype(np.int8)
             layer1_output = self.layer_outputs[1].inspect(sim=sim).astype(np.int8)
-
-            argmax = sim.inspect("argmax")
+            argmax = sim.inspect("argmax_out")
 
         if verilog:
             suffix = ""
