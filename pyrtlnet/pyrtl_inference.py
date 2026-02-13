@@ -295,7 +295,7 @@ class PyRTLInference:
         argmax_output <<= argmax
 
         #argmax = [argmax[i*4:i*4+4] for i in range(numimages)] how can i index into the wirevector per 4 bits to access column argmaxes?
-        #assuming argmax pyrtl_matrix function returns wire_struct / indexable wirevector?
+        #wire matrix for indexable?
 
         # Make a PyRTL Output for the second layer output's `valid` signal. When this
         # signal goes high, inference is complete.
@@ -374,8 +374,8 @@ class PyRTLInference:
 
         :returns: ``(layer0_output, layer1_output, predicted_digit)``, where
                   ``layer0_output`` is the first layer's raw tensor output, with shape
-                  ``(18, 1)``. ``layer1_output`` is the second layer's raw tensor
-                  output, with shape ``(10, 1)``. Note that these layer outputs are
+                  ``(1, 18)``. ``layer1_output`` is the second layer's raw tensor
+                  output, with shape ``(1, 10)``. Note that these layer outputs are
                   transposed compared to :func:`.run_tflite_model`. ``predicted_digit``
                   is the actual predicted digit. ``predicted_digit`` is equivalent to
                   ``layer1_output.flatten().argmax()``.
@@ -482,8 +482,8 @@ class PyRTLInference:
                     vcd=f"pyrtl_inference{suffix}.vcd",
                     cmd=(
                         '$display("time %3t\\n'
-                        "layer1 output (transposed):\\n"
-                        "[[%4d %4d %4d %4d %4d %4d %4d %4d %4d %4d]]\\n"
+                        "layer1 output:\\n"
+                        "[%4d %4d %4d %4d %4d %4d %4d %4d %4d %4d]\\n"
                         'argmax: %1d\\n", '
                         "$time,"
                         "$signed(layer1_0_0), $signed(layer1_1_0), "
