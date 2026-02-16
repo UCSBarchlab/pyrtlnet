@@ -430,9 +430,7 @@ class PyRTLInference:
         while not done:
             sim.step(provided_inputs)
             done = sim.inspect("valid")
-        # sim.tracer.render_trace(
-        #     ["argmax_out[0].row","argmax_out[1].row"]
-        # )
+
         # Retrieve each layer's outputs and the predicted digit.
         if self.axi:
 
