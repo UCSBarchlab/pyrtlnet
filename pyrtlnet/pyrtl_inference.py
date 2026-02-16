@@ -326,6 +326,8 @@ class PyRTLInference:
                 ].next <<= self.layer_outputs[1][row][0]
 
     def _memblock_data(self, test_image: np.ndarray) -> list[int]:
+
+        # change docs to talk about batching
         """Convert ``test_image`` to loadable data for :attr:`flat_image_memblock`.
 
         Each ``test_image`` is 12×12, with 8-bit pixels (see
@@ -428,7 +430,9 @@ class PyRTLInference:
         while not done:
             sim.step(provided_inputs)
             done = sim.inspect("valid")
-
+        # sim.tracer.render_trace(
+        #     ["argmax_out[0].row","argmax_out[1].row"]
+        # )
         # Retrieve each layer's outputs and the predicted digit.
         if self.axi:
 
@@ -464,7 +468,9 @@ class PyRTLInference:
         else:
             layer0_output = self.layer_outputs[0].inspect(sim=sim).astype(np.int8)
             layer1_output = self.layer_outputs[1].inspect(sim=sim).astype(np.int8)
-            argmax = sim.inspect("argmax_out")
+            argmax = []
+            for i in range(self.batch_size):
+                argmax.append(sim.inspect(f"argmax_out[{i}].row"))
 
         if verilog:
             suffix = ""
