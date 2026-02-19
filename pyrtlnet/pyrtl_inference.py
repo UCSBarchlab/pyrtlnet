@@ -222,19 +222,10 @@ class PyRTLInference:
             initial_delay_cycles=self.initial_delay_cycles,
         )
 
-        # placed here for now. ideally, when the class is constructed the biases are cloned immediately by batch_size
-        self.layer[layer_num].bias = np.tile(
-            self.layer[layer_num].bias, (1, input.shape[1])
-        )
-
         # Create a WireMatrix2D for the layer's bias.
         bias_matrix = WireMatrix2D(
             values=self.layer[layer_num].bias,
-            # values = np.tile(
-            #     self.layer[layer_num].bias, (1, input.shape[1])
-            # ),
             bitwidth=pyrtl_matrix.minimum_bitwidth(self.layer[layer_num].bias),
-            # bitwidth=pyrtl_matrix.minimum_bitwidth(self.layer[layer_num].bias)*input.shape[1],
             name=layer_name + "_bias",
             valid=True,
         )

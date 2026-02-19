@@ -667,6 +667,51 @@ def make_systolic_array(
 
     return product
 
+# def make_elementwise_bias_add(
+#     name: str,
+#     a: WireMatrix2D,
+#     b: WireMatrix2D,
+#     output_bitwidth: int,
+# ) -> WireMatrix2D:
+#     """Combinationally add matrices ``a`` and ``b`` elementwise.
+
+#     This implementation is fully combinational (no registers).
+
+#     ``b`` is the bias vector to be added to ``a`` elementwise. It
+#     must be a column vector, and broadcastable to ``a``.
+
+#     :param name: The returned :class:`.WireMatrix2D` will be named ``{name}.output``.
+#     :param a:
+#     :param b:
+#     :returns: :class:`.WireMatrix2D` containing a + b.
+
+#     """
+#     # Assert that b is a column vector.
+#     assert len(b.shape) == 1
+    
+#     num_rows, num_columns = a.shape
+
+#     #2D array of sums.
+#     sums = np.array(shape = a.shape)
+
+#     for column in range(num_columns):
+#         for row in range(num_rows):
+#             sum[row][column] = pyrtl.signed_add(
+#                 a[row][column], b[column]
+#             ).truncate(output_bitwidth)
+
+#     # Combinational adder is always ready for input
+#     a.ready <<= True
+#     b.ready <<= True
+
+#     # Combinational adder's output is valid when both inputs are valid.
+#     return WireMatrix2D(
+#         values=sums,
+#         shape=a.shape,
+#         bitwidth=output_bitwidth,
+#         name=f"{name}.output",
+#         valid=a.valid & b.valid,
+#     )
 
 def make_elementwise_add(
     name: str,
@@ -674,9 +719,10 @@ def make_elementwise_add(
     b: WireMatrix2D,
     output_bitwidth: int,
 ) -> WireMatrix2D:
-    """Combinationally add matricies ``a`` and ``b`` elementwise.
+    """Combinationally add matrices ``a`` and ``b`` elementwise.
 
     This implementation is fully combinational (no registers).
+    ``b`` is allowed to be a column vector if not the same shape as ``a``.
 
     :param name: The returned :class:`.WireMatrix2D` will be named ``{name}.output``.
     :param a:
@@ -684,7 +730,7 @@ def make_elementwise_add(
     :returns: :class:`.WireMatrix2D` containing a + b.
 
     """
-    assert a.shape == b.shape
+    assert a.shape == b.shape or b.shape[1] == 1
     num_rows, num_columns = a.shape
 
     # Collect a 2D array of sums.
@@ -692,9 +738,14 @@ def make_elementwise_add(
 
     for row in range(num_rows):
         for column in range(num_columns):
-            sums[row][column] = pyrtl.signed_add(
-                a[row][column], b[row][column]
-            ).truncate(output_bitwidth)
+            if b.shape[1] != 1:
+                sums[row][column] = pyrtl.signed_add(
+                    a[row][column], b[row][column]
+                ).truncate(output_bitwidth)
+            else:
+                sums[row][column] = pyrtl.signed_add(
+                    a[row][column], b[row]
+                ).truncate(output_bitwidth)
 
     # Combinational adder is always ready for input.
     a.ready <<= True
