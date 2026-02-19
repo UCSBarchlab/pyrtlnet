@@ -184,7 +184,6 @@ class PyRTLInference:
         # Create a properly-sized empty MemBlock. The MemBlock's contents will be set
         # at simulation time in `simulate()`.
 
-        # hardware initialization to accomodate batch_size, fill in smaller batch with 0'd images
         _, num_columns = flat_image_shape
         self.flat_image_memblock = pyrtl.MemBlock(
             name="flat_image",
@@ -231,7 +230,11 @@ class PyRTLInference:
         # Create a WireMatrix2D for the layer's bias.
         bias_matrix = WireMatrix2D(
             values=self.layer[layer_num].bias,
+            # values = np.tile(
+            #     self.layer[layer_num].bias, (1, input.shape[1])
+            # ),
             bitwidth=pyrtl_matrix.minimum_bitwidth(self.layer[layer_num].bias),
+            # bitwidth=pyrtl_matrix.minimum_bitwidth(self.layer[layer_num].bias)*input.shape[1],
             name=layer_name + "_bias",
             valid=True,
         )
@@ -296,9 +299,6 @@ class PyRTLInference:
         )
         argmax_output <<= argmax
 
-        # argmax = [argmax[i*4:i*4+4] for i in range(numimages)] how can i index into the wirevector per 4 bits to access column argmaxes?
-        # wire matrix for indexable?
-
         # Make a PyRTL Output for the second layer output's `valid` signal. When this
         # signal goes high, inference is complete.
         valid = pyrtl.Output(name="valid", bitwidth=1)
@@ -339,7 +339,9 @@ class PyRTLInference:
         :param test_image: A resized MNIST image to convert to MemBlock data.
         :returns: Image data that can be loaded into :attr:`flat_image_memblock`.
         """
+
         flat_image = preprocess_image(test_image, self.input_scale, self.input_zero)
+
         # Convert the flattened image data to a dictionary for use in Simulation's
         # `memory_value_map`. The `flat_image` is transposed because this data will be
         # the second input to the first layer's systolic array (`top` inputs to the
@@ -355,6 +357,7 @@ class PyRTLInference:
         assert len(data) == 2**self.flat_image_memblock.addrwidth
         for pixel in data:
             pixel_bitwidth = pyrtl.infer_val_and_bitwidth(pixel).bitwidth
+            # print(pixel_bitwidth, self.flat_image_memblock.bitwidth, "pixel bitwidth, flat_image memblock bitwidth")
             assert pixel_bitwidth <= self.flat_image_memblock.bitwidth
 
         return data
@@ -362,6 +365,7 @@ class PyRTLInference:
     def simulate(
         self, test_image: np.ndarray, verilog: bool = False
     ) -> tuple[np.ndarray, np.ndarray, int]:
+        #change docs to mention batches instead of single image
         """Simulate quantized inference on a single image.
 
         All calculations are done in PyRTL :class:`~pyrtl.Simulation`, using the

@@ -963,8 +963,8 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.WireVector:
         value: a.bitwidth
 
     enumerated_values = [
-        EnumeratedValue(row=row, value=a[row][col])
-        for col in range(num_columns)
+        [EnumeratedValue(row=row, value=a[row][col])
+        for col in range(num_columns)]
         for row in range(num_rows)
     ]
 
@@ -978,16 +978,16 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.WireVector:
 
     # Compose two-input argmaxes into a wider argmax that accepts ``num_rows`` inputs.
 
-    argmaxValues = []
+    argmax_values = []
     for col in range(num_columns):
-        imgArgmax = argmax2(
-            enumerated_values[col * num_rows], enumerated_values[col * num_rows + 1]
+        img_argmax = argmax2(
+            enumerated_values[0][col], enumerated_values[1][col]
         )
-        for valIndex in range(col * num_rows + 2, col * num_rows + num_rows):
-            imgArgmax = argmax2(imgArgmax, enumerated_values[valIndex])
-        argmaxValues.append(imgArgmax)
+        for val_index in range(2, num_rows):
+            img_argmax = argmax2(img_argmax, enumerated_values[val_index][col])
+        argmax_values.append(img_argmax)
     
-    out = BatchArgmaxes(name="argmax_out", values = argmaxValues)
+    out = BatchArgmaxes(name="argmax_out", values = argmax_values)
 
     return out
 

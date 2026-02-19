@@ -48,36 +48,28 @@ def main() -> None:
 
     accuracy = Accuracy()
 
-    # If batch_size doesn't fit cleanly into num_images (i.e, num_images % batch_size != 0), use the compensation amount of np.zero images to fill out the batch for the hardware
-    compensation = args.batch_size - (args.num_images % args.batch_size)
-
     for batch_number, (batch_start_index, test_batch) in enumerate(
         batched_images(test_images, args.start_image, args.num_images, args.batch_size)
     ):
         # Run PyRTL inference on the test image.
-        compensated = False
-        if test_batch.shape[0] < args.batch_size:
-            filler = np.zeros(
-                (compensation, test_batch[0].shape[0], test_batch[0].shape[1])
-            )
-            test_batch = np.append(test_batch, filler, axis=0)
-            compensated = True
+        
+        # Always pad test_batch, in case last test_batch size is less than args.batch_size
+        compensation = args.batch_size - test_batch.shape[0]
+        padded_batch = np.append(test_batch, np.zeros(
+            (compensation, test_batch.shape[1],test_batch.shape[2])
+            ), axis = 0) 
 
         layer0_outputs, layer1_outputs, actual = pyrtl_inference.simulate(
-            test_batch, args.verilog
-        )
-
-        current_batch_len = (
-            len(test_batch) - compensation if compensated else len(test_batch)
+            padded_batch, args.verilog
         )
 
         # Display the test image.
-        for test_batch_index in range(current_batch_len):
+        for test_batch_index in range(test_batch.shape[0]):
             test_image = test_batch[test_batch_index]
             display_image(
                 image=test_image,
                 script_name="PyRTL Inference",
-                image_index=batch_start_index,
+                image_index=batch_start_index + test_batch_index,
                 batch_number=batch_number,
                 batch_index=test_batch_index,
                 verbose=args.verbose,
