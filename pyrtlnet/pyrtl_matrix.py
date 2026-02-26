@@ -939,7 +939,7 @@ def make_elementwise_normalize(
     )
 
 
-def make_argmax(a: WireMatrix2D) -> pyrtl.WireVector:
+def make_argmax(a: WireMatrix2D) -> pyrtl.wire_matrix:
     """Combinationally argmax a matrix ``a`` by column.
 
     This implementation is fully combinational (no registers).
