@@ -122,7 +122,6 @@ class TestPyRTLInference(unittest.TestCase):
             pyrtl_layer1_output, numpy_layer1_output, strict=True
         )
         # Also verify that the actual predicted digits match.
-        self.assertEqual(numpy_actual, np.array(pyrtl_actual))
         np.testing.assert_array_equal(
             pyrtl_actual, numpy_actual, strict=True
         )
