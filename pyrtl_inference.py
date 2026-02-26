@@ -52,12 +52,14 @@ def main() -> None:
         batched_images(test_images, args.start_image, args.num_images, args.batch_size)
     ):
         # Run PyRTL inference on the test image.
-        
-        # Always pad test_batch, in case last test_batch size is less than args.batch_size
+
+        # Always pad test_batch, in case last test_batch size < args.batch_size
         compensation = args.batch_size - test_batch.shape[0]
-        padded_batch = np.append(test_batch, np.zeros(
-            (compensation, test_batch.shape[1],test_batch.shape[2])
-            ), axis = 0) 
+        padded_batch = np.append(
+            test_batch,
+            np.zeros((compensation, test_batch.shape[1], test_batch.shape[2])),
+            axis=0,
+        )
 
         layer0_outputs, layer1_outputs, actual = pyrtl_inference.simulate(
             padded_batch, args.verilog

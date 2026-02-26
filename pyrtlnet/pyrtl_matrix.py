@@ -667,6 +667,7 @@ def make_systolic_array(
 
     return product
 
+
 def make_elementwise_add(
     name: str,
     a: WireMatrix2D,
@@ -697,9 +698,9 @@ def make_elementwise_add(
                     a[row][column], b[row][column]
                 ).truncate(output_bitwidth)
             else:
-                sums[row][column] = pyrtl.signed_add(
-                    a[row][column], b[row]
-                ).truncate(output_bitwidth)
+                sums[row][column] = pyrtl.signed_add(a[row][column], b[row]).truncate(
+                    output_bitwidth
+                )
 
     # Combinational adder is always ready for input.
     a.ready <<= True
@@ -968,12 +969,13 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.wire_matrix:
         value: a.bitwidth
 
     enumerated_values = [
-        [EnumeratedValue(row=row, value=a[row][col])
-        for col in range(num_columns)]
+        [EnumeratedValue(row=row, value=a[row][col]) for col in range(num_columns)]
         for row in range(num_rows)
     ]
 
-    BatchArgmaxes = pyrtl.wire_matrix(component_schema=EnumeratedValue, size = num_columns)
+    BatchArgmaxes = pyrtl.wire_matrix(
+        component_schema=EnumeratedValue, size=num_columns
+    )
 
     def argmax2(a: EnumeratedValue, b: EnumeratedValue) -> EnumeratedValue:
         """Two-input argmax."""
@@ -985,16 +987,13 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.wire_matrix:
 
     argmax_values = []
     for col in range(num_columns):
-        img_argmax = argmax2(
-            enumerated_values[0][col], enumerated_values[1][col]
-        )
+        img_argmax = argmax2(enumerated_values[0][col], enumerated_values[1][col])
         for val_index in range(2, num_rows):
             img_argmax = argmax2(img_argmax, enumerated_values[val_index][col])
         argmax_values.append(img_argmax)
-    
-    out = BatchArgmaxes(name="argmax_out", values = argmax_values)
 
-    return out
+    return BatchArgmaxes(name="argmax_out", values=argmax_values)
+
 
 def minimum_bitwidth(a: np.ndarray) -> int:
     """Return the minimum number of bits needed to represent each element in ``a``.

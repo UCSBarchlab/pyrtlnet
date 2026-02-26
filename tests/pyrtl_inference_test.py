@@ -52,15 +52,15 @@ class TestPyRTLInference(unittest.TestCase):
     def test_pyrtl_inference(self) -> None:
         """Check that NumPyInference and PyRTLInference produce the same results.
 
-        This runs a batch of 10 images through both inference systems and compares the tensor
-        outputs from each layer.
+        This runs a batch of 10 images through both inference systems
+        and compares the tensor outputs from each layer.
         """
         pyrtl_inference = PyRTLInference(
             tensor_path=self.temp_dir.name,
             input_bitwidth=8,
             accumulator_bitwidth=32,
             axi=False,
-            batch_size=10
+            batch_size=10,
         )
 
         test_batch = self.test_images[0:10]
@@ -84,9 +84,7 @@ class TestPyRTLInference(unittest.TestCase):
         )
 
         # Also verify that the actual predicted digits match.
-        np.testing.assert_array_equal(
-            pyrtl_actual, numpy_actual, strict=True
-        )
+        np.testing.assert_array_equal(pyrtl_actual, numpy_actual, strict=True)
 
     def test_pyrtl_inference_axi(self) -> None:
         """Check that NumPyInference and PyRTLInference produce the same results.
@@ -99,7 +97,7 @@ class TestPyRTLInference(unittest.TestCase):
             input_bitwidth=8,
             accumulator_bitwidth=32,
             axi=True,
-            batch_size = 10
+            batch_size=10,
         )
 
         test_batch = [self.test_images[i] for i in range(10)]
@@ -122,9 +120,7 @@ class TestPyRTLInference(unittest.TestCase):
             pyrtl_layer1_output, numpy_layer1_output, strict=True
         )
         # Also verify that the actual predicted digits match.
-        np.testing.assert_array_equal(
-            pyrtl_actual, numpy_actual, strict=True
-        )
+        np.testing.assert_array_equal(pyrtl_actual, numpy_actual, strict=True)
 
 
 if __name__ == "__main__":
