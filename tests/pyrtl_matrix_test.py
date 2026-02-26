@@ -430,16 +430,37 @@ class TestPyrtlMatrix(unittest.TestCase):
         input_bitwidth = pyrtl_matrix.minimum_bitwidth(a)
         a_matrix = self.make_wire_matrix_2d(name="a", array=a, bitwidth=input_bitwidth)
 
-        argmax = pyrtl_matrix.make_argmax(a=a_matrix)
-        argmax.name = "argmax"
+        pyrtl_matrix.make_argmax(a=a_matrix)
 
         sim = pyrtl.Simulation()
         sim.step()
 
-        argmax_actual = sim.inspect(argmax.name)
+        argmax_actual = sim.inspect("argmax_out[0].row")
         argmax_expected = a.argmax()
 
         self.assertEqual(argmax_expected, argmax_actual)
+
+        # Now, test batched argmax
+        pyrtl.reset_working_block()
+
+        a = np.array(
+            [[1, -2, 3, -4, 5, -6], [1337, 532, -2048, 111624, 914, 0]]
+        ).transpose()
+
+        input_bitwidth = pyrtl_matrix.minimum_bitwidth(a)
+        a_matrix = self.make_wire_matrix_2d(name="a", array=a, bitwidth=input_bitwidth)
+
+        pyrtl_matrix.make_argmax(a=a_matrix)
+
+        sim = pyrtl.Simulation()
+        sim.step()
+
+        argmax_actual = np.array(
+            [sim.inspect(f"argmax_out[{i}].row") for i in range(a.shape[1])]
+        )
+        argmax_expected = a.argmax(axis=0)
+
+        np.testing.assert_array_equal(argmax_actual, argmax_expected, strict=True)
 
 
 if __name__ == "__main__":
