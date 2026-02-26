@@ -63,7 +63,6 @@ class TestPyRTLInference(unittest.TestCase):
             batch_size=10
         )
 
-        # test_batch = [self.test_images[i] for i in range(10)]
         test_batch = self.test_images[0:10]
 
         numpy_layer0_output, numpy_layer1_output, numpy_actual = (
@@ -71,7 +70,7 @@ class TestPyRTLInference(unittest.TestCase):
         )
 
         pyrtl_layer0_output, pyrtl_layer1_output, pyrtl_actual = (
-            pyrtl_inference.simulate(test_image=test_batch)
+            pyrtl_inference.simulate(test_batch=test_batch)
         )
 
         # Check the first layer's outputs.
@@ -110,7 +109,7 @@ class TestPyRTLInference(unittest.TestCase):
         )
 
         pyrtl_layer0_output, pyrtl_layer1_output, pyrtl_actual = (
-            pyrtl_inference.simulate(test_image=test_batch)
+            pyrtl_inference.simulate(test_batch=test_batch)
         )
 
         # Check the first layer's outputs.
