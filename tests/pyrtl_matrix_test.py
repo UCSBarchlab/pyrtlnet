@@ -429,12 +429,12 @@ class TestPyrtlMatrix(unittest.TestCase):
 
         input_bitwidth = pyrtl_matrix.minimum_bitwidth(a)
         a_matrix = self.make_wire_matrix_2d(name="a", array=a, bitwidth=input_bitwidth)
-        
-        SingleArgmaxValue = pyrtl.wire_matrix(
-            component_schema = 4, size = 1
-        )
 
-        SingleArgmaxValue(name = "argmax_out", values = pyrtl_matrix.make_argmax(a=a_matrix))
+        SingleArgmaxValue = pyrtl.wire_matrix(component_schema=4, size=1)
+
+        SingleArgmaxValue(
+            name="argmax_out", values=pyrtl_matrix.make_argmax(a=a_matrix)
+        )
 
         sim = pyrtl.Simulation()
         sim.step()
@@ -454,11 +454,11 @@ class TestPyrtlMatrix(unittest.TestCase):
         input_bitwidth = pyrtl_matrix.minimum_bitwidth(a)
         a_matrix = self.make_wire_matrix_2d(name="a", array=a, bitwidth=input_bitwidth)
 
-        BatchArgmaxValues = pyrtl.wire_matrix(
-            component_schema = 4, size = 2
-        )
+        BatchArgmaxValues = pyrtl.wire_matrix(component_schema=4, size=2)
 
-        BatchArgmaxValues(name = "argmax_out", values = pyrtl_matrix.make_argmax(a=a_matrix))
+        BatchArgmaxValues(
+            name="argmax_out", values=pyrtl_matrix.make_argmax(a=a_matrix)
+        )
 
         sim = pyrtl.Simulation()
         sim.step()

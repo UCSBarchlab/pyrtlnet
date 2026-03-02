@@ -281,13 +281,11 @@ class PyRTLInference:
         self.layer_outputs = [layer0, layer1]
 
         # Compute argmax for the last layer's output.
-        BatchArgmaxValues = pyrtl.wire_matrix(
-            component_schema=4, size = self.batch_size
-        )
+        BatchArgmaxValues = pyrtl.wire_matrix(component_schema=4, size=self.batch_size)
 
         argmax_values = pyrtl_matrix.make_argmax(a=layer1)
 
-        BatchArgmaxValues(name = "argmax_out", values = argmax_values)
+        BatchArgmaxValues(name="argmax_out", values=argmax_values)
 
         # Make a PyRTL Output for the second layer output's `valid` signal. When this
         # signal goes high, inference is complete.

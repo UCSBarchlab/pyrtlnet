@@ -685,8 +685,7 @@ def make_elementwise_add(
     :returns: :class:`.WireMatrix2D` containing a + b.
 
     """
-    assert (a.shape[0] == b.shape[0]) and \
-    (a.shape[1] == b.shape[1] or b.shape[1] == 1)
+    assert (a.shape[0] == b.shape[0]) and (a.shape[1] == b.shape[1] or b.shape[1] == 1)
 
     num_rows, num_columns = a.shape
 
@@ -698,9 +697,9 @@ def make_elementwise_add(
             b_value = b[row]
             if b.shape[1] != 1:
                 b_value = b[row][column]
-            sums[row][column] = pyrtl.signed_add(
-                a[row][column], b_value
-                ).truncate(output_bitwidth)
+            sums[row][column] = pyrtl.signed_add(a[row][column], b_value).truncate(
+                output_bitwidth
+            )
 
     # Combinational adder is always ready for input.
     a.ready <<= True
@@ -997,10 +996,8 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.wire_matrix:
         for val_index in range(2, num_rows):
             img_argmax = argmax2(img_argmax, enumerated_values[val_index][col])
         argmax_values.append(img_argmax)
-    
-    BatchArgmaxValues = pyrtl.wire_matrix(
-        component_schema=4, size = num_columns
-    )
+
+    BatchArgmaxValues = pyrtl.wire_matrix(component_schema=4, size=num_columns)
 
     return BatchArgmaxValues(values=[a.row for a in argmax_values])
 
