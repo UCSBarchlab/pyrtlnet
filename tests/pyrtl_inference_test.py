@@ -100,7 +100,7 @@ class TestPyRTLInference(unittest.TestCase):
             batch_size=10,
         )
 
-        test_batch = [self.test_images[i] for i in range(10)]
+        test_batch = self.test_images[10:20]
 
         numpy_layer0_output, numpy_layer1_output, numpy_actual = (
             self.numpy_inference.run(test_batch=test_batch)

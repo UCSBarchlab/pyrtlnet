@@ -175,8 +175,7 @@ class PyRTLInference:
     def _make_input_memblock(self) -> None:
         """Build the MemBlock that will hold the input batch data."""
         weight_shape = self.layer[0].weight.shape
-        batch_size = self.batch_size
-        flat_batch_shape = (weight_shape[1], batch_size)
+        flat_batch_shape = (weight_shape[1], self.batch_size)
 
         done_cycle = (
             pyrtl_matrix.num_systolic_array_cycles(weight_shape, flat_batch_shape) - 1
@@ -282,7 +281,13 @@ class PyRTLInference:
         self.layer_outputs = [layer0, layer1]
 
         # Compute argmax for the last layer's output.
-        argmax = pyrtl_matrix.make_argmax(a=layer1)
+        BatchArgmaxValues = pyrtl.wire_matrix(
+            component_schema=4, size = self.batch_size
+        )
+
+        argmax_values = pyrtl_matrix.make_argmax(a=layer1)
+
+        BatchArgmaxValues(name = "argmax_out", values = argmax_values)
 
         # Make a PyRTL Output for the second layer output's `valid` signal. When this
         # signal goes high, inference is complete.
@@ -292,9 +297,10 @@ class PyRTLInference:
         if self.axi:
             # Make an AXI-Lite subordinate. Register map:
             #
-            #      Register 0 - batch_size: argmaxes
-            #  Registers batch_size - 19 * batch_size: layer 0 output
-            # Registers 19 * batch_size - 29 * batch_size : layer 1 output
+            # argmax registers: [0 : batch_size)
+            # layer 0 output registers: [batch_size : 19 * batch_size)
+            # layer 1 output registers: [19 * batch_size : 29 * batch_size)
+            # Layer outputs are in row-major order.
             num_registers = (
                 self.batch_size
                 + self.layer_outputs[0].shape[0] * self.batch_size
@@ -304,7 +310,7 @@ class PyRTLInference:
                 num_registers=num_registers, num_writable_registers=0
             )
             for i in range(self.batch_size):
-                registers[i].next <<= argmax[i].row
+                registers[i].next <<= argmax_values[i]
             for row in range(self.layer_outputs[0].shape[0]):
                 for col in range(self.batch_size):
                     registers[
@@ -322,17 +328,16 @@ class PyRTLInference:
     def _memblock_data(self, test_batch: np.ndarray) -> list[int]:
         """Convert ``test_batch`` to loadable data for :attr:`flat_batch_memblock`.
 
-        Each ``test_batch`` is batch_sizex12×12, with 8-bit pixels (see
+        Each ``test_batch`` is batch_size×12×12, with 8-bit pixels (see
         :func:`.load_mnist_images`). The pixel data of each image
         will be linearized into a 144-entry list, and that list will be
         padded out to the next largest power of 2, which is
-        256. So the returned list will have 256 * batch_size entries,
+        256. So the returned list will have batch_size * 256 entries,
         and each entry will fit in 8 bits.
 
         :param test_batch: A resized MNIST image batch to convert to MemBlock data.
         :returns: Image data that can be loaded into :attr:`flat_batch_memblock`.
         """
-
         flat_batch = preprocess_image(test_batch, self.input_scale, self.input_zero)
 
         # Convert the flattened batch data to a dictionary for use in Simulation's
@@ -374,15 +379,15 @@ class PyRTLInference:
                   ``layer0_output`` is the first layer's raw tensor output, with shape
                   ``(batch_size, 18)``.
                   ``layer1_output`` is the second layer's raw tensor output,
-                  with shape ``(batch_size, 10)``. ``argmax`` is a list of each
-                  image in the batch's predicted digit, with length ``batch_size``.
+                  with shape ``(batch_size, 10)``. ``argmax`` is a list of predicted
+                  digits for each image in the batch, with length ``batch_size``.
         """
         memblock_data = self._memblock_data(test_batch)
 
-        # TODO: The `pyrtlnet` hardware can currently only process one image, so we have
-        # to make a new `FastSimulation` for each image. Update the
+        # TODO: The `pyrtlnet` hardware can currently only process one batch, so we have
+        # to make a new `FastSimulation` for each batch. Update the
         # `axi_stream_subordinate` and `systolic_array` state machines so they reset
-        # after processing one image.
+        # after processing one batch.
         if self.axi:
             sim = pyrtl.FastSimulation()
 
@@ -426,21 +431,25 @@ class PyRTLInference:
             sim.step(provided_inputs)
             done = sim.inspect("valid")
 
-        # Retrieve each layer's outputs and the predicted digit.
+        # Retrieve each layer's outputs and the predicted digit(s).
         if self.axi:
 
             def retrieve_layer_outputs(start: int, layer_dim: int) -> list[int]:
                 """Retrieve a layer's outputs via AXI-Lite.
 
+                :param start: AXI register to start reading from.
+                :param layer_dim: Number of weights from this neural network layer.
+                    Used to determine which register to stop reading at.
+
                 Each layer output is a signed 8-bit value, stored in a 32-bit AXI
                 register.
                 """
                 outputs = []
-                for batch_index in range(self.batch_size):
-                    img_vals = []
-                    for row in range(layer_dim):
+                for row in range(layer_dim):
+                    batch_vals = []
+                    for batch_index in range(self.batch_size):
                         addr = start + (row * self.batch_size + batch_index) * 4
-                        img_vals.append(
+                        batch_vals.append(
                             pyrtl.val_to_signed_integer(
                                 pyrtl_axi.simulate_axi_lite_read(
                                     sim, provided_inputs, address=addr
@@ -448,13 +457,14 @@ class PyRTLInference:
                                 bitwidth=8,
                             )
                         )
-                    outputs.append(img_vals)
-                return np.array(outputs, dtype=np.int8).transpose()
+                    outputs.append(batch_vals)
+                return np.array(outputs, dtype=np.int8)
 
-            # Registers batch_size - 18 * batch_size hold the layer0's outputs,
-            # and registers 19 * batch_size - 28 * batch_size hold
-            # layer1's outputs. Each register is 32-bits wide, and AXI addresses are
-            # byte addresses.
+            # argmax registers: [0 : batch_size)
+            # layer 0 output registers: [batch_size : 19 * batch_size)
+            # layer 1 output registers: [19 * batch_size : 29 * batch_size)
+            # Each register is 32-bits wide, and AXI addresses are byte addresses.
+            # Layer outputs are in row-major order.
 
             layer0_output = retrieve_layer_outputs(
                 start=self.batch_size * 4, layer_dim=18
@@ -479,7 +489,7 @@ class PyRTLInference:
             layer1_output = self.layer_outputs[1].inspect(sim=sim).astype(np.int8)
             argmax = []
             for i in range(self.batch_size):
-                argmax.append(sim.inspect(f"argmax_out[{i}].row"))
+                argmax.append(sim.inspect(f"argmax_out[{i}]"))
 
         if verilog:
             suffix = ""
