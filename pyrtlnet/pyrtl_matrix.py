@@ -677,7 +677,7 @@ def make_elementwise_add(
     """Combinationally add matrices ``a`` and ``b`` elementwise.
 
     This implementation is fully combinational (no registers).
-    ``b`` is allowed to be a column vector if not the same shape as ``a``.
+    ``b`` is allowed to be a column vector of the same amount of rows as ``a``.
 
     :param name: The returned :class:`.WireMatrix2D` will be named ``{name}.output``.
     :param a:
@@ -942,12 +942,14 @@ def make_elementwise_normalize(
 def make_argmax(a: WireMatrix2D) -> pyrtl.wire_matrix:
     """Combinationally argmax a matrix ``a`` by column, returning
     the index of the row containing the largest value in each column.
-    For example, given a matrix:
+    For example, given a matrix::
+
         [[1,5],
          [3,4]]
-    an indexable ''wire_matrix'' is returned, where each 4-bit slice
+
+    an indexable ``wire_matrix`` is returned, where each 4-bit slice
     represents an argmax value across each column, in this
-    example the argmax values are 1 and 0, since
+    example the argmax values are [1,0], since
     in the first column, the 1st value 3 is the largest
     across its column. In the second column, the 0th value 5
     is the largest value across its column.
@@ -955,7 +957,7 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.wire_matrix:
     This implementation is fully combinational (no registers).
 
     :param a: Input matrix.
-    :return: A ``WireVector`` containing the concatenation of the row indexes
+    :return: A ``wire_matrix`` containing the concatenation of the row indexes
         of the largest values in each column of ``a`` in unsigned binary.
 
     """

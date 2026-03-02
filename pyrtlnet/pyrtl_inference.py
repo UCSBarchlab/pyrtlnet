@@ -295,6 +295,7 @@ class PyRTLInference:
         if self.axi:
             # Make an AXI-Lite subordinate. Register map:
             #
+            # In mathematical interval notation:
             # argmax registers: [0 : batch_size)
             # layer 0 output registers: [batch_size : 19 * batch_size)
             # layer 1 output registers: [19 * batch_size : 29 * batch_size)
@@ -458,6 +459,7 @@ class PyRTLInference:
                     outputs.append(batch_vals)
                 return np.array(outputs, dtype=np.int8)
 
+            # In mathematical interval notation:
             # argmax registers: [0 : batch_size)
             # layer 0 output registers: [batch_size : 19 * batch_size)
             # layer 1 output registers: [19 * batch_size : 29 * batch_size)
