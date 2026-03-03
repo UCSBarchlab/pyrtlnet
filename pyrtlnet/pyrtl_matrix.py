@@ -73,6 +73,7 @@ def make_input_memblock_data(
         memblock_data[cycle] = wire_matrix_2d.make_concatenated_value(
             values=np.array([data[cycle]]), bitwidth=input_bitwidth
         )
+
     return memblock_data
 
 
@@ -673,9 +674,10 @@ def make_elementwise_add(
     b: WireMatrix2D,
     output_bitwidth: int,
 ) -> WireMatrix2D:
-    """Combinationally add matricies ``a`` and ``b`` elementwise.
+    """Combinationally add matrices ``a`` and ``b`` elementwise.
 
     This implementation is fully combinational (no registers).
+    ``b`` is allowed to be a column vector of the same amount of rows as ``a``.
 
     :param name: The returned :class:`.WireMatrix2D` will be named ``{name}.output``.
     :param a:
@@ -683,7 +685,8 @@ def make_elementwise_add(
     :returns: :class:`.WireMatrix2D` containing a + b.
 
     """
-    assert a.shape == b.shape
+    assert (a.shape[0] == b.shape[0]) and (a.shape[1] == b.shape[1] or b.shape[1] == 1)
+
     num_rows, num_columns = a.shape
 
     # Collect a 2D array of sums.
@@ -691,9 +694,12 @@ def make_elementwise_add(
 
     for row in range(num_rows):
         for column in range(num_columns):
-            sums[row][column] = pyrtl.signed_add(
-                a[row][column], b[row][column]
-            ).truncate(output_bitwidth)
+            b_value = b[row]
+            if b.shape[1] != 1:
+                b_value = b[row][column]
+            sums[row][column] = pyrtl.signed_add(a[row][column], b_value).truncate(
+                output_bitwidth
+            )
 
     # Combinational adder is always ready for input.
     a.ready <<= True
@@ -933,23 +939,33 @@ def make_elementwise_normalize(
     )
 
 
-def make_argmax(a: WireMatrix2D) -> pyrtl.WireVector:
-    """Combinationally argmax a signed single-column matrix ``a``.
+def make_argmax(a: WireMatrix2D) -> pyrtl.wire_matrix:
+    """Combinationally argmax a matrix ``a`` by column, returning
+    the index of the row containing the largest value in each column.
+    For example, given a matrix::
+
+        [[1,5],
+         [3,4]]
+
+    an indexable ``wire_matrix`` is returned, where each 4-bit slice
+    represents an argmax value across each column, in this
+    example the argmax values are [1,0], since
+    in the first column, the 1st value 3 is the largest
+    across its column. In the second column, the 0th value 5
+    is the largest value across its column.
 
     This implementation is fully combinational (no registers).
 
-    :param a: Single-column input matrix.
-    :return: A ``WireVector`` containing the row number of the largest value in ``a``,
-        in unsigned binary.
+    :param a: Input matrix.
+    :return: A ``wire_matrix`` containing the concatenation of the row indexes
+        of the largest values in each column of ``a`` in unsigned binary.
 
     """
     num_rows, num_columns = a.shape
 
-    assert num_columns == 1
     assert num_rows > 0
 
     row_bitwidth = pyrtl.infer_val_and_bitwidth(num_rows).bitwidth
-
     # Combinational argmax is always ready for input.
     a.ready <<= True
 
@@ -964,7 +980,8 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.WireVector:
         value: a.bitwidth
 
     enumerated_values = [
-        EnumeratedValue(row=row, value=a[row][0]) for row in range(num_rows)
+        [EnumeratedValue(row=row, value=a[row][col]) for col in range(num_columns)]
+        for row in range(num_rows)
     ]
 
     def argmax2(a: EnumeratedValue, b: EnumeratedValue) -> EnumeratedValue:
@@ -974,11 +991,17 @@ def make_argmax(a: WireMatrix2D) -> pyrtl.WireVector:
         )
 
     # Compose two-input argmaxes into a wider argmax that accepts ``num_rows`` inputs.
-    argmax = argmax2(enumerated_values[0], enumerated_values[1])
-    for row in range(2, num_rows):
-        argmax = argmax2(argmax, enumerated_values[row])
 
-    return argmax.row
+    argmax_values = []
+    for col in range(num_columns):
+        img_argmax = argmax2(enumerated_values[0][col], enumerated_values[1][col])
+        for val_index in range(2, num_rows):
+            img_argmax = argmax2(img_argmax, enumerated_values[val_index][col])
+        argmax_values.append(img_argmax)
+
+    BatchArgmaxValues = pyrtl.wire_matrix(component_schema=4, size=num_columns)
+
+    return BatchArgmaxValues(values=[a.row for a in argmax_values])
 
 
 def minimum_bitwidth(a: np.ndarray) -> int:
