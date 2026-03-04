@@ -4,8 +4,11 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import inspect
 import os
+import subprocess
 import sys
+import typing
 
 # -- Path setup --------------------------------------------------------------
 
@@ -17,7 +20,7 @@ sys.path.insert(0, os.path.abspath(".."))
 
 # -- Project information -----------------------------------------------------
 project = "pyrtlnet"
-copyright = "2025, Jeremy Lau"
+copyright = "2026, Jeremy Lau"
 author = "Jeremy Lau"
 
 # -- General configuration ---------------------------------------------------
@@ -28,7 +31,7 @@ master_doc = "index"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
-    "sphinx.ext.viewcode",
+    "sphinx.ext.linkcode",
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
 ]
@@ -61,6 +64,7 @@ typehints_document_rtype_none = False
 
 # The theme to use for HTML and HTML Help pages. See the documentation for a list of
 # builtin themes.
+html_baseurl = "https://pyrtlnet.readthedocs.io/en/latest"
 html_theme = "furo"
 html_title = "pyrtlnet Reference Documentation"
 
@@ -83,3 +87,127 @@ html_theme_options = {
         },
     ],
 }
+
+# -- linkcode_resolve --------------------------------------------------------
+
+# linkcode generates GitHub "[source]" links for documentation. linkcode_resolve returns
+# a GitHub link for a documented item (class, method, object, etc).
+#
+# Based on https://gist.github.com/rainbowphysics/505e35a7a1e9545d5a6cde22f6ca9558
+
+# Link to your GitHub repo here:
+REPO_LINK = "https://github.com/UCSBarchlab/pyrtlnet"
+# Specify main branch
+MAIN_BRANCH = "main"
+
+
+def run_git_command(cmd: str) -> str | None:
+    try:
+        # Run command and get the output
+        output: str = subprocess.check_output(cmd.split()).strip().decode("utf-8")
+
+        # In case command failed, return None
+        if output.startswith("fatal:"):
+            return None
+
+        # Return the raw command output
+        return output
+    except subprocess.CalledProcessError:
+        return None
+
+
+# lock to current commit number
+head_commit = run_git_command("git log -n1 --pretty=%H")
+if head_commit is not None:
+    linkcode_revision = head_commit
+
+    # if we are on main's HEAD, use main as reference instead
+    main_head_commit = run_git_command(
+        f"git log --first-parent {MAIN_BRANCH} -n1 --pretty=%H"
+    )
+    if head_commit == main_head_commit:
+        linkcode_revision = MAIN_BRANCH
+
+    # if we have a tag, use tag as reference
+    tag = run_git_command(f"git describe --exact-match --tags {linkcode_revision}")
+    if tag is not None:
+        linkcode_revision = tag
+
+else:
+    # If for some reason git command didn't work then default to main branch
+    linkcode_revision = MAIN_BRANCH
+
+
+def get_line_range(obj: typing.Any) -> (int, int):  # noqa: ANN401
+    source, lineno = inspect.getsourcelines(obj)
+    return lineno, lineno + len(source) - 1
+
+
+def get_link_info(
+    modname: str, fullname: str
+) -> tuple[str, tuple[int, int]] | tuple[str, None]:
+    # Fallback in case git repo is missing or malformed, or another error occurs
+    fallback = modname.replace(".", "/")
+
+    # Get module based on module name
+    module = sys.modules.get(modname)
+    if module is None:
+        return fallback, None
+
+    repo_main_folder = run_git_command("git rev-parse --show-toplevel")
+    if repo_main_folder is None:
+        return fallback, None
+
+    parent_obj = None
+    obj = module
+    for part in fullname.split("."):
+        next_obj = getattr(obj, part, None)
+        if next_obj is None:
+            parent_obj = obj
+            obj = part
+        else:
+            parent_obj = obj
+            obj = next_obj
+
+    if isinstance(obj, property):
+        obj = obj.fget
+
+    try:
+        src_file = inspect.getsourcefile(obj)
+    except TypeError:
+        src_file = inspect.getsourcefile(parent_obj)
+
+    filepath = os.path.relpath(src_file, repo_main_folder)
+
+    try:
+        source, lineno = inspect.getsourcelines(obj)
+        linestart, linestop = lineno, lineno + len(source) - 1
+    except OSError:
+        return filepath, None
+    except TypeError:
+        source, lineno = inspect.getsourcelines(parent_obj)
+        found_in_source = False
+        for idx, line in enumerate(source):
+            if line.lstrip().startswith(fullname.rsplit(".", maxsplit=1)[-1]):
+                linestart = lineno + idx
+                linestop = linestart
+                found_in_source = True
+                break
+
+        if not found_in_source:
+            return filepath, None
+
+    return filepath, (linestart, linestop)
+
+
+def linkcode_resolve(domain: str, info: str) -> str:
+    if domain != "py" or not info["module"]:
+        return None
+
+    filepath, linenos = get_link_info(info["module"], info["fullname"])
+    result = f"{REPO_LINK}/blob/{linkcode_revision}/{filepath}"
+    if linenos is not None:
+        linestart, linestop = linenos
+        result += f"#L{linestart}-L{linestop}"
+
+    return result
