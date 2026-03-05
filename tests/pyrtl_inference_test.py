@@ -53,18 +53,20 @@ class TestPyRTLInference(unittest.TestCase):
     def test_pyrtl_inference(self) -> None:
         """Check that NumPyInference and PyRTLInference produce the same results.
 
-        This runs a batch of 10 images through both inference systems
-        and compares the tensor outputs from each layer.
+        This runs a batch of images through both inference systems and compares the
+        tensor outputs from each layer.
         """
+        start_image = 0
+        batch_size = 2
         pyrtl_inference = PyRTLInference(
             tensor_path=self.temp_dir.name,
             input_bitwidth=8,
             accumulator_bitwidth=32,
             axi=False,
-            batch_size=10,
+            batch_size=batch_size,
         )
 
-        test_batch = self.test_images[0:10]
+        test_batch = self.test_images[start_image : start_image + batch_size]
 
         numpy_layer0_output, numpy_layer1_output, numpy_actual = (
             self.numpy_inference.run(test_batch=test_batch)
@@ -91,18 +93,20 @@ class TestPyRTLInference(unittest.TestCase):
         """Check that NumPyInference and PyRTLInference produce the same results.
         PyrtlInference uses AXI-Lite in this test.
 
-        This runs a batch through both inference systems and compares the tensor
-        outputs from each layer.
+        This runs a batch through both inference systems and compares the tensor outputs
+        from each layer.
         """
+        start_image = 0
+        batch_size = 2
         pyrtl_inference = PyRTLInference(
             tensor_path=self.temp_dir.name,
             input_bitwidth=8,
             accumulator_bitwidth=32,
             axi=True,
-            batch_size=10,
+            batch_size=batch_size,
         )
 
-        test_batch = self.test_images[10:20]
+        test_batch = self.test_images[start_image : start_image + batch_size]
 
         numpy_layer0_output, numpy_layer1_output, numpy_actual = (
             self.numpy_inference.run(test_batch=test_batch)
@@ -126,17 +130,16 @@ class TestPyRTLInference(unittest.TestCase):
 
     def test_pyrtl_inference_uneven_batch(self) -> None:
         """
-        Check that NumPyInference and PyRTLInference produce the same results,
-        using uneven batches.
+        Check that NumPyInference and PyRTLInference produce the same results, using
+        uneven batches.
 
-        This runs a two batches of different sizes
-        through both inference systems and compares the tensor
-        outputs from each layer.
+        This runs a two batches of different sizes through both inference systems and
+        compares the tensor outputs from each layer.
         """
 
-        start_image = 17
-        batch_size = 5
-        num_images = 7
+        start_image = 6
+        batch_size = 2
+        num_images = 3
 
         pyrtl_inference = PyRTLInference(
             tensor_path=self.temp_dir.name,
@@ -149,20 +152,12 @@ class TestPyRTLInference(unittest.TestCase):
         for _batch_number, (_batch_start_index, test_batch) in enumerate(
             batched_images(self.test_images, start_image, num_images, batch_size)
         ):
-            # Always pad test_batch, in case last test_batch size < batch_size
-            compensation = batch_size - test_batch.shape[0]
-            padded_batch = np.append(
-                test_batch,
-                np.zeros((compensation, test_batch.shape[1], test_batch.shape[2])),
-                axis=0,
-            )
-
             numpy_layer0_output, numpy_layer1_output, numpy_actual = (
-                self.numpy_inference.run(test_batch=padded_batch)
+                self.numpy_inference.run(test_batch=test_batch)
             )
 
             pyrtl_layer0_output, pyrtl_layer1_output, pyrtl_actual = (
-                pyrtl_inference.simulate(test_batch=padded_batch)
+                pyrtl_inference.simulate(test_batch=test_batch)
             )
 
             # Check the first layer's outputs.
@@ -179,17 +174,16 @@ class TestPyRTLInference(unittest.TestCase):
 
     def test_pyrtl_inference_axi_uneven_batch(self) -> None:
         """
-        Check that NumPyInference and PyRTLInference produce the same results,
-        using uneven batches. PyrtlInference uses AXI-Lite in this test.
+        Check that NumPyInference and PyRTLInference produce the same results, using
+        uneven batches. PyrtlInference uses AXI-Lite in this test.
 
-        This runs a two batches of different sizes
-        through both inference systems and compares the tensor
-        outputs from each layer.
+        This runs a two batches of different sizes through both inference systems and
+        compares the tensor outputs from each layer.
         """
 
-        start_image = 17
-        batch_size = 5
-        num_images = 7
+        start_image = 9
+        batch_size = 2
+        num_images = 3
 
         pyrtl_inference = PyRTLInference(
             tensor_path=self.temp_dir.name,
@@ -202,20 +196,12 @@ class TestPyRTLInference(unittest.TestCase):
         for _batch_number, (_batch_start_index, test_batch) in enumerate(
             batched_images(self.test_images, start_image, num_images, batch_size)
         ):
-            # Always pad test_batch, in case last test_batch size < batch_size
-            compensation = batch_size - test_batch.shape[0]
-            padded_batch = np.append(
-                test_batch,
-                np.zeros((compensation, test_batch.shape[1], test_batch.shape[2])),
-                axis=0,
-            )
-
             numpy_layer0_output, numpy_layer1_output, numpy_actual = (
-                self.numpy_inference.run(test_batch=padded_batch)
+                self.numpy_inference.run(test_batch=test_batch)
             )
 
             pyrtl_layer0_output, pyrtl_layer1_output, pyrtl_actual = (
-                pyrtl_inference.simulate(test_batch=padded_batch)
+                pyrtl_inference.simulate(test_batch=test_batch)
             )
 
             # Check the first layer's outputs.

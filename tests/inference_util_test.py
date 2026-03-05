@@ -69,7 +69,10 @@ class TestInferenceUtil(unittest.TestCase):
 
         batch_start_index, test_batch = next(iterator, (None, None))
         self.assertEqual(batch_start_index, 2)
-        self.assertEqual(test_batch.shape, (1, 12, 12))
+        self.assertEqual(test_batch.shape, (2, 12, 12))
+        np.testing.assert_array_equal(
+            test_batch[1], np.zeros(shape=(12, 12)), strict=True
+        )
 
         batch_start_index, test_batch = next(iterator, (None, None))
         self.assertIsNone(batch_start_index)
@@ -111,7 +114,10 @@ class TestInferenceUtil(unittest.TestCase):
 
         batch_start_index, test_batch = next(iterator, (None, None))
         self.assertEqual(batch_start_index, third_from_last_image_index + 2)
-        self.assertEqual(test_batch.shape, (1, 12, 12))
+        self.assertEqual(test_batch.shape, (2, 12, 12))
+        np.testing.assert_array_equal(
+            test_batch[1], np.zeros(shape=(12, 12)), strict=True
+        )
 
         batch_start_index, test_batch = next(iterator, (None, None))
         self.assertIsNone(batch_start_index)

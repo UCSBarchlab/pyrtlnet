@@ -92,8 +92,8 @@ def batched_images(
         the end of ``images`` and does not wrap around to the beginning, so fewer than
         ``num_images`` images will be yielded if there aren't enough ``images``.
     :param batch_size: Maximum size of each batch. If ``num_images`` is not evenly
-        divisible by ``batch_size``, the last batch will be a partial batch, with fewer
-        than ``batch_size`` images. ``batch_size`` must be greater than zero.
+        divisible by ``batch_size``, the last batch will be padded out to ``batch_size``
+        with null images. ``batch_size`` must be greater than zero.
 
     :raises ValueError: If ``start_image`` exceeds the number of available ``images``,
         or if ``batch_size`` is less than or equal to zero.
@@ -101,9 +101,8 @@ def batched_images(
     :return: Yields ``batch_start_index, test_batch``, where ``batch_start_index`` is
              the index of the first image in the yielded batch, and ``test_batch`` is a
              batch of image data, with shape ``(batch_size, 12, 12)``. The last batch
-             may be a partial batch with fewer than ``batch_size`` images, see the
-             description of ``batch_size`` above. ``images[batch_start_index]`` is
-             equivalent to ``test_batch[0]``.
+             may be padded with null images, see the description of ``batch_size``
+             above. ``images[batch_start_index]`` is equivalent to ``test_batch[0]``.
     """
     if start_image >= len(images):
         msg = f"start_image must be less than the number of test images ({len(images)})"
@@ -116,8 +115,17 @@ def batched_images(
     end_image = min(start_image + num_images, len(images))
     for batch_start_index in range(start_image, end_image, batch_size):
         batch_end_index = min(batch_start_index + batch_size, start_image + num_images)
+        image_batch = images[batch_start_index:batch_end_index]
 
-        yield batch_start_index, images[batch_start_index:batch_end_index]
+        # Pad image_batch to batch_size, if necessary.
+        compensation = batch_size - image_batch.shape[0]
+        image_batch = np.append(
+            image_batch,
+            np.zeros(shape=(compensation, image_batch.shape[1], image_batch.shape[2])),
+            axis=0,
+        )
+
+        yield batch_start_index, image_batch
 
 
 def preprocess_image(

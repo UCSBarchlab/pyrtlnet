@@ -64,9 +64,7 @@ class TestLiteRTInference(unittest.TestCase):
         self.assertGreater(accuracy, 0.75)
 
     def test_litert_inference_batch(self) -> None:
-        """Run the LiteRT interpreter on a batch of images and
-        check its accuracy.
-        """
+        """Run the LiteRT interpreter on a batch of images and check its accuracy."""
         start_image = 10
         batch_size = 10
         correct = 0
@@ -85,8 +83,8 @@ class TestLiteRTInference(unittest.TestCase):
         self.assertGreater(accuracy, 0.75)
 
     def test_litert_inference_uneven_batch(self) -> None:
-        """Run the LiteRT Interpreter on two batches of unequal size
-        and check its accuracy.
+        """Run the LiteRT Interpreter on two batches of unequal size and check its
+        accuracy.
         """
         start_image = 20
         batch_size = 17
