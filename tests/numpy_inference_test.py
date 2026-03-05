@@ -112,8 +112,8 @@ class TestNumPyInference(unittest.TestCase):
     def test_numpy_inference_uneven_batch(self) -> None:
         """Check that LiteRT Interpreter and NumPyInference produce the same results.
 
-        This runs uneven batches of 10 images then 7 images
-        through both inference systems and compares the tensor outputs from each layer.
+        This runs uneven batches of 10 images then 7 images through both inference
+        systems and compares the tensor outputs from each layer.
         """
 
         start_image = 20

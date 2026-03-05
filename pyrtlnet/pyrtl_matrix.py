@@ -676,14 +676,14 @@ def make_elementwise_add(
 ) -> WireMatrix2D:
     """Combinationally add matrices ``a`` and ``b`` elementwise.
 
-    This implementation is fully combinational (no registers).
-    ``b`` is allowed to be a column vector of the same amount of rows as ``a``.
+    This implementation is fully combinational (no registers). ``b`` is allowed to be a
+    column vector of the same amount of rows as ``a``.
 
     :param name: The returned :class:`.WireMatrix2D` will be named ``{name}.output``.
     :param a:
     :param b:
-    :returns: :class:`.WireMatrix2D` containing a + b.
 
+    :returns: :class:`.WireMatrix2D` containing a + b.
     """
     assert (a.shape[0] == b.shape[0]) and (a.shape[1] == b.shape[1] or b.shape[1] == 1)
 
@@ -940,26 +940,26 @@ def make_elementwise_normalize(
 
 
 def make_argmax(a: WireMatrix2D) -> pyrtl.wire_matrix:
-    """Combinationally argmax a matrix ``a`` by column, returning
-    the index of the row containing the largest value in each column.
-    For example, given a matrix::
+    """Combinationally argmax a matrix ``a`` by column, returning the index of the row
+    containing the largest value in each column.
 
-        [[1,5],
-         [3,4]]
+    For example, given the matrix::
 
-    an indexable ``wire_matrix`` is returned, where each 4-bit slice
-    represents an argmax value across each column, in this
-    example the argmax values are [1,0], since
-    in the first column, the 1st value 3 is the largest
-    across its column. In the second column, the 0th value 5
-    is the largest value across its column.
+        ┌     ┐
+        │ 1 5 │
+        │ 3 4 │
+        └     ┘
+
+    ``make_argmax`` returns a :func:`~pyrtl.wire_matrix` containing the values ``[1,
+    0]``, because the ``1``-st value (3) is the largest in the first column, and the
+    ``0``-th value (5) is the largest value in the second column.
 
     This implementation is fully combinational (no registers).
 
     :param a: Input matrix.
-    :return: A ``wire_matrix`` containing the concatenation of the row indexes
-        of the largest values in each column of ``a`` in unsigned binary.
 
+    :return: A :func:`~pyrtl.wire_matrix` containing the concatenation of the row
+             indexes of the largest values in each column of ``a`` in unsigned binary.
     """
     num_rows, num_columns = a.shape
 
