@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 
 from pyrtlnet.constants import quantized_model_prefix
+from pyrtlnet.inference_util import batched_images
 from pyrtlnet.litert_inference import load_tflite_model, run_tflite_model
 from pyrtlnet.mnist_util import load_mnist_images
 from pyrtlnet.tensorflow_training import quantize_model, train_unquantized_model
@@ -63,6 +64,9 @@ class TestLiteRTInference(unittest.TestCase):
         self.assertGreater(accuracy, 0.75)
 
     def test_litert_inference_batch(self) -> None:
+        """Run the LiteRT interpreter on a batch of images and
+        check its accuracy.
+        """
         start_image = 10
         batch_size = 10
         correct = 0
@@ -73,11 +77,39 @@ class TestLiteRTInference(unittest.TestCase):
             _litert_layer1_batch_output,
             litert_actual_batch,
         ) = run_tflite_model(interpreter=self.interpreter, test_batch=test_batch)
+
         for batch_index in range(batch_size):
             if litert_actual_batch[batch_index] == self.test_labels[10 + batch_index]:
                 correct += 1
         accuracy = correct / batch_size
         self.assertGreater(accuracy, 0.75)
+
+    def test_litert_inference_uneven_batch(self) -> None:
+        """Run the LiteRT Interpreter on two batches of unequal size
+        and check its accuracy.
+        """
+        start_image = 20
+        batch_size = 17
+        correct = 0
+        num_images = 30
+
+        for _batch_number, (batch_start_index, test_batch) in enumerate(
+            batched_images(self.test_images, start_image, num_images, batch_size)
+        ):
+            (
+                _litert_layer0_batch_output,
+                _litert_layer1_batch_output,
+                litert_actual_batch,
+            ) = run_tflite_model(interpreter=self.interpreter, test_batch=test_batch)
+
+            for batch_index in range(len(litert_actual_batch)):
+                if (
+                    litert_actual_batch[batch_index]
+                    == self.test_labels[batch_start_index + batch_index]
+                ):
+                    correct += 1
+            accuracy = correct / batch_size
+            self.assertGreater(accuracy, 0.75)
 
 
 if __name__ == "__main__":
