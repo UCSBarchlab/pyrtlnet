@@ -315,6 +315,34 @@ class TestPyrtlMatrix(unittest.TestCase):
 
         np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
+        # Test bias shape addition.
+
+        a = np.array([[1, -2, 3], [-4, 5, -6]])
+        b = np.array([[10], [13]])
+
+        input_bitwidth = max([pyrtl_matrix.minimum_bitwidth(m) for m in [a, b]])
+        output_bitwidth = input_bitwidth + 1
+        a_matrix = self.make_wire_matrix_2d(
+            name="a_bias", array=a, bitwidth=input_bitwidth
+        )
+        b_matrix = self.make_wire_matrix_2d(
+            name="b_bias", array=b, bitwidth=input_bitwidth
+        )
+
+        ab_matrix_bias = pyrtl_matrix.make_elementwise_add(
+            name="add_bias", a=a_matrix, b=b_matrix, output_bitwidth=output_bitwidth
+        )
+        ab_matrix_bias.ready <<= True
+        ab_matrix_bias.make_outputs("ab_matrix_bias")
+
+        sim = pyrtl.Simulation()
+        sim.step()
+
+        ab_actual_bias = ab_matrix_bias.inspect(sim=sim)
+        ab_expected_bias = a + b
+
+        np.testing.assert_array_equal(ab_actual_bias, ab_expected_bias, strict=True)
+
     def test_elementwise_relu(self) -> None:
         a = np.array([[1, -2, 3], [-4, 5, -6]])
 
