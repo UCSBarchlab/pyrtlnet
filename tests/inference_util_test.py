@@ -151,7 +151,7 @@ class TestInferenceUtil(unittest.TestCase):
                 )
             )
         )
-        test_batch = np.reshape(array, newshape=test_batch_shape).astype(np.int8)
+        test_batch = np.reshape(array, shape=test_batch_shape).astype(np.int8)
 
         preprocessed_batch = inference_util.preprocess_image(
             test_batch, input_scale=2, input_zero=1

@@ -28,7 +28,7 @@ def _make_np_matrix(shape: tuple[int, int], start: int) -> np.ndarray:
     """
     num_rows, num_columns = shape
     array = np.array(list(range(start, start + num_rows * num_columns)))
-    return np.reshape(array, newshape=shape)
+    return np.reshape(array, shape=shape)
 
 
 def _render_trace(sim: pyrtl.Simulation, prefixes: list[str]) -> None:

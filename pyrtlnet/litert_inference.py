@@ -14,6 +14,7 @@ to implement quantized inference with `LiteRT`_.
 """
 
 import pathlib
+import warnings
 
 import numpy as np
 from ai_edge_litert.interpreter import Interpreter
@@ -38,7 +39,11 @@ def load_tflite_model(tensor_path: str) -> Interpreter:
 
     # Set preserve_all_tensors so we can inspect intermediate tensor values.
     # Intermediate values help when debugging other quantized inference implementations.
-    return Interpreter(model_path=tflite_file, experimental_preserve_all_tensors=True)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        return Interpreter(
+            model_path=tflite_file, experimental_preserve_all_tensors=True
+        )
 
 
 def _normalize_input(interpreter: Interpreter, input: np.ndarray) -> np.ndarray:
