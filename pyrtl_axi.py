@@ -32,10 +32,7 @@ def main() -> None:
         # Addition complete, the sum can be read from `total`.
         DONE = 3
 
-    state = pyrtl.Register(
-        name="sum_state",
-        bitwidth=pyrtl.infer_val_and_bitwidth(max(SumState)).bitwidth,
-    )
+    state = pyrtl.Register(name="sum_state", State=SumState)
 
     read_addr = pyrtl.Register(name="read_addr", bitwidth=mem.addrwidth)
     read_data = pyrtl.Register(name="read_data", bitwidth=mem.bitwidth)
@@ -141,11 +138,6 @@ def main() -> None:
             "s0_axi_read_state",
         ],
         repr_func=int,
-        repr_per_name={
-            "s0_axis_state": pyrtl.enum_name(pyrtl_axi.StreamState),
-            "sum_state": pyrtl.enum_name(SumState),
-            "s0_axi_read_state": pyrtl.enum_name(pyrtl_axi.ReadState),
-        },
     )
 
     expected_sum = sum(data)

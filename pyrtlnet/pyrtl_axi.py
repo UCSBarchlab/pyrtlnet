@@ -202,10 +202,7 @@ def make_axi_lite_subordinate(
     write_resp <<= BResp.OKAY
 
     # Make the read state machine.
-    read_state = pyrtl.Register(
-        name=f"{prefix}read_state",
-        bitwidth=pyrtl.infer_val_and_bitwidth(max(ReadState)).bitwidth,
-    )
+    read_state = pyrtl.Register(name=f"{prefix}read_state", State=ReadState)
 
     # Index of the Register to read.
     read_index = pyrtl.Register(name=f"{prefix}read_index", bitwidth=index_bitwidth)
@@ -238,10 +235,7 @@ def make_axi_lite_subordinate(
                 read_state.next |= ReadState.IDLE
 
     # Make the write state machine.
-    write_state = pyrtl.Register(
-        name=f"{prefix}write_state",
-        bitwidth=pyrtl.infer_val_and_bitwidth(max(WriteState)).bitwidth,
-    )
+    write_state = pyrtl.Register(name=f"{prefix}write_state", State=WriteState)
 
     # Index of the Register to write.
     write_index_reg = pyrtl.Register(
@@ -440,10 +434,7 @@ def make_axi_stream_subordinate(
     )
 
     # Make the state machine.
-    state = pyrtl.Register(
-        name=f"{prefix}state",
-        bitwidth=pyrtl.infer_val_and_bitwidth(max(StreamState)).bitwidth,
-    )
+    state = pyrtl.Register(name=f"{prefix}state", State=StreamState)
 
     with pyrtl.conditional_assignment:
         with reset:

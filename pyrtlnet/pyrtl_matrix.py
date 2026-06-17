@@ -592,9 +592,7 @@ def make_systolic_array(
     )
 
     # State machine.
-    state = pyrtl.Register(
-        bitwidth=pyrtl.infer_val_and_bitwidth(max(State)).bitwidth, name=f"{name}.state"
-    )
+    state = pyrtl.Register(name=f"{name}.state", State=State)
 
     done_next_cycle = counter == done_cycle
     done_next_cycle.name = f"{name}.done_next_cycle"

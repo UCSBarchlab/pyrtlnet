@@ -49,7 +49,6 @@ def _render_trace(sim: pyrtl.Simulation, prefixes: list[str]) -> None:
     sim.tracer.render_trace(
         trace_list=trace_list,
         repr_func=pyrtl.val_to_signed_integer,
-        repr_per_name={"mm0.state": pyrtl.enum_name(pyrtl_matrix.State)},
     )
 
 
