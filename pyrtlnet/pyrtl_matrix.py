@@ -13,6 +13,8 @@ so they can be composed to implement arbitrary matrix calculations. See the
 """
 
 import enum
+import itertools
+import math
 import warnings
 
 import numpy as np
@@ -102,7 +104,10 @@ class State(enum.IntEnum):
 
 
 def _make_systolic_array_wire_inputs(
-    a: WireMatrix2D, reset: pyrtl.WireVector, input_bitwidth: int
+    a: WireMatrix2D,
+    reset: pyrtl.WireVector,
+    input_bitwidth: int,
+    tick: pyrtl.WireVector,
 ) -> list[pyrtl.WireVector]:
     """Generate left inputs from a ``WireMatrix2D`` of ``WireVector``s.
 
@@ -155,7 +160,12 @@ def _make_systolic_array_wire_inputs(
             else:
                 reg_next = all_registers[row][cycle + 1]
 
-            reg.next <<= pyrtl.select(reset, reg_init, reg_next)
+            # The chain only shifts on ``tick``. When ``tick`` is low the register
+            # holds its current value so the systolic array stays on the same
+            # logical cycle for the time-multiplexed multipliers.
+            reg.next <<= pyrtl.select(
+                reset, reg_init, pyrtl.select(tick, reg_next, reg)
+            )
 
             all_registers[row][cycle] = reg
     # Return the leftmost register for each row.
@@ -163,7 +173,11 @@ def _make_systolic_array_wire_inputs(
 
 
 def _make_systolic_array_memblock_inputs(
-    shape: tuple, addr: pyrtl.Register, mem: pyrtl.MemBlock, input_bitwidth: int
+    shape: tuple,
+    addr: pyrtl.Register,
+    mem: pyrtl.MemBlock,
+    input_bitwidth: int,
+    tick: pyrtl.WireVector,
 ) -> list[pyrtl.WireVector]:
     """Generate left inputs for a ``WireMatrix2D`` with a ``MemBlock``.
 
@@ -178,12 +192,28 @@ def _make_systolic_array_memblock_inputs(
     input_row = InputRow(concatenated_type=pyrtl.Register)
     # Synchronous read: `addr` and `input_row` are both Registers.
     assert isinstance(addr, pyrtl.Register)
-    input_row.next <<= mem[addr]
+    if isinstance(tick, pyrtl.Const):
+        # ``reuse_factor == 1`` path. Keep the original direct ``mem[addr]`` →
+        # register wiring so the read is recognized as synchronous by
+        # downstream FPGA-synthesis checks.
+        input_row.next <<= mem[addr]
+    else:
+        # Time-multiplexed path. ``addr`` only advances when ``tick`` is high,
+        # so ``mem[addr]`` is naturally stable across the time-multiplexed
+        # sub-cycles. We capture ``mem[addr]`` whenever ``tick`` is high (at
+        # each logical-cycle boundary), and also during the systolic array's
+        # reset cycle so the first logical cycle sees ``mem[0]`` — mirroring
+        # how the wire-input shift registers load their initial values on
+        # reset.
+        reset_signal = addr == 0
+        input_row.next <<= pyrtl.select(reset_signal | tick, mem[addr], input_row)
     return [input_row[i] for i in range(num_rows)]
 
 
 def num_systolic_array_cycles(
-    a_shape: tuple[int, int], b_shape: tuple[int, int]
+    a_shape: tuple[int, int],
+    b_shape: tuple[int, int],
+    reuse_factor: int = 1,
 ) -> int:
     """Return the cycles needed to multiply ``a`` and ``b`` with the systolic array.
 
@@ -193,15 +223,24 @@ def num_systolic_array_cycles(
 
     :param a_shape: Shape of matrix ``a``.
     :param b_shape: Shape of matrix ``b``.
+    :param reuse_factor: Multiplier reuse factor used in :func:`make_systolic_array`.
+        When ``reuse_factor > 1``, the systolic array's PE grid is zero-padded so its
+        row and column counts are multiples of ``reuse_factor``, and each logical
+        cycle takes ``reuse_factor ** 2`` physical cycles. The returned cycle count
+        is in physical cycles.
 
     :returns: The number of cycles needed to multiply ``a`` and ``b`` with the systolic
               array. See :func:`.make_systolic_array`.
     """
+    assert reuse_factor >= 1
     num_rows, num_inner = a_shape
     assert num_inner == b_shape[0]
     num_columns = b_shape[1]
 
-    return num_rows + num_inner + num_columns
+    padded_rows = math.ceil(num_rows / reuse_factor) * reuse_factor
+    padded_columns = math.ceil(num_columns / reuse_factor) * reuse_factor
+
+    return (padded_rows + num_inner + padded_columns) * reuse_factor**2
 
 
 def make_systolic_array(
@@ -212,6 +251,7 @@ def make_systolic_array(
     input_bitwidth: int,
     accumulator_bitwidth: int,
     initial_delay_cycles: int = 0,
+    reuse_factor: int = 1,
 ) -> WireMatrix2D:
     """Generate an output-stationary systolic array, computing ``a ⋅ (b - b_zero)``.
 
@@ -229,6 +269,15 @@ def make_systolic_array(
     :param initial_delay_cycles: Number of cycles to wait before starting operation.
         This is a temporary hack that's currently required for correct synthesis with
         Vivado. No delay cycles should be required.
+    :param reuse_factor: Time-multiplexing factor for the multipliers. With
+        ``reuse_factor=R``, each ``R``×``R`` block of logical processing elements
+        shares a single physical multiplier, distributed in 2D blocks. The PE grid
+        is zero-padded so that ``num_rows`` and ``num_columns`` are multiples of
+        ``R``. Each logical cycle now takes ``R**2`` physical cycles so each PE in
+        a block can take its turn on the shared multiplier, so the total runtime
+        scales by ``R**2`` while the multiplier count drops from
+        ``num_rows × num_columns`` to ``ceil(num_rows/R) × ceil(num_columns/R)``.
+        Defaults to ``1`` (no reuse).
     :returns: A :class:`.WireMatrix2D` representing ``a ⋅ (b - b_zero)``.
 
     ---------------------------
@@ -430,36 +479,14 @@ def make_systolic_array(
         right: input_bitwidth
         bottom: input_bitwidth
 
-    def _make_systolic_array_pe(
-        tile_out: TileOut, row: int, column: int, reset: pyrtl.WireVector
-    ) -> pyrtl.Register:
-        """Make a multiply-and-accumulate processing element.
-
-        Multiply the tile's outputs and accumulate their sum in a register.
-
-        """
-        accumulator = pyrtl.Register(
-            bitwidth=accumulator_bitwidth, name=f"{name}.pe[{row}][{column}]"
-        )
-        accumulator.next <<= pyrtl.select(
-            reset,
-            0,
-            pyrtl.signed_add(
-                accumulator,
-                # q1 * (q2 - z2) == (q1 * q2) - (q1 * z2)
-                pyrtl.signed_mult(
-                    tile_out.right, pyrtl.signed_sub(tile_out.bottom, b_zero_const)
-                ),
-            ),
-        )
-        return accumulator
-
     def _make_systolic_array_tile(
-        tile_in: TileIn, row: int, column: int, reset: pyrtl.WireVector
-    ) -> (TileOut, pyrtl.Register):
-        """Make a tile's input register ``reg`` and processing element ``pe``.
-
-        Returns the tile's outputs.
+        tile_in: TileIn,
+        row: int,
+        column: int,
+        reset: pyrtl.WireVector,
+        tick: pyrtl.WireVector,
+    ) -> TileOut:
+        """Make a tile's input register and return the tile's outputs.
 
         We construct the systolic array by composing these tiles::
                             tile_in.top
@@ -480,18 +507,21 @@ def make_systolic_array(
 
         ``tile_out.bottom`` is ``tile_in.top``, delayed by one cycle.
 
-        This function generates the tile at ``(row, column)`` and returns the tile's
-        outputs.
+        The tile's processing element (multiplier + accumulator) is built
+        separately by the caller, since the multiplier may be shared across an
+        R×R block of PEs (see ``reuse_factor``).
         """
         input_register = TileIn(
             name=f"{name}.reg_{row}_{column}", concatenated_type=pyrtl.Register
         )
-        input_register.next <<= pyrtl.select(reset, 0, tile_in)
-        tile_out = TileOut(bottom=input_register.top, right=input_register.left)
-        accumulator = _make_systolic_array_pe(
-            tile_out=tile_out, row=row, column=column, reset=reset
+        # The input register only advances on ``tick`` so the systolic array stays
+        # on the same logical cycle while the time-multiplexed multipliers cycle
+        # through their PEs. When ``reuse_factor == 1``, ``tick`` is a constant
+        # ``1`` and this collapses to ``select(reset, 0, tile_in)``.
+        input_register.next <<= pyrtl.select(
+            reset, 0, pyrtl.select(tick, tile_in, input_register)
         )
-        return (tile_out, accumulator)
+        return TileOut(bottom=input_register.top, right=input_register.left)
 
     # If b_zero is a length-1 vector, convert it to an integer.
     if not isinstance(b_zero, int):
@@ -499,9 +529,23 @@ def make_systolic_array(
         b_zero = b_zero[0]
     b_zero_const = pyrtl.Const(b_zero, signed=True, bitwidth=input_bitwidth)
 
+    assert reuse_factor >= 1
+    R = reuse_factor
+
+    # Round the PE-grid dimensions up to multiples of ``R`` so each R×R block of
+    # PEs cleanly fits one shared multiplier. The padded positions get zero
+    # inputs and their accumulator outputs are dropped before returning.
+    orig_num_rows, num_inner = a.shape
+    assert num_inner == b.shape[0]
+    orig_num_columns = b.shape[1]
+    num_rows = math.ceil(orig_num_rows / R) * R
+    num_columns = math.ceil(orig_num_columns / R) * R
+
     # ``done_next_cycle`` is high when the matrix multiplication is one cycle away from
-    # completion. We need to know one cycle ahead to update ``state``.
-    done_cycle = num_systolic_array_cycles(a.shape, b.shape) - 1
+    # completion. We need to know one cycle ahead to update ``state``. The counter
+    # counts *logical* cycles (it only advances when the time-multiplexed phase
+    # counter wraps), so ``done_cycle`` is sized for the padded grid only.
+    done_cycle = num_rows + num_inner + num_columns - 1
 
     # This counter determines when the matrix multiplication is complete. The counter is
     # also used as an address for reading input data from ``MemBlocks``.
@@ -511,6 +555,25 @@ def make_systolic_array(
 
     reset = pyrtl.WireVector(bitwidth=1, name=f"{name}.reset")
     reset <<= counter == 0
+
+    # Time-multiplexing phase counter. Cycles through the ``R*R`` PEs in each
+    # shared-multiplier block. When ``reuse_factor == 1`` we skip the register
+    # entirely and use a constant tick so the generated hardware matches the
+    # original (un-multiplexed) implementation.
+    if R == 1:
+        tick = pyrtl.Const(1, bitwidth=1)
+        phase = None
+    else:
+        phase_max = R * R - 1
+        phase_bitwidth = pyrtl.infer_val_and_bitwidth(phase_max).bitwidth
+        phase = pyrtl.Register(bitwidth=phase_bitwidth, name=f"{name}.phase")
+        phase.next <<= pyrtl.select(
+            reset,
+            0,
+            pyrtl.select(phase == phase_max, 0, phase + 1),
+        )
+        tick = pyrtl.WireVector(bitwidth=1, name=f"{name}.tick")
+        tick <<= phase == phase_max
 
     def process_input(
         a: WireMatrix2D | np.ndarray, name: str
@@ -527,35 +590,40 @@ def make_systolic_array(
                 a, input_bitwidth=input_bitwidth, addrwidth=counter_bitwidth, name=name
             )
             return _make_systolic_array_memblock_inputs(
-                a.shape, counter, left_romblock, input_bitwidth
+                a.shape, counter, left_romblock, input_bitwidth, tick
             )
         assert isinstance(a, WireMatrix2D)
         if a.memblock is not None:
             return _make_systolic_array_memblock_inputs(
-                a.shape, counter, a.memblock, input_bitwidth
+                a.shape, counter, a.memblock, input_bitwidth, tick
             )
-        return _make_systolic_array_wire_inputs(a, reset, input_bitwidth)
-
-    num_rows, num_inner = a.shape
-    assert num_inner == b.shape[0]
-    num_columns = b.shape[1]
+        return _make_systolic_array_wire_inputs(a, reset, input_bitwidth, tick)
 
     left = process_input(a, name=f"{name}_a")
-    for row in range(num_rows):
+    for row in range(orig_num_rows):
         left[row].name = f"{name}.left[{row}]"
 
     top = process_input(b.transpose(), name=f"{name}_b")
-    for col in range(num_columns):
+    for col in range(orig_num_columns):
         top[col].name = f"{name}.top[{col}]"
 
-    num_columns = len(top)
-    num_rows = len(left)
+    # Pad the left and top input lists with zeros so the padded PE grid is fully
+    # driven. Padded PEs see zero inputs every cycle and contribute zero to the
+    # final result.
+    zero_input = pyrtl.Const(0, bitwidth=input_bitwidth)
+    while len(left) < num_rows:
+        left.append(zero_input)
+    while len(top) < num_columns:
+        top.append(zero_input)
 
-    # Collect a 2D array of tile outputs.
+    # Collect a 2D array of tile outputs over the padded grid.
     tile_outs = [[None for column in range(num_columns)] for row in range(num_rows)]
-    # Collect a 2D array of accumulator registers.
+    # Collect a 2D array of accumulator registers over the padded grid.
     accumulators = [[None for column in range(num_columns)] for row in range(num_rows)]
 
+    # Pass 1: build the input register for every tile in the padded grid. The
+    # processing-element multipliers and accumulators are built in pass 2 since
+    # multipliers are shared across R×R blocks.
     # TODO: This always creates a systolic array large enough to process all the input
     # data. Implement tiled matrix multiplication, so large inputs can be processed with
     # smaller systolic arrays.
@@ -578,15 +646,73 @@ def make_systolic_array(
                 current_top = tile_outs[row - 1][column].bottom
 
             tile_in = TileIn(left=current_left, top=current_top)
-            tile_out, accumulator = _make_systolic_array_tile(
-                tile_in=tile_in, column=column, row=row, reset=reset
+            tile_outs[row][column] = _make_systolic_array_tile(
+                tile_in=tile_in, column=column, row=row, reset=reset, tick=tick
             )
-            tile_outs[row][column] = tile_out
-            accumulators[row][column] = accumulator
 
+    # Pass 2: for each R×R block of PEs, build one shared multiplier and one
+    # accumulator per PE. Each PE in the block is assigned a unique slot in the
+    # ``R*R``-long phase sequence; its accumulator only updates during its slot.
+    for br in range(num_rows // R):
+        for bc in range(num_columns // R):
+            block_pes = list(itertools.product(range(R), repeat=2))
+
+            if R == 1:
+                # Single PE per "block" — no muxing, matches the original layout.
+                mul_right = tile_outs[br][bc].right
+                mul_bottom = tile_outs[br][bc].bottom
+            else:
+                block_right = [
+                    tile_outs[br * R + rr][bc * R + cc].right for (rr, cc) in block_pes
+                ]
+                block_bottom = [
+                    tile_outs[br * R + rr][bc * R + cc].bottom for (rr, cc) in block_pes
+                ]
+                # ``pyrtl.mux`` requires exactly ``2 ** phase.bitwidth`` inputs;
+                # when ``R*R`` isn't a power of two the extra slots are
+                # unreachable (``phase`` never reaches them), so pad with zero.
+                mul_right = pyrtl.mux(phase, *block_right, default=zero_input)
+                mul_bottom = pyrtl.mux(phase, *block_bottom, default=zero_input)
+
+            # q1 * (q2 - z2) == (q1 * q2) - (q1 * z2). One physical multiplier
+            # shared by all ``R*R`` PEs in this block.
+            mul_out = pyrtl.signed_mult(
+                mul_right, pyrtl.signed_sub(mul_bottom, b_zero_const)
+            )
+
+            for rr, cc in block_pes:
+                r = br * R + rr
+                c = bc * R + cc
+                accumulator = pyrtl.Register(
+                    bitwidth=accumulator_bitwidth,
+                    name=f"{name}.pe[{r}][{c}]",
+                )
+                if R == 1:
+                    accumulator.next <<= pyrtl.select(
+                        reset,
+                        0,
+                        pyrtl.signed_add(accumulator, mul_out),
+                    )
+                else:
+                    pe_active = phase == (rr * R + cc)
+                    accumulator.next <<= pyrtl.select(
+                        reset,
+                        0,
+                        pyrtl.select(
+                            pe_active,
+                            pyrtl.signed_add(accumulator, mul_out),
+                            accumulator,
+                        ),
+                    )
+                accumulators[r][c] = accumulator
+
+    # Expose only the original (unpadded) accumulators in the output.
+    unpadded_accumulators = [
+        accumulators[row][:orig_num_columns] for row in range(orig_num_rows)
+    ]
     product = WireMatrix2D(
-        values=accumulators,
-        shape=(num_rows, num_columns),
+        values=unpadded_accumulators,
+        shape=(orig_num_rows, orig_num_columns),
         bitwidth=accumulator_bitwidth,
         name=f"{name}.output",
     )
@@ -633,9 +759,14 @@ def make_systolic_array(
         # Stop advancing the counter when the matrix multiplication is done.
         with done_next_cycle:
             counter.next |= counter
-        # Otherwise, advance the counter.
-        with pyrtl.otherwise:
+        # Advance the counter on every cycle while transitioning out of INIT/WAIT,
+        # and once per R² physical cycles (``tick``) during BUSY so the
+        # time-multiplexed multipliers cycle through all the PEs in each block
+        # before the next logical cycle.
+        with (state == State.INIT) | (state == State.WAIT) | tick:
             counter.next |= counter + 1
+        with pyrtl.otherwise:
+            counter.next |= counter
 
     # Update current state.
     with pyrtl.conditional_assignment:
@@ -658,7 +789,11 @@ def make_systolic_array(
                 state.next |= State.BUSY
             with pyrtl.otherwise:
                 init_counter.next |= init_counter + 1
-        with (state == State.BUSY) & done_next_cycle:
+        # During BUSY, the counter holds at ``done_cycle`` for the full ``R**2``
+        # physical cycles of the last logical cycle so each shared multiplier can
+        # still service every PE in its block. Delay the transition to DONE until
+        # the final ``tick`` of that last logical cycle.
+        with (state == State.BUSY) & done_next_cycle & tick:
             state.next |= State.DONE
         with state == State.DONE:
             product.valid |= True

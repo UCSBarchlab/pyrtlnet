@@ -292,6 +292,125 @@ class TestPyrtlMatrix(unittest.TestCase):
         abc_expected = a @ b @ c
         np.testing.assert_array_equal(abc_actual, abc_expected, strict=True)
 
+    def test_systolic_array_reuse_factor_wire_inputs(self) -> None:
+        """Time-multiplexed multipliers must produce the same result as R=1.
+
+        Exercises the wire-input path (no MemBlocks). ``a`` has shape (2, 3) and
+        ``b`` has shape (3, 4); ``reuse_factor=3`` forces the padding code path
+        for both dimensions.
+        """
+        a = np.array([[1, -2, 3], [-4, 5, -6]])
+        b = np.array([[11, 12, 13, 14], [15, 16, 17, 18], [19, 20, 21, 22]])
+        b_zero = 1
+        ab_expected = a @ (b - b_zero)
+
+        for reuse_factor in [1, 2, 3]:
+            with self.subTest(reuse_factor=reuse_factor):
+                pyrtl.reset_working_block()
+
+                input_bitwidth = max([pyrtl_matrix.minimum_bitwidth(m) for m in [a, b]])
+                accumulator_bitwidth = input_bitwidth * 2
+                a_matrix = self.make_wire_matrix_2d(
+                    name="a", array=a, bitwidth=input_bitwidth
+                )
+                b_matrix = self.make_wire_matrix_2d(
+                    name="b", array=b, bitwidth=input_bitwidth
+                )
+
+                ab_matrix = pyrtl_matrix.make_systolic_array(
+                    name="matmul",
+                    a=a_matrix,
+                    b=b_matrix,
+                    b_zero=b_zero,
+                    input_bitwidth=input_bitwidth,
+                    accumulator_bitwidth=accumulator_bitwidth,
+                    reuse_factor=reuse_factor,
+                )
+                ab_matrix.ready <<= True
+                ab_matrix.make_outputs("ab_matrix")
+
+                sim = pyrtl.Simulation()
+                cycles = 0
+                cycle_budget = (
+                    pyrtl_matrix.num_systolic_array_cycles(
+                        a.shape, b.shape, reuse_factor=reuse_factor
+                    )
+                    + 5
+                )
+                while not sim.inspect("matmul.output.valid"):
+                    sim.step()
+                    cycles += 1
+                    self.assertLess(
+                        cycles,
+                        cycle_budget,
+                        f"systolic array did not finish within budget "
+                        f"{cycle_budget} for reuse_factor={reuse_factor}",
+                    )
+
+                ab_actual = ab_matrix.inspect(sim=sim)
+                np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
+
+    def test_systolic_array_reuse_factor_memblock(self) -> None:
+        """Time-multiplexed multipliers via the MemBlock-input path."""
+        a = np.array([[1, -2, 3], [-4, 5, -6]])
+        b = np.array([[11, 12, 13, 14], [15, 16, 17, 18], [19, 20, 21, 22]])
+        b_zero = 1
+        ab_expected = a @ (b - b_zero)
+
+        for reuse_factor in [1, 2, 3]:
+            with self.subTest(reuse_factor=reuse_factor):
+                pyrtl.reset_working_block()
+
+                input_bitwidth = max([pyrtl_matrix.minimum_bitwidth(m) for m in [a, b]])
+                accumulator_bitwidth = input_bitwidth * 2
+
+                done_cycle = (
+                    pyrtl_matrix.num_systolic_array_cycles(
+                        a.shape, b.shape, reuse_factor=reuse_factor
+                    )
+                    - 1
+                )
+                counter_bitwidth = pyrtl.infer_val_and_bitwidth(done_cycle).bitwidth
+
+                matrix_a, memblock_a, memblock_data_a = self.make_memblock(
+                    name="a",
+                    array=a,
+                    input_bitwidth=input_bitwidth,
+                    counter_bitwidth=counter_bitwidth,
+                    left_input=True,
+                )
+                matrix_b, memblock_b, memblock_data_b = self.make_memblock(
+                    name="b",
+                    array=b,
+                    input_bitwidth=input_bitwidth,
+                    counter_bitwidth=counter_bitwidth,
+                    left_input=False,
+                )
+
+                ab_matrix = pyrtl_matrix.make_systolic_array(
+                    name="matmul",
+                    a=matrix_a,
+                    b=matrix_b,
+                    b_zero=b_zero,
+                    input_bitwidth=input_bitwidth,
+                    accumulator_bitwidth=accumulator_bitwidth,
+                    reuse_factor=reuse_factor,
+                )
+                ab_matrix.ready <<= True
+                ab_matrix.make_outputs("ab_matrix")
+
+                sim = pyrtl.Simulation(
+                    memory_value_map={
+                        memblock_a: memblock_data_a,
+                        memblock_b: memblock_data_b,
+                    }
+                )
+                while not sim.inspect("matmul.output.valid"):
+                    sim.step()
+
+                ab_actual = ab_matrix.inspect(sim=sim)
+                np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
+
     def test_elementwise_add(self) -> None:
         a = np.array([[1, -2, 3], [-4, 5, -6]])
         b = np.array([[10, 11, 12], [13, 14, 15]])
