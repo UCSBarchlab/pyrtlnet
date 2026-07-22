@@ -14,6 +14,7 @@ to implement quantized inference with `LiteRT`_.
 """
 
 import pathlib
+import time
 import warnings
 
 import numpy as np
@@ -102,7 +103,9 @@ def run_tflite_model(
     # Convert from float32 to the actual input type.
     test_batch = test_batch.astype(input_details["dtype"])
     interpreter.set_tensor(input_details["index"], test_batch)
+    start = time.time()
     interpreter.invoke()
+    print(f"inference done {time.time() - start:.9f} seconds")
 
     # Tensor metadata, from the Model Explorer
     # (https://github.com/google-ai-edge/model-explorer):

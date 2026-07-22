@@ -14,6 +14,7 @@ inference with `PyRTL`_.
 """
 
 import pathlib
+import time
 
 import numpy as np
 import pyrtl
@@ -387,6 +388,7 @@ class PyRTLInference:
         # to make a new `FastSimulation` for each batch. Update the
         # `axi_stream_subordinate` and `systolic_array` state machines so they reset
         # after processing one batch.
+        start = None
         if self.axi:
             sim = pyrtl.FastSimulation()
 
@@ -424,11 +426,14 @@ class PyRTLInference:
             )
             provided_inputs = {}
 
+        start = time.time()
         # Wait until the second layer's computations are done.
         done = False
         while not done:
             sim.step(provided_inputs)
             done = sim.inspect("valid")
+
+        print(f"simulation done {time.time() - start:.3f} seconds")
 
         # Retrieve each layer's outputs and the predicted digit(s).
         if self.axi:
