@@ -22,7 +22,6 @@ inference with `NumPy`_.
 """  # noqa: E501
 
 import pathlib
-import time
 
 import numpy as np
 from fxpmath import Fxp
@@ -224,14 +223,11 @@ class NumPyInference:
         """
 
         flat_batch = preprocess_image(test_batch, self.input_scale, self.input_zero)
-
-        start = time.time()
         layer0_outputs = self._run_layer(0, flat_batch, self.input_zero, run_relu=True)
         layer1_outputs = self._run_layer(
             1, layer0_outputs, self.layer[0].zero, run_relu=False
         )
 
         actuals = layer1_outputs.argmax(axis=0)
-        print(f"inference done {time.time() - start:.6f} seconds")
 
         return layer0_outputs.transpose(), layer1_outputs.transpose(), actuals
