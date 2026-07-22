@@ -16,9 +16,40 @@ from pyrtlnet.pyrtl_inference import PyRTLInference
 def main() -> None:
     parser = argparse.ArgumentParser(prog="pyrtl_inference.py")
     add_common_arguments(parser)
-    parser.add_argument("--verilog", action="store_true", default=False)
-    parser.add_argument("--axi", action="store_true", default=False)
-    parser.add_argument("--initial_delay_cycles", type=int, default=0)
+    parser.add_argument(
+        "--verilog",
+        action="store_true",
+        default=False,
+        help="""If enabled, export the pyrtlnet hardware design to a Verilog file. The
+             file will be named `pyrtl_inference.v` or `pyrtl_inference_axi.v`,
+             depending on `--axi`. A Verilog testbench will also be written, named
+             `pyrtl_inference_test.v` or `pyrtl_inference_axi_test.v`, which repeats the
+             `pyrtl_inference.py` simulation in Verilog.""",
+    )
+    parser.add_argument(
+        "--axi",
+        action="store_true",
+        default=False,
+        help="""If enabled, transmit image data via AXI-Stream and receive layer outputs
+             via AXI-Lite. This is synthesizable, but more complicated. If disabled,
+             `Simulation` initializes memories with image data, and retrieves layer
+             outputs by inspecting registers. This is not synthesizable, and is less
+             complicated.""",
+    )
+    parser.add_argument(
+        "--simulation",
+        type=str,
+        default="FastSimulation",
+        help="""Name of the PyRTL `Simulation` class to instantiate. Valid values are
+             `Simulation`, `FastSimulation`, and `CompiledSimulation`.""",
+    )
+    parser.add_argument(
+        "--initial_delay_cycles",
+        type=int,
+        default=0,
+        help="""A hack which should not be necessary. Currently required for correct
+             FPGA synthesis.""",
+    )
     args = parser.parse_args()
 
     # Validate arguments.
@@ -52,7 +83,7 @@ def main() -> None:
     ):
         # Run PyRTL inference on the test image.
         layer0_outputs, layer1_outputs, actual = pyrtl_inference.simulate(
-            test_batch, args.verilog
+            test_batch, args.verilog, args.verbose, args.simulation
         )
 
         # Display the test image.

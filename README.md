@@ -289,7 +289,7 @@ hardware description language. Main features include:
    time 1930
    layer1 output:
    [  33  -48   29   58  -50   31  -87   93    9   49]
-   argmax: 7
+   argmax: [7]
 
    - pyrtl_inference_test.v:858: Verilog $finish
    - S i m u l a t i o n   R e p o r t: Verilator 5.032 2025-01-01

@@ -13,7 +13,14 @@ from pyrtlnet.training_util import save_mnist_data
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog="tensorflow_training.py")
-    parser.add_argument("--tensor_path", type=str, default=".")
+    parser.add_argument(
+        "--tensor_path",
+        type=str,
+        default=".",
+        help="""Name of the directory where quantized weights and preprocessed MNIST
+        test data will be saved. The inference scripts will load this data from this
+        directory.""",
+    )
     args = parser.parse_args()
 
     # Load MNIST dataset.
