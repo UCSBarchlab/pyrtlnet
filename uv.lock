@@ -754,11 +754,11 @@ wheels = [
 
 [[package]]
 name = "pyrtl"
-version = "1.0.1"
+version = "1.0.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ba/fd/dd842536bc97b6b806fe3c8672907dcd3492e963da7b2e73aeab90f128b0/pyrtl-1.0.1.tar.gz", hash = "sha256:94d6ba1e5b6953dac4a39c1f1b115bcb46920c7f2ae2b1b45e22d05695e3d9ad", size = 647887, upload-time = "2026-07-22T22:35:04.541Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/91/f0/cac392c674bb18766f2e0ac20aa2ca506e8e579321027c15506840d5e4f5/pyrtl-1.0.2.tar.gz", hash = "sha256:e0e43c86dc57e4148c64924ac22a09de87b089cf916ecc846a4e1ab94c6658fa", size = 648173, upload-time = "2026-07-23T00:32:09.93Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e7/a9/744210ed47568c7bfd0cbb460c3b148c752942a9dfb10fc6b8cc38495bbb/pyrtl-1.0.1-py3-none-any.whl", hash = "sha256:af60c11f28498f569e986c09f50efa4c4bcc6fd30ce7c20af2ce8f0b35242716", size = 220250, upload-time = "2026-07-22T22:35:02.95Z" },
+    { url = "https://files.pythonhosted.org/packages/e2/72/27f2fcec4f90ab3af3f6a8653660198f5f2729af83d896828ac173e65067/pyrtl-1.0.2-py3-none-any.whl", hash = "sha256:a708c9244daab632369caaaac62b499d4b36967fd7b6b238a5128feb12035398", size = 220298, upload-time = "2026-07-23T00:32:08.511Z" },
 ]
 
 [[package]]
