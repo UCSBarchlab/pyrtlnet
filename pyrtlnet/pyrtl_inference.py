@@ -14,12 +14,14 @@ inference with `PyRTL`_.
 """
 
 import pathlib
+from contextlib import nullcontext
 
 import numpy as np
 import pyrtl
 
 import pyrtlnet.pyrtl_axi as pyrtl_axi
 import pyrtlnet.pyrtl_matrix as pyrtl_matrix
+from pyrtlnet.cli_util import PrintElapsedTime
 from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.inference_util import preprocess_image
 from pyrtlnet.saved_tensors import SavedTensors
@@ -281,11 +283,14 @@ class PyRTLInference:
         self.layer_outputs = [layer0, layer1]
 
         # Compute argmax for the last layer's output.
-        BatchArgmaxValues = pyrtl.wire_matrix(component_schema=4, size=self.batch_size)
-
         argmax_values = pyrtl_matrix.make_argmax(a=layer1)
 
-        BatchArgmaxValues(name="argmax_out", values=argmax_values)
+        # Create Outputs for the argmaxes.
+        argmax_outputs = []
+        for i in range(self.batch_size):
+            argmax_output = pyrtl.Output(name=f"argmax_{i}", bitwidth=4)
+            argmax_output <<= argmax_values[i]
+            argmax_outputs.append(argmax_output)
 
         # Make a PyRTL Output for the second layer output's `valid` signal. When this
         # signal goes high, inference is complete.
@@ -358,8 +363,22 @@ class PyRTLInference:
 
         return data
 
+    def make_simulation(self, simulation_name: str) -> object:
+        if simulation_name == "Simulation":
+            return pyrtl.Simulation
+        if simulation_name == "FastSimulation":
+            return pyrtl.FastSimulation
+        if simulation_name == "CompiledSimulation":
+            return pyrtl.CompiledSimulation
+        msg = f"Unknown simulator type '{simulation_name}'"
+        raise AssertionError(msg)
+
     def simulate(
-        self, test_batch: np.ndarray, verilog: bool = False
+        self,
+        test_batch: np.ndarray,
+        verilog: bool = False,
+        verbose: bool = False,
+        simulation_name: str = "FastSimulation",
     ) -> tuple[np.ndarray, np.ndarray, int]:
         """Simulate quantized inference on an image batch.
 
@@ -373,13 +392,16 @@ class PyRTLInference:
             ``pyrtl_inference.v``, or ``pyrtl_inference_axi.v`` when constructed with
             ``axi=True``. The testbench will be named ``pyrtl_inference_test.v``, or
             ``pyrtl_inference_axi_test.v`` when constructed with ``axi=True``.
+        :param verbose: If ``True``, print simulation timing statistics.
+        :param simulation_name: Name of the PyRTL Simulation class to instantiate for
+            simulation. Valid options are ``Simulation``, ``FastSimulation``, and
+            ``CompiledSimulation``.
 
-        :returns: ``(layer0_output, layer1_output, argmax)``, where
-                  ``layer0_output`` is the first layer's raw tensor output, with shape
-                  ``(batch_size, 18)``.
-                  ``layer1_output`` is the second layer's raw tensor output,
-                  with shape ``(batch_size, 10)``. ``argmax`` is a list of predicted
-                  digits for each image in the batch, with length ``batch_size``.
+        :returns: ``(layer0_output, layer1_output, argmax)``, where ``layer0_output`` is
+                  the first layer's raw tensor output, with shape ``(batch_size, 18)``.
+                  ``layer1_output`` is the second layer's raw tensor output, with shape
+                  ``(batch_size, 10)``. ``argmax`` is a list of predicted digits for
+                  each image in the batch, with length ``batch_size``.
         """
         memblock_data = self._memblock_data(test_batch)
 
@@ -387,8 +409,13 @@ class PyRTLInference:
         # to make a new `FastSimulation` for each batch. Update the
         # `axi_stream_subordinate` and `systolic_array` state machines so they reset
         # after processing one batch.
+        constructor_context = nullcontext()
+        if verbose:
+            constructor_context = PrintElapsedTime(f"Constructing {simulation_name}")
+        simulation = self.make_simulation(simulation_name)
         if self.axi:
-            sim = pyrtl.FastSimulation()
+            with constructor_context:
+                sim = simulation()
 
             # `provided_inputs` holds default values for all Inputs. `aresetn` is active
             # low.
@@ -419,16 +446,21 @@ class PyRTLInference:
             )
         else:
             memblock_data_dict = dict(enumerate(memblock_data))
-            sim = pyrtl.FastSimulation(
-                memory_value_map={self.flat_batch_memblock: memblock_data_dict}
-            )
+            with constructor_context:
+                sim = simulation(
+                    memory_value_map={self.flat_batch_memblock: memblock_data_dict}
+                )
             provided_inputs = {}
 
         # Wait until the second layer's computations are done.
-        done = False
-        while not done:
-            sim.step(provided_inputs)
-            done = sim.inspect("valid")
+        step_context = nullcontext()
+        if verbose:
+            step_context = PrintElapsedTime(f"Stepping {simulation_name}")
+        with step_context:
+            done = False
+            while not done:
+                sim.step(provided_inputs)
+                done = sim.inspect("valid")
 
         # Retrieve each layer's outputs and the predicted digit(s).
         if self.axi:
@@ -489,7 +521,7 @@ class PyRTLInference:
             layer1_output = self.layer_outputs[1].inspect(sim=sim).astype(np.int8)
             argmax = []
             for i in range(self.batch_size):
-                argmax.append(sim.inspect(f"argmax_out[{i}]"))
+                argmax.append(sim.inspect(f"argmax_{i}"))
 
         if verilog:
             suffix = ""
@@ -499,6 +531,28 @@ class PyRTLInference:
             with open(module_file_name, "w") as output:
                 pyrtl.output_to_verilog(output, add_reset=False)
             with open(f"pyrtl_inference{suffix}_test.v", "w") as output:
+                layer1_format = ""
+                layer1_names = ""
+                if not self.axi:
+                    layer1_format = (
+                        "layer1 output:\\n[%4d %4d %4d %4d %4d %4d %4d %4d %4d %4d]\\n"
+                    )
+                    layer1_names = (
+                        ", $signed(layer1_0_0), $signed(layer1_1_0), "
+                        "$signed(layer1_2_0), $signed(layer1_3_0), "
+                        "$signed(layer1_4_0), $signed(layer1_5_0), "
+                        "$signed(layer1_6_0), $signed(layer1_7_0), "
+                        "$signed(layer1_8_0), $signed(layer1_9_0)"
+                    )
+
+                argmax_formats = []
+                argmax_names = []
+                for i in range(self.batch_size):
+                    argmax_formats.append("%1d")
+                    argmax_names.append(f"argmax_{i}")
+
+                argmax_formats = " ".join(argmax_formats)
+                argmax_names = f", {', '.join(argmax_names)}"
                 pyrtl.output_verilog_testbench(
                     output,
                     simulation_trace=sim.tracer,
@@ -506,16 +560,9 @@ class PyRTLInference:
                     vcd=f"pyrtl_inference{suffix}.vcd",
                     cmd=(
                         '$display("time %3t\\n'
-                        "layer1 output:\\n"
-                        "[%4d %4d %4d %4d %4d %4d %4d %4d %4d %4d]\\n"
-                        'argmax: %1d\\n", '
-                        "$time,"
-                        "$signed(layer1_0_0), $signed(layer1_1_0), "
-                        "$signed(layer1_2_0), $signed(layer1_3_0), "
-                        "$signed(layer1_4_0), $signed(layer1_5_0), "
-                        "$signed(layer1_6_0), $signed(layer1_7_0), "
-                        "$signed(layer1_8_0), $signed(layer1_9_0), "
-                        "argmax);"
+                        f"{layer1_format}"
+                        f'argmax: [{argmax_formats}]\\n", '
+                        f"$time{layer1_names}{argmax_names});"
                     ),
                     add_reset=False,
                 )

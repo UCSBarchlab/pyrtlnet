@@ -66,8 +66,20 @@ def main() -> None:
     parser.add_argument("--y_zero", type=int, default=0)
     parser.add_argument("--a_shape", type=int, nargs=2, default=(2, 4))
     parser.add_argument("--a_start", type=int, default=1)
-    parser.add_argument("--verilog", action="store_true", default=False)
-    parser.add_argument("--initial_delay_cycles", type=int, default=0)
+    parser.add_argument(
+        "--verilog",
+        action="store_true",
+        default=False,
+        help="""If enabled, export the `pyrtl_matrix` hardware and its testbench to a
+             Verilog file. The file will be named `pyrtl_matrix.v`.""",
+    )
+    parser.add_argument(
+        "--initial_delay_cycles",
+        type=int,
+        default=0,
+        help="""A hack which should not be necessary. Currently required for correct
+             FPGA synthesis.""",
+    )
     args = parser.parse_args()
 
     # Create input matrices.

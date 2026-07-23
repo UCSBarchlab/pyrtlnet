@@ -298,7 +298,7 @@ class PrintElapsedTime:
 
     Example output::
 
-        Sleeping... done (2.0 seconds)
+        Sleeping... done (2.00 seconds)
     """
 
     def __init__(self, message: str) -> None:
@@ -313,4 +313,13 @@ class PrintElapsedTime:
         print(f"{self.message}... ", end="", flush=True)
 
     def __exit__(self, *exception_info) -> None:  #  noqa: ANN002
-        print(f"done ({time.time() - self.start:.1f} seconds)")
+        elapsed = time.time() - self.start
+        units = "s"
+
+        if elapsed < 0.001:
+            elapsed *= 1_000_000
+            units = "µs"
+        elif elapsed < 1:
+            elapsed *= 1000
+            units = "ms"
+        print(f"done ({elapsed:.2f} {units})")

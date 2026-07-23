@@ -21,8 +21,7 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
         type=int,
         default=0,
         help="""Index of the first image to run in the MNIST test data set. Must be
-             less than the number of images in the test data set (10000).
-             """,
+             less than the number of images in the test data set (10000).""",
     )
     parser.add_argument(
         "--num_images",
@@ -30,25 +29,24 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
         default=1,
         help="""Number of images to run. If the last image in the MNIST test data set is
              reached, processing will stop. When processing stops this way, fewer than
-             `num_images` may be processed.
-             """,
+             `num_images` may be processed.""",
     )
     parser.add_argument(
         "--batch_size",
         type=int,
         default=1,
         help="""Number of images to process per batch. If `batch_size > num_images`, the
-             model will process up to `num_images`. If `num_images %% batch_size != 0`,
-             the last batch will be of size `num_images %% batch_size`.
-             """,
+             model will process up to `num_images`. If `num_images` is not evenly
+             divisible by `batch_size`, the last batch will contain
+             `num_images %% batch_size` images. Any unused image slots in the last batch
+             will be zeroed out.""",
     )
     parser.add_argument(
         "--tensor_path",
         type=str,
         default=".",
         help="""Name of the directory containing the quantized weights and preprocessed
-             MNIST test data produced by `tensorflow_training.py`.
-             """,
+             MNIST test data produced by `tensorflow_training.py`.""",
     )
     parser.add_argument("--verbose", action=argparse.BooleanOptionalAction)
 
