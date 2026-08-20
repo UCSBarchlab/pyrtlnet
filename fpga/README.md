@@ -59,7 +59,7 @@ root@pynq:/home/xilinx# echo "This is running on the Pynq Z2 as `root`."
 Follow the
 [Pynq Z2 Setup Guide](https://pynq.readthedocs.io/en/latest/getting_started/pynq_z2_setup.html)
 to configure and boot the Pynq Z2. These
-instructions were tested with SD card image v3.1.
+instructions were tested with SD card image v3.1.1.
 
 Verify that you can
 [connect to the board's Jupyter Notebook](https://pynq.readthedocs.io/en/latest/getting_started/pynq_z2_setup.html#connecting-to-jupyter-notebook).
@@ -68,9 +68,8 @@ Verify that you can `ssh` to the board:
 ```shell
 $ ssh xilinx@pynq
 ...
-Welcome to PYNQ Linux, based on Ubuntu 22.04 (GNU/Linux 6.6.10-xilinx-v2024.1-gb36799f4e960 armv7l)
-
-Last login: Fri Oct 24 21:58:37 2025
+Welcome to PYNQ Linux, based on Ubuntu 22.04 (GNU/Linux 6.6.10-xilinx-v2024.1-g3c0eca68c652 armv7l)
+...
 xilinx@pynq:~$ exit
 logout
 Connection to pynq closed.
@@ -214,9 +213,8 @@ total size is 5,723,218  speedup is 1.00
 ```shell
 $ ssh xilinx@pynq
 ...
-Welcome to PYNQ Linux, based on Ubuntu 22.04 (GNU/Linux 6.6.10-xilinx-v2024.1-gb36799f4e960 armv7l)
-
-Last login: Fri Oct 24 21:58:37 2025
+Welcome to PYNQ Linux, based on Ubuntu 22.04 (GNU/Linux 6.6.10-xilinx-v2024.1-g3c0eca68c652 armv7l)
+...
 xilinx@pynq:~$
 ```
 
@@ -238,8 +236,7 @@ Install `pyrtl` on the Pynq Z2:
 ```shell
 (pynq-venv) root@pynq:/home/xilinx# pip install pyrtl
 ...
-Installing collected packages: pyrtl
-Successfully installed pyrtl-0.12
+Successfully installed pyrtl-1.0.3
 ```
 
 > [!NOTE]
@@ -256,20 +253,25 @@ Successfully installed pyrtl-0.12
 
 Run the
 [`fpga_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/fpga/fpga_inference.py)
-driver script on the Pynq Z2, which:
-1. Loads the `pynq` runtime environment
-1. Copies the `pyrtlnet` bitstream to the FPGA
-1. Loads the MNIST test image in a
-   [Pynq `Buffer`](https://pynq.readthedocs.io/en/latest/pynq_libraries/allocate.html#allocate)
-1. Transmits the `Buffer` to the FPGA via
-   [AXI DMA](https://discuss.pynq.io/t/tutorial-pynq-dma-part-1-hardware-design/3133)
-1. Retrieves the inference results via AXI
+driver script on the Pynq Z2:
 
 ```shell
 (pynq-venv) root@pynq:/home/xilinx# python fpga_inference.py
 ```
 
-![fpga_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/fpga_inference.png?raw=true)
+This script does the following:
+
+1. Loads the `pynq` runtime environment.
+1. Copies the `pyrtlnet` bitstream to the FPGA.
+1. Loads the MNIST test image in a
+   [Pynq `Buffer`](https://pynq.readthedocs.io/en/latest/pynq_libraries/allocate.html#allocate).
+1. Transmits the `Buffer` to the FPGA via
+   [AXI DMA](https://discuss.pynq.io/t/tutorial-pynq-dma-part-1-hardware-design/3133).
+1. Retrieves the inference results via AXI.
+
+The script's output should look like this:
+
+![fpga_inference.py screenshot](../docs/images/fpga_inference.png)
 
 The tensors output by this script should exactly match the tensors output by
 [`pyrtl_inference.py`](https://github.com/UCSBarchlab/pyrtlnet/blob/main/pyrtl_inference.py)

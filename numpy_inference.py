@@ -3,7 +3,13 @@ import shutil
 
 import numpy as np
 
-from pyrtlnet.cli_util import Accuracy, display_image, display_outputs
+from pyrtlnet.cli_util import (
+    Accuracy,
+    display_images,
+    display_outputs,
+    force_verbose,
+    trim_batch,
+)
 from pyrtlnet.inference_util import (
     add_common_arguments,
     batched_images,
@@ -17,11 +23,11 @@ def main() -> None:
     add_common_arguments(parser)
     args = parser.parse_args()
 
-    # Validate arguments.
-    if args.num_images == 1:
+    terminal_width = shutil.get_terminal_size().columns
+    if force_verbose(args.num_images, args.batch_size, terminal_width):
         args.verbose = True
 
-    np.set_printoptions(linewidth=shutil.get_terminal_size((80, 24)).columns)
+    np.set_printoptions(linewidth=terminal_width)
 
     # Load MNIST test data.
     test_images, test_labels = load_mnist_data(args.tensor_path)
@@ -33,34 +39,42 @@ def main() -> None:
     for batch_number, (batch_start_index, test_batch) in enumerate(
         batched_images(test_images, args.start_image, args.num_images, args.batch_size)
     ):
-        layer0_outputs, layer1_outputs, actuals = numpy_inference.run(test_batch)
+        layer0_outputs, layer1_outputs, actual = numpy_inference.run(test_batch)
 
-        for batch_index in range(len(test_batch)):
-            # Display the test image.
-            display_image(
-                script_name="NumPy Inference",
-                image=test_batch[batch_index],
-                image_index=batch_start_index + batch_index,
-                batch_number=batch_number,
-                batch_index=batch_index,
-                verbose=args.verbose,
-            )
+        # The last batch may not be full. Filter out results for any null images added
+        # by `batched_images`.
+        image_indices, layer0_outputs, layer1_outputs, actual, expected = trim_batch(
+            batch_start_index,
+            batch_number,
+            args.batch_size,
+            args.num_images,
+            layer0_outputs,
+            layer1_outputs,
+            actual,
+            test_labels,
+        )
 
-            # Display results.
-            expected = test_labels[batch_start_index + batch_index]
-            actual = actuals[batch_index]
-            display_outputs(
-                script_name="NumPy Inference",
-                layer0_output=layer0_outputs[batch_index],
-                layer1_output=layer1_outputs[batch_index],
-                expected=expected,
-                actual=actual,
-                verbose=args.verbose,
-            )
+        # Display the batch of test images.
+        display_images(
+            script_name="NumPy Inference",
+            images=test_batch,
+            image_indices=image_indices,
+            batch_number=batch_number,
+            verbose=args.verbose,
+        )
 
-            accuracy.update(actual=actual, expected=expected)
+        # Print the batch inference results.
+        display_outputs(
+            script_name="NumPy Inference",
+            layer0_output=layer0_outputs,
+            layer1_output=layer1_outputs,
+            expected=expected,
+            actual=actual,
+            verbose=args.verbose,
+        )
+        accuracy.update(actual=actual, expected=expected)
 
-            print()
+        print()
 
     accuracy.display()
 

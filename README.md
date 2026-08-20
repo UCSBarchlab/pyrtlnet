@@ -147,7 +147,7 @@ hardware description language. Main features include:
 
    Sample output:
 
-   ![litert_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/litert_inference.png?raw=true)
+   ![litert_inference.py screenshot](docs/images/litert_inference.png)
 
    The script outputs many useful pieces of information:
 
@@ -178,53 +178,6 @@ hardware description language. Main features include:
       network. It is also labeled as `expected` because the labeled test data
       confirms that the image actually depicts the digit `7`.
 
-   The `litert_inference.py` script has many command line flags:
-
-   * `--start_image` selects other images to run from the test data set.
-
-   * `--num_images` determines how many consecutive images to run from the test
-     data set. When `--num_images` is greater than one, the script processes
-     several images from the test data set, and prints an overall accuracy
-     score.
-
-   * `--batch_size` determines how many images are processed at once. When
-     `--num_images` is not evenly divisible by `--batch_size`, the last batch
-     will be a partial batch.
-
-   All of the provided inference scripts accept these command line flags. For example:
-
-   ```shell
-   $ uv run litert_inference.py --start_image=7 --num_images=10 --batch_size=3
-   LiteRT Inference image_index 7 batch 0 batch_index 0
-   Expected: 9 | Actual: 9
-   LiteRT Inference image_index 8 batch 0 batch_index 1
-   Expected: 5 | Actual: 6
-   LiteRT Inference image_index 9 batch 0 batch_index 2
-   Expected: 9 | Actual: 9
-
-   LiteRT Inference image_index 10 batch 1 batch_index 0
-   Expected: 0 | Actual: 0
-   LiteRT Inference image_index 11 batch 1 batch_index 1
-   Expected: 6 | Actual: 6
-   LiteRT Inference image_index 12 batch 1 batch_index 2
-   Expected: 9 | Actual: 9
-
-   LiteRT Inference image_index 13 batch 2 batch_index 0
-   Expected: 0 | Actual: 0
-   LiteRT Inference image_index 14 batch 2 batch_index 1
-   Expected: 1 | Actual: 1
-   LiteRT Inference image_index 15 batch 2 batch_index 2
-   Expected: 5 | Actual: 5
-
-   LiteRT Inference image_index 16 batch 3 batch_index 0
-   Expected: 9 | Actual: 9
-
-   9/10 correct predictions, 90.0% accuracy
-   ```
-
-   In this case, the model mispredicts `image_index 8`, which is predicted to
-   be a `5`, but actually depicts a `6`.
-
 1. Run:
 
    ```shell
@@ -239,7 +192,7 @@ hardware description language. Main features include:
 
    Sample output:
 
-   ![numpy_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/numpy_inference.png?raw=true)
+   ![numpy_inference.py screenshot](docs/images/numpy_inference.png)
 
    The script's layer outputs should be nearly identical to
    `litert_inference.py`'s layer outputs. Differences of ±1 may occur due to
@@ -258,7 +211,7 @@ hardware description language. Main features include:
    logic, and simulates the hardware with a PyRTL
    [`Simulation`](https://pyrtl.readthedocs.io/en/latest/simtest.html#pyrtl.simulation.Simulation).
 
-   ![pyrtl_inference.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/pyrtl_inference.png?raw=true)
+   ![pyrtl_inference.py screenshot](docs/images/pyrtl_inference.png)
 
    The script's layer outputs should exactly match `numpy_inference.py`'s layer outputs.
 
@@ -300,6 +253,39 @@ hardware description language. Main features include:
    The final `layer1 output` printed by the Verilator simulation should
    exactly match the `layer1 output` output from `pyrtl_inference.py`.
 
+1. The inference scripts have many common command line flags:
+
+   * `--start_image` selects other images to run from the test data set.
+
+   * `--num_images` determines how many consecutive images to run from the test
+     data set, starting from `--start_image`. When `--num_images` is greater
+     than one, the script processes several images from the test data set, and
+     prints an overall accuracy score.
+
+   * `--batch_size` determines how many images are processed at once. When
+     `--num_images` is not evenly divisible by `--batch_size`, the last batch
+     will be a partial batch. Unused image slots in a partial batch will be
+     filled with null images.
+
+   * `--verbose` determines whether image inputs and detailed outputs with bar
+     charts are displayed. `--verbose` is enabled by default when processing
+     one batch of images.
+
+   All of the provided inference scripts accept these command line flags. Examples:
+
+   ![pyrtl_inference.py single-batch screenshot](docs/images/pyrtl_inference_single_batch.png)
+
+   The `pyrtl_inference.py` example above shows how `--verbose` output is
+   enabled by default when processing single batch of images. When a batch
+   contains multiple images, `--verbose` displays the images and their output
+   bar charts in one row each.
+
+   ![numpy_inference.py multiple-batch screenshot](docs/images/numpy_inference_multiple_batches.png)
+
+   The `numpy_inference.py` example above shows how `--verbose` output is
+   disabled by default when processing multiple batches of images. In this
+   mode, the scripts display a summary, highlighting mispredictions in color.
+
 ### Next Steps
 
 See
@@ -317,7 +303,7 @@ to see how the PyRTL systolic array multiplies matrices. Also see the
 documentation for
 [`make_systolic_array`](https://pyrtlnet.readthedocs.io/en/latest/matrix.html#pyrtlnet.pyrtl_matrix.make_systolic_array):
 
-![pyrtl_matrix.py screenshot](https://github.com/UCSBarchlab/pyrtlnet/blob/main/docs/images/pyrtl_matrix.png?raw=true)
+![pyrtl_matrix.py screenshot](docs/images/pyrtl_matrix.png)
 
 `pyrtl_matrix.py` also supports the `--verilog` flag, so this systolic array
 simulation can be repeated with Verilator.

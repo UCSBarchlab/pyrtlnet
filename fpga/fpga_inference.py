@@ -6,7 +6,12 @@ import sys
 import numpy as np
 import pyrtl
 
-from pyrtlnet.cli_util import Accuracy, PrintElapsedTime, display_image, display_outputs
+from pyrtlnet.cli_util import (
+    Accuracy,
+    PrintElapsedTime,
+    display_images,
+    display_outputs,
+)
 from pyrtlnet.constants import quantized_model_prefix
 from pyrtlnet.inference_util import (
     add_common_arguments,
@@ -39,7 +44,7 @@ def main() -> None:
     if args.num_images == 1:
         args.verbose = True
 
-    np.set_printoptions(linewidth=shutil.get_terminal_size((80, 24)).columns)
+    np.set_printoptions(linewidth=shutil.get_terminal_size().columns)
 
     # Load MNIST test data.
     test_images, test_labels = load_mnist_data(args.tensor_path)
@@ -63,12 +68,11 @@ def main() -> None:
     ):
         # Display the test image.
         test_image = test_batch[0]
-        display_image(
-            image=test_image,
+        display_images(
+            images=test_image,
             script_name="PyRTL FPGA",
-            image_index=batch_start_index,
+            image_indices=[batch_start_index],
             batch_number=batch_number,
-            batch_index=0,
             verbose=args.verbose,
         )
 
@@ -101,7 +105,7 @@ def main() -> None:
 
             # Retrieve layer1's argmax, which is stored in AXI-Lite register 0. The
             # register mapping is defined in `PyRTLInference._make_inference()`.
-            actual = overlay.pyrtlnet.read(0)
+            actual = [overlay.pyrtlnet.read(0)]
 
             # Layer 0 outputs are in AXI-Lite registers 1-18. AXI registers are 32 bits,
             # and AXI addresses are byte addresses, so we multiply by 4.
@@ -118,6 +122,7 @@ def main() -> None:
                 ],
                 dtype=np.int8,
             )
+            layer0_output = np.expand_dims(layer0_output, axis=0)
 
             # Layer 1 outputs are in AXI-Lite registers 19-28.
             layer1_output = np.array(
@@ -129,8 +134,9 @@ def main() -> None:
                 ],
                 dtype=np.int8,
             )
+            layer1_output = np.expand_dims(layer1_output, axis=0)
 
-            expected = test_labels[batch_start_index]
+            expected = [test_labels[batch_start_index]]
             display_outputs(
                 script_name="PyRTL FPGA",
                 layer0_output=layer0_output,
