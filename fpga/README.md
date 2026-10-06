@@ -31,7 +31,7 @@ The FPGA is typically accessed from this Processing System, instead of accessing
 the FPGA directly from a host computer. So to deploy a bitstream on the Z2, we
 first build the bitstream on a host computer with
 [Vivado](https://www.amd.com/en/products/software/adaptive-socs-and-fpgas/vivado.html),
-then copy the bitstream to Processing System over the network, with `scp` for
+then copy the bitstream to the Processing System over the network, with `scp` for
 example. Then we instruct the Processing System to load the bitstream on the
 FPGA, with the
 [`pynq.Overlay`](https://pynq.readthedocs.io/en/latest/pynq_overlays/loading_an_overlay.html)
@@ -57,12 +57,12 @@ root@pynq:/home/xilinx# echo "This is running on the Pynq Z2 as `root`."
 ### Pynq Z2 Set Up
 
 Follow the
-[Pynq Z2 Setup Guide](https://pynq.readthedocs.io/en/latest/getting_started/pynq_z2_setup.html)
+[Pynq Z2 Setup Guide](https://pynq.readthedocs.io/en/v3.1/getting_started/pynq_z2_setup.html)
 to configure and boot the Pynq Z2. These
 instructions were tested with SD card image v3.1.1.
 
 Verify that you can
-[connect to the board's Jupyter Notebook](https://pynq.readthedocs.io/en/latest/getting_started/pynq_z2_setup.html#connecting-to-jupyter-notebook).
+[connect to the board's Jupyter Notebook](https://pynq.readthedocs.io/en/v3.1/getting_started/pynq_z2_setup.html#connecting-to-jupyter-notebook).
 
 Verify that you can `ssh` to the board:
 ```shell
@@ -77,7 +77,7 @@ $
 ```
 
 Verify that you can
-[connect to the Serial Console](https://pynq.readthedocs.io/en/latest/getting_started/pynq_z2_setup.html#opening-a-usb-serial-terminal).
+[connect to the Serial Console](https://pynq.readthedocs.io/en/v3.1/getting_started/pynq_z2_setup.html#opening-a-usb-serial-terminal).
 This is not strictly necessary, but very useful for debugging, especially if
 you are having trouble connecting the Pynq Z2 to your network.
 
@@ -85,7 +85,7 @@ you are having trouble connecting the Pynq Z2 to your network.
 
 [Install Vivado](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools.html).
 Use the version
-[recommended for your SD card image](https://pynq.readthedocs.io/en/latest/pynq_sd_card.html#use-an-existing-ubuntu-os).
+[recommended for your SD card image](https://pynq.readthedocs.io/en/v3.1/pynq_sd_card.html#use-an-existing-ubuntu-os).
 These instructions were tested with SD card image v3.1 and Vivado 2024.1.
 
 Ensure that `vivado` is on your `$PATH`:
