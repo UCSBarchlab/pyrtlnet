@@ -13,7 +13,7 @@ PyRTL Matrix Operations
 
 .. automodule:: pyrtlnet.pyrtl_matrix
     :members:
-    :exclude-members: State
+    :exclude-members: State, MemBlockWriterState
 
 
 WireMatrix2D
