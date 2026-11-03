@@ -13,6 +13,7 @@ so they can be composed to implement arbitrary matrix calculations. See the
 """
 
 import enum
+import math
 import warnings
 
 import numpy as np
@@ -664,6 +665,374 @@ def make_systolic_array(
             product.valid |= True
 
     return product
+
+
+class MemBlockWriterState(enum.IntEnum):
+    """State for the MemBlock writer's state machine."""
+
+    # Wait for a valid block.
+    IDLE = 0
+    # Copy data from ``block`` to the MemBlock.
+    WRITE = 1
+    # Wait for pending read-modify-writes to finish. The producer can populate
+    # ``block`` with the next block's data.
+    DRAIN = 2
+    # All blocks have been written to the MemBlock.
+    DONE = 3
+
+
+def make_systolic_input_memblock_writer(
+    name: str,
+    block: WireMatrix2D,
+    m_shape: tuple[int, int],
+    addrwidth: int,
+    block_row_index: pyrtl.WireVector,
+    block_column_index: pyrtl.WireVector,
+) -> WireMatrix2D:
+    """Copies the blocks of a matrix into a :class:`.WireMatrix2D` using
+    :class:`~pyrtl.MemBlock` representation, intended for use as the ``b`` input to
+    :func:`make_systolic_array`.
+
+    A larger matrix ``m`` is partitioned into uniformly sized blocks, which are
+    supplied one at a time via the ``block`` parameter.
+    ``make_systolic_input_memblock_writer`` creates a :class:`~pyrtl.MemBlock` to store
+    ``m`` and copies each block into its appropriate location in that
+    :class:`~pyrtl.MemBlock`. This :class:`~pyrtl.MemBlock` can be accessed via the
+    :class:`.WireMatrix2D` returned by ``make_systolic_input_memblock_writer``.
+
+    For example, if ``m`` has shape ``(4, 2)`` and the blocks have shape ``(2, 2)``,
+    ``m`` is partitioned into a top block and a bottom block::
+
+            ┌     ┐
+            │ 1 2 │  top block:
+            │ 3 4 │      block_row_index = 0, block_column_index = 0
+        m = ├─────┤
+            │ 5 6 │  bottom block:
+            │ 7 8 │      block_row_index = 1, block_column_index = 0
+            └     ┘
+
+    The producer supplies these two blocks one at a time, in either order. To supply the
+    bottom block, the producer sets ``block`` to ``[[5, 6], [7, 8]]``,
+    ``block_row_index`` to ``1``, and ``block_column_index`` to ``0``.
+
+    ``m_shape`` does not need to be a multiple of ``block.shape``. If it isn't, the
+    blocks on the bottom and right edges of ``m`` extend past ``m``. The writer ignores
+    any elements of these edge blocks that fall outside ``m``.
+
+    :param name: The returned :class:`.WireMatrix2D` will be named ``{name}.output``.
+    :param block: A block of ``m`` to copy into the full matrix ``m``.
+    :param m_shape: Shape of the full matrix ``m``.
+    :param addrwidth: Address width of the internal :class:`~pyrtl.MemBlock` of the
+        :class:`.WireMatrix2D`. This argument is necessary because the
+        :class:`~pyrtl.MemBlock`'s ``addrwidth`` must be at least the bitwidth of the
+        cycle counter that :func:`make_systolic_array` uses.
+    :param block_row_index: Which row of blocks ``block`` is in. ``0`` is the top row
+        of blocks. ``block`` holds rows ``block_row_index * block_rows`` through
+        ``(block_row_index + 1) * block_rows - 1`` of ``m``, where ``block_rows`` is
+        ``block.shape[0]``.
+    :param block_column_index: Which column of blocks ``block`` is in. ``0`` is the
+        left column of blocks. ``block`` holds columns
+        ``block_column_index * block_columns`` through
+        ``(block_column_index + 1) * block_columns - 1`` of ``m``, where
+        ``block_columns`` is ``block.shape[1]``.
+
+    :returns: A :class:`.WireMatrix2D` in :class:`~pyrtl.MemBlock` representation that
+        holds ``m``. Its ``valid`` goes high when all blocks have been written.
+
+    The producer must supply every block of ``m`` to the MemBlock writer exactly once,
+    in any order. To supply a block, the producer:
+
+    1. Computes the block, drives ``block`` with its values, and sets
+       ``block_row_index`` and ``block_column_index`` to the block's position.
+    2. Raises ``block.valid``.
+    3. Keeps ``block``, ``block_row_index`` and ``block_column_index`` unchanged until
+       ``block.ready`` is high. The writer raises ``block.ready`` for one cycle, after
+       it has read everything it needs from ``block``. Only then can the producer
+       modify ``block``, ``block_row_index`` and ``block_column_index`` for the next
+       block.
+
+    After the writer has copied every block to its place in ``m``, it raises
+    ``m.valid``. At this point, the :class:`~pyrtl.MemBlock` in ``m`` holds the whole
+    matrix, in the format that :func:`make_systolic_array` expects for its top input
+    ``b``.
+    """
+
+    # ``m`` is stored in the MemBlock in the format that ``make_systolic_array`` expects
+    # for its top input ``b``. The systolic array reads one address per cycle, so
+    # address ``N`` holds the top inputs for cycle ``N``. Each MemBlock word is the
+    # concatenation of ``m_columns`` values, one for each top input. We call each of
+    # these values a "lane". Lane ``j`` of the word at address ``N`` is the value that
+    # the systolic array sends to top input ``tj`` in cycle ``N``.
+    #
+    # For example, if ``m`` is:
+    #
+    #         ┌     ┐
+    #         │ 1 2 │
+    #     m = │ 3 4 │
+    #         │ 5 6 │
+    #         │ 7 8 │
+    #         └     ┘
+    #
+    # the contents of the MemBlock would be:
+    #
+    #            │  address
+    #            │ 0 1 2 3 4
+    #     ───────┼──────────
+    #     lane 0 │ 1 3 5 7 0
+    #     lane 1 │ 0 2 4 6 8
+    #
+    # This matches the top inputs expected for each cycle in ``make_systolic_array``.
+    # Lane ``j`` holds column ``j`` of ``m``, shifted forward ``j`` addresses.
+    # That is, ``m[row][column]`` is stored at address ``row + column``, in
+    # lane ``column``, so each address holds one anti-diagonal of ``m``.
+    #
+    # Because of this, a word that holds data from one block of ``m`` can also hold data
+    # from other blocks. In the docstring's example, ``m`` is split into a top block
+    # ``[[1, 2], [3, 4]]`` and a bottom block ``[[5, 6], [7, 8]]``. ``·`` marks a lane
+    # that the block does not write. The top block writes:
+    #
+    #            │  address
+    #            │ 0 1 2 3 4
+    #     ───────┼──────────
+    #     lane 0 │ 1 3 · · ·
+    #     lane 1 │ · 2 4 · ·
+    #
+    # and the bottom block writes:
+    #
+    #            │  address
+    #            │ 0 1 2 3 4
+    #     ───────┼──────────
+    #     lane 0 │ · · 5 7 ·
+    #     lane 1 │ · · · 6 8
+    #
+    # Both blocks write to address ``2``. Lane ``0`` gets ``5`` from the bottom block,
+    # and lane ``1`` gets ``4`` from the top block.
+    #
+    # Therefore, we use a read-modify-write procedure to copy a block's data into the
+    # MemBlock. For every word the block touches, we read the word, replace only the
+    # lanes that hold the block's data, and write the word back.
+    #
+    # The block's top left element is ``m[row_offset][column_offset]``, where
+    # ``row_offset = block_row_index * block_rows`` and
+    # ``column_offset = block_column_index * block_columns``.
+    #
+    # ``m[row][column]`` is stored at address ``row + column``, so the block spans
+    # addresses ``row_offset + column_offset`` (top left element) through
+    # ``row_offset + column_offset + block_rows + block_columns - 2`` (bottom right
+    # element), which is ``block_rows + block_columns - 1`` addresses in total. We start
+    # at the first address and handle one address per step until the last.
+
+    # Ensure ``block`` uses the ``self.Matrix`` representation of ``WireMatrix2D``.
+    assert block.matrix is not None
+
+    m_rows, m_columns = m_shape
+    block_rows, block_columns = block.shape
+
+    # ``m`` spans m_rows + m_columns - 1 addresses in the MemBlock.
+    assert m_rows + m_columns - 1 <= 2**addrwidth
+
+    mem = pyrtl.MemBlock(
+        name=name, addrwidth=addrwidth, bitwidth=block.bitwidth * m_columns
+    )
+
+    # Row and column of ``m`` containing ``block``'s top left element.
+    row_offset = block_row_index * block_rows
+    column_offset = block_column_index * block_columns
+
+    # We do one read-modify-write for each address the block touches. ``step`` counts
+    # them, from ``0`` to ``num_steps - 1``.
+    num_steps = block_rows + block_columns - 1
+    step = pyrtl.Register(
+        name=f"{name}.step",
+        bitwidth=pyrtl.infer_val_and_bitwidth(num_steps - 1).bitwidth,
+    )
+    # The address that the current step reads, ``row_offset + column_offset + step``.
+    read_addr = pyrtl.Register(name=f"{name}.read_addr", bitwidth=addrwidth)
+
+    # Each step does one read-modify-write, at address ``read_addr``. For each column
+    # ``j`` of ``block``, ``block_column_memblock_values[j]`` is the value that the
+    # current step writes to column ``j``'s lane at ``read_addr``. Column ``j``'s lane
+    # only holds the current block's data at some addresses.
+    # ``block_column_memblock_mask[j]`` indicates whether column ``j``'s lane at the
+    # current ``read_addr`` holds the current block's data, and should be overwritten.
+    # This is the "address check" described in the comment for ``lane_masks`` below.
+    block_column_memblock_values = [None for _ in range(block_columns)]
+    block_column_memblock_mask = [None for _ in range(block_columns)]
+    for j in range(block_columns):
+        # Column ``j`` of the block, in the parallelogram format that
+        # ``make_systolic_array`` needs. ``make_systolic_array`` expects column ``j``
+        # to be shifted forward ``j`` addresses, so ``column_j_shifted`` holds ``j``
+        # leading zeroes, followed by ``column_j``.
+        leading_zeroes = [0] * j
+        column_j = [block[k][j] for k in range(block_rows)]
+        column_j_shifted = leading_zeroes + column_j
+        # Select the value for the current step. ``*column_j_shifted`` passes each
+        # element of ``column_j_shifted`` to ``pyrtl.mux`` as a separate ``mux_ins``
+        # argument, so ``block_column_memblock_values[j]`` is
+        # ``column_j_shifted[step]``. Steps past the end of ``column_j_shifted`` select
+        # ``default``, which provides the trailing zeroes.
+        block_column_memblock_values[j] = pyrtl.mux(step, *column_j_shifted, default=0)
+        # Column ``j``'s lane at the current ``read_addr`` holds the current block's
+        # data only when ``step`` is between ``j`` and
+        # ``min(j + block_rows, j + m_rows - row_offset) - 1``, inclusive.
+        block_column_memblock_mask[j] = (
+            (step >= j) & (step < j + block_rows) & (step < m_rows + j - row_offset)
+        )
+
+    # ``MemBlockWord`` is the type for the data at one MemBlock address, with one lane
+    # for each column of ``m``.
+    MemBlockWord = pyrtl.wire_matrix(component_schema=block.bitwidth, size=m_columns)
+
+    @pyrtl.wire_struct
+    class LaneUpdate:
+        """The current block's update for one lane of a ``MemBlockWord``.
+
+        ``mask`` indicates whether the read-modify-write overwrites the lane with
+        ``value``.
+
+        """
+
+        value: block.bitwidth
+        mask: 1
+
+    # ``WordUpdate`` has one ``LaneUpdate`` for each lane of a ``MemBlockWord``.
+    WordUpdate = pyrtl.wire_matrix(component_schema=LaneUpdate, size=m_columns)
+
+    # Route each block column to its lane in the MemBlock. Lane ``lane`` holds column
+    # ``lane`` of ``m``, which is column ``lane % block_columns`` of the blocks with
+    # ``block_column_index == lane // block_columns``. For example, with 2-column
+    # blocks, lanes ``2`` and ``3`` get columns ``0`` and ``1`` of the blocks with
+    # ``block_column_index == 1``.
+    lane_values = [
+        block_column_memblock_values[lane % block_columns] for lane in range(m_columns)
+    ]
+    # A lane is only overwritten if it holds data from the current block at the current
+    # address. Otherwise, the lane holds data from another block, or no data, and the
+    # read-modify-write does not overwrite it. This requires two checks, which
+    # constrain different axes of the MemBlock:
+    #
+    # 1. Lane check: The lane must hold one of the current block's columns. This is
+    #    ``block_column_index == lane // block_columns``.
+    # 2. Address check: One address can hold data from multiple blocks, so the current
+    #    address must hold the current block's data in this lane. This is
+    #    ``block_column_memblock_mask[lane % block_columns]``.
+    #
+    # For example, suppose ``m`` has shape ``(4, 4)``, and is split into four ``(2, 2)``
+    # blocks ``A``, ``B``, ``C`` and ``D``:
+    #
+    #         ┌         ┐
+    #         │ A A B B │
+    #     m = │ A A B B │
+    #         │ C C D D │
+    #         │ C C D D │
+    #         └         ┘
+    #
+    # These blocks are stored in the MemBlock as shown below. ``·`` marks a lane that
+    # holds no data:
+    #
+    #            │    address
+    #            │ 0 1 2 3 4 5 6
+    #     ───────┼──────────────
+    #     lane 0 │ A A C C · · ·
+    #     lane 1 │ · A A C C · ·
+    #     lane 2 │ · · B B D D ·
+    #     lane 3 │ · · · B B D D
+    #
+    # When writing block ``C``, ``read_addr`` goes from ``2`` to ``4``. The lane check
+    # prevents writes to lanes ``2`` and ``3``, which hold blocks ``B`` and ``D``. The
+    # address check prevents writes to lane ``1`` at address ``2``, which holds block
+    # ``A``, and to lane ``0`` at address ``4``, which is past the end of block ``C``.
+    lane_masks = [
+        block_column_memblock_mask[lane % block_columns]
+        & (block_column_index == lane // block_columns)
+        for lane in range(m_columns)
+    ]
+
+    # Read-modify-write pipeline
+    state = pyrtl.Register(name=f"{name}.state", State=MemBlockWriterState)
+
+    # Stage 1: Read the word at ``read_addr`` in ``mem`` and build the ``WordUpdate``.
+    old_word = MemBlockWord(name=f"{name}.old_word", concatenated_type=pyrtl.Register)
+    old_word.next <<= mem[read_addr]
+
+    merge_word_update = WordUpdate(
+        name=f"{name}.word_update", concatenated_type=pyrtl.Register
+    )
+    merge_word_update.next <<= WordUpdate(
+        values=[
+            LaneUpdate(value=lane_values[lane], mask=lane_masks[lane])
+            for lane in range(m_columns)
+        ]
+    )
+    # Pass ``read_addr`` and the write enable to stage 2.
+    merge_addr = pyrtl.Register(name=f"{name}.merge_addr", bitwidth=addrwidth)
+    merge_addr.next <<= read_addr
+    merge_write_enable = pyrtl.Register(name=f"{name}.merge_write_enable", bitwidth=1)
+    merge_write_enable.next <<= state == MemBlockWriterState.WRITE
+
+    # Stage 2: Merge the word with the data from this block.
+    merged = MemBlockWord(
+        values=[
+            pyrtl.select(
+                merge_word_update[lane].mask,
+                merge_word_update[lane].value,
+                old_word[lane],
+            )
+            for lane in range(m_columns)
+        ]
+    )
+    write_data = pyrtl.Register(name=f"{name}.write_data", bitwidth=mem.bitwidth)
+    write_data.next <<= merged
+    # Pass ``merge_addr`` and ``merge_write_enable`` to stage 3.
+    write_addr = pyrtl.Register(name=f"{name}.write_addr", bitwidth=addrwidth)
+    write_addr.next <<= merge_addr
+    write_enable = pyrtl.Register(name=f"{name}.write_enable", bitwidth=1)
+    write_enable.next <<= merge_write_enable
+
+    # Stage 3: Write the merged word back to ``mem``.
+    mem[write_addr] <<= pyrtl.MemBlock.EnabledWrite(
+        data=write_data, enable=write_enable
+    )
+
+    # State machine.
+    num_blocks = math.ceil(m_rows / block_rows) * math.ceil(m_columns / block_columns)
+    # Counts the number of blocks copied to ``m``.
+    blocks_copied = pyrtl.Register(
+        name=f"{name}.blocks_copied",
+        bitwidth=pyrtl.infer_val_and_bitwidth(num_blocks).bitwidth,
+    )
+    with pyrtl.conditional_assignment:
+        with state == MemBlockWriterState.IDLE:
+            with block.valid:
+                step.next |= 0
+                # The first word that the block touches is at address
+                # ``row_offset + column_offset``.
+                read_addr.next |= row_offset + column_offset
+                state.next |= MemBlockWriterState.WRITE
+        with state == MemBlockWriterState.WRITE:
+            step.next |= step + 1
+            read_addr.next |= read_addr + 1
+            with step == num_steps - 1:
+                # The last address was read, and the block's values for it were
+                # registered, so the producer can replace the block.
+                block.ready |= True
+                blocks_copied.next |= blocks_copied + 1
+                state.next |= MemBlockWriterState.DRAIN
+        # Wait for the pipeline to empty and the transition to the DONE or IDLE state
+        # depending on whether there are more blocks to copy to the MemBlock.
+        with (state == MemBlockWriterState.DRAIN) & ~merge_write_enable & ~write_enable:
+            with blocks_copied == num_blocks:
+                state.next |= MemBlockWriterState.DONE
+            with pyrtl.otherwise:
+                state.next |= MemBlockWriterState.IDLE
+
+    return WireMatrix2D(
+        values=mem,
+        shape=m_shape,
+        bitwidth=block.bitwidth,
+        name=name,
+        valid=state == MemBlockWriterState.DONE,
+    )
 
 
 def make_elementwise_add(
