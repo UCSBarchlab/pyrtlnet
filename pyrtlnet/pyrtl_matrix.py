@@ -48,8 +48,8 @@ def make_input_memblock_data(
     :param a: Input data to convert to :class:`~pyrtl.MemBlock` data.
     :param input_bitwidth: Bitwidth of each element in ``a``.
     :param addrwidth: Number of :class:`~pyrtl.MemBlock` address bits. This must be
-        large enough to hold the number of cycles needed to run the systolic array. See
-        :func:`num_systolic_array_cycles`.
+        large enough to hold all of ``a``'s data, which spans
+        ``a.shape[0] + a.shape[1] - 1`` addresses.
 
     :returns: A list of integer values, ready for storage in a :class:`~pyrtl.MemBlock`.
               Each integer contains all the bits from ``a`` that the systolic array
@@ -173,14 +173,27 @@ def _make_systolic_array_memblock_inputs(
     building a chain of shift registers.
 
     The MemBlock's contents must be formatted with ``make_input_memblock_data``.
+
+    ``addr`` can be wider than the MemBlock's ``addrwidth``. When an address past the
+    MemBlock's address range is read, zeroes are returned.
     """
     num_rows, _num_inner = shape
     InputRow = pyrtl.wire_matrix(component_schema=input_bitwidth, size=num_rows)
     input_row = InputRow(concatenated_type=pyrtl.Register)
     # Synchronous read: `addr` and `input_row` are both Registers.
     assert isinstance(addr, pyrtl.Register)
-    input_row.next <<= mem[addr]
-    return [input_row[i] for i in range(num_rows)]
+    if addr.bitwidth <= mem.addrwidth:
+        input_row.next <<= mem[addr]
+        inputs = [input_row[i] for i in range(num_rows)]
+    else:
+        # ``addr`` is wider than ``mem.addrwidth``, so ``addr`` can be past the end of
+        # ``mem``. Hence, when ``addr < 2**mem.addrwidth``, we read the data from the
+        # MemBlock. Otherwise, we return a row of zeroes.
+        input_row.next <<= mem[addr[: mem.addrwidth]]
+        past_end = pyrtl.Register(bitwidth=1)
+        past_end.next <<= addr >= 2**mem.addrwidth
+        inputs = [pyrtl.select(past_end, 0, input_row[i]) for i in range(num_rows)]
+    return inputs
 
 
 def num_systolic_array_cycles(
@@ -685,7 +698,6 @@ def make_systolic_input_memblock_writer(
     name: str,
     block: WireMatrix2D,
     m_shape: tuple[int, int],
-    addrwidth: int,
     block_row_index: pyrtl.WireVector,
     block_column_index: pyrtl.WireVector,
 ) -> WireMatrix2D:
@@ -722,10 +734,6 @@ def make_systolic_input_memblock_writer(
     :param name: The returned :class:`.WireMatrix2D` will be named ``{name}.output``.
     :param block: A block of ``m`` to copy into the full matrix ``m``.
     :param m_shape: Shape of the full matrix ``m``.
-    :param addrwidth: Address width of the internal :class:`~pyrtl.MemBlock` of the
-        :class:`.WireMatrix2D`. This argument is necessary because the
-        :class:`~pyrtl.MemBlock`'s ``addrwidth`` must be at least the bitwidth of the
-        cycle counter that :func:`make_systolic_array` uses.
     :param block_row_index: Which row of blocks ``block`` is in. ``0`` is the top row
         of blocks. ``block`` holds rows ``block_row_index * block_rows`` through
         ``(block_row_index + 1) * block_rows - 1`` of ``m``, where ``block_rows`` is
@@ -828,8 +836,9 @@ def make_systolic_input_memblock_writer(
     m_rows, m_columns = m_shape
     block_rows, block_columns = block.shape
 
-    # ``m`` spans m_rows + m_columns - 1 addresses in the MemBlock.
-    assert m_rows + m_columns - 1 <= 2**addrwidth
+    # ``m`` spans ``m_rows + m_columns - 1`` addresses in the MemBlock, so the MemBlock
+    # needs enough address bits for addresses ``0`` through ``m_rows + m_columns - 2``.
+    addrwidth = pyrtl.infer_val_and_bitwidth(m_rows + m_columns - 2).bitwidth
 
     mem = pyrtl.MemBlock(
         name=name, addrwidth=addrwidth, bitwidth=block.bitwidth * m_columns
@@ -1012,7 +1021,17 @@ def make_systolic_input_memblock_writer(
         with state == MemBlockWriterState.WRITE:
             step.next |= step + 1
             read_addr.next |= read_addr + 1
-            with step == num_steps - 1:
+            # Currently at the block's last address.
+            at_block_end = step == num_steps - 1
+
+            # Currently at ``m``'s last address. A block on the bottom or right edge of
+            # ``m`` can extend past ``m``, so the block's last addresses can be past
+            # ``m``'s last address.
+            at_m_end = read_addr == m_rows + m_columns - 2
+
+            # Stop after the block's last address, or after ``m``'s last address,
+            # whichever comes first.
+            with at_block_end | at_m_end:
                 # The last address was read, and the block's values for it were
                 # registered, so the producer can replace the block.
                 block.ready |= True

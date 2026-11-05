@@ -1,4 +1,5 @@
 import unittest
+from collections import namedtuple
 
 import numpy as np
 import pyrtl
@@ -118,7 +119,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         name: str,
         array: np.ndarray,
         input_bitwidth: int,
-        counter_bitwidth: int,
+        addrwidth: int,
         left_input: bool,
     ) -> (pyrtl.MemBlock, dict):
         if left_input:
@@ -126,7 +127,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         else:
             element_size = array.shape[1]
         memblock = pyrtl.MemBlock(
-            addrwidth=counter_bitwidth, bitwidth=input_bitwidth * element_size
+            addrwidth=addrwidth, bitwidth=input_bitwidth * element_size
         )
         matrix = WireMatrix2D(
             values=memblock,
@@ -139,7 +140,7 @@ class TestPyrtlMatrix(unittest.TestCase):
         if not left_input:
             array = array.transpose()
         memblock_data = pyrtl_matrix.make_input_memblock_data(
-            array, input_bitwidth, counter_bitwidth
+            array, input_bitwidth, addrwidth
         )
         memblock_data = dict(enumerate(memblock_data))
 
@@ -155,43 +156,59 @@ class TestPyrtlMatrix(unittest.TestCase):
         done_cycle = pyrtl_matrix.num_systolic_array_cycles(a.shape, b.shape) - 1
         counter_bitwidth = pyrtl.infer_val_and_bitwidth(done_cycle).bitwidth
 
-        matrix_a, memblock_a, memblock_data_a = self.make_memblock(
-            name="a",
-            array=a,
-            input_bitwidth=input_bitwidth,
-            counter_bitwidth=counter_bitwidth,
-            left_input=True,
-        )
-        matrix_b, memblock_b, memblock_data_b = self.make_memblock(
-            name="b",
-            array=b,
-            input_bitwidth=input_bitwidth,
-            counter_bitwidth=counter_bitwidth,
-            left_input=False,
-        )
+        TestCase = namedtuple("TestCase", ["addrwidth_a", "addrwidth_b"])
+        test_cases = [
+            # MemBlocks with an address for every systolic array cycle.
+            TestCase(addrwidth_a=counter_bitwidth, addrwidth_b=counter_bitwidth),
+            # MemBlocks with the minimum ``addrwidth``, so the systolic array reads past
+            # the end of both MemBlocks. ``a`` spans 2 + 3 - 1 = 4 addresses, and ``b``
+            # spans 4 + 3 - 1 = 6 addresses.
+            TestCase(addrwidth_a=2, addrwidth_b=3),
+        ]
+        for addrwidth_a, addrwidth_b in test_cases:
+            with self.subTest(addrwidth_a=addrwidth_a, addrwidth_b=addrwidth_b):
+                pyrtl.reset_working_block()
 
-        b_zero = 1
-        ab_matrix = pyrtl_matrix.make_systolic_array(
-            name="matmul",
-            a=matrix_a,
-            b=matrix_b,
-            b_zero=b_zero,
-            input_bitwidth=input_bitwidth,
-            accumulator_bitwidth=accumulator_bitwidth,
-        )
-        ab_matrix.ready <<= True
-        ab_matrix.make_outputs("ab_matrix")
+                matrix_a, memblock_a, memblock_data_a = self.make_memblock(
+                    name="a",
+                    array=a,
+                    input_bitwidth=input_bitwidth,
+                    addrwidth=addrwidth_a,
+                    left_input=True,
+                )
+                matrix_b, memblock_b, memblock_data_b = self.make_memblock(
+                    name="b",
+                    array=b,
+                    input_bitwidth=input_bitwidth,
+                    addrwidth=addrwidth_b,
+                    left_input=False,
+                )
 
-        sim = pyrtl.Simulation(
-            memory_value_map={memblock_a: memblock_data_a, memblock_b: memblock_data_b}
-        )
-        while not sim.inspect("matmul.output.valid"):
-            sim.step()
+                b_zero = 1
+                ab_matrix = pyrtl_matrix.make_systolic_array(
+                    name="matmul",
+                    a=matrix_a,
+                    b=matrix_b,
+                    b_zero=b_zero,
+                    input_bitwidth=input_bitwidth,
+                    accumulator_bitwidth=accumulator_bitwidth,
+                )
+                ab_matrix.ready <<= True
+                ab_matrix.make_outputs("ab_matrix")
 
-        ab_actual = ab_matrix.inspect(sim=sim)
+                sim = pyrtl.Simulation(
+                    memory_value_map={
+                        memblock_a: memblock_data_a,
+                        memblock_b: memblock_data_b,
+                    }
+                )
+                while not sim.inspect("matmul.output.valid"):
+                    sim.step()
 
-        ab_expected = a @ (b - b_zero)
-        np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
+                ab_actual = ab_matrix.inspect(sim=sim)
+
+                ab_expected = a @ (b - b_zero)
+                np.testing.assert_array_equal(ab_actual, ab_expected, strict=True)
 
     def test_systolic_array_idle(self) -> None:
         """Test that the systolic array remain idle before and after processing.
@@ -304,7 +321,6 @@ class TestPyrtlMatrix(unittest.TestCase):
         )
         block_shape = (2, 2)
         bitwidth = 8
-        addrwidth = 3
 
         block_valid = pyrtl.Input(name="block_valid", bitwidth=1)
         block = WireMatrix2D(
@@ -318,7 +334,6 @@ class TestPyrtlMatrix(unittest.TestCase):
             name="m",
             block=block,
             m_shape=m.shape,
-            addrwidth=addrwidth,
             block_row_index=pyrtl.Input(name="block_row_index", bitwidth=2),
             block_column_index=pyrtl.Input(name="block_column_index", bitwidth=1),
         )
@@ -357,6 +372,10 @@ class TestPyrtlMatrix(unittest.TestCase):
         while not sim.inspect("m.valid"):
             sim.step(provided_inputs=provided_inputs)
 
+        # ``m`` spans 5 + 3 - 1 = 7 addresses, so the MemBlock should only have 3
+        # address bits.
+        addrwidth = m_matrix.memblock.addrwidth
+        self.assertEqual(addrwidth, 3)
         expected = pyrtl_matrix.make_input_memblock_data(
             m.transpose(), input_bitwidth=bitwidth, addrwidth=addrwidth
         )
@@ -366,36 +385,54 @@ class TestPyrtlMatrix(unittest.TestCase):
 
     def test_systolic_input_memblock_writer_systolic_array(self) -> None:
         """Test matrix multiplication with ``make_systolic_input_memblock_writer``."""
+        TestCase = namedtuple("TestCase", ["a", "b", "block_shape"])
         test_cases = [
             # Normal test case.
-            (
-                np.array([[1, -2, 3], [-4, 5, -6]]),
-                np.array([[11, 12, 13, 14], [15, 16, 17, 18], [19, 20, 21, 22]]),
+            TestCase(
+                a=np.array([[1, -2, 3], [-4, 5, -6]]),
+                b=np.array([[11, 12, 13, 14], [15, 16, 17, 18], [19, 20, 21, 22]]),
+                block_shape=(3, 4),
             ),
             # Test with a 1x1 ``b`` to make sure ``make_systolic_input_memblock_writer``
             # doesn't raise ``valid`` too early.
-            (np.array([[1], [-4]]), np.array([[11]])),
+            TestCase(
+                a=np.array([[1], [-4]]),
+                b=np.array([[11]]),
+                block_shape=(1, 1),
+            ),
+            # Test with a block that is larger than ``b``. The block extends past the
+            # end of ``b``, so the writer must stop at ``b``'s last address, not the
+            # block's last address.
+            TestCase(
+                a=np.array([[1], [-4]]),
+                b=np.array([[11]]),
+                block_shape=(2, 2),
+            ),
         ]
-        for a, b in test_cases:
-            with self.subTest(b_shape=b.shape):
+        for a, b, block_shape in test_cases:
+            with self.subTest(b_shape=b.shape, block_shape=block_shape):
                 pyrtl.reset_working_block()
 
                 input_bitwidth = max([pyrtl_matrix.minimum_bitwidth(m) for m in [a, b]])
                 accumulator_bitwidth = input_bitwidth * 2
 
-                done_cycle = (
-                    pyrtl_matrix.num_systolic_array_cycles(a.shape, b.shape) - 1
+                # Write all of ``b`` as one block. Pad ``b`` to ``block_shape``. The
+                # padding values are outside ``b``, so they should not be copied to the
+                # MemBlock.
+                padded_b = np.pad(
+                    b,
+                    (
+                        (0, block_shape[0] - b.shape[0]),
+                        (0, block_shape[1] - b.shape[1]),
+                    ),
+                    constant_values=7,
                 )
-                counter_bitwidth = pyrtl.infer_val_and_bitwidth(done_cycle).bitwidth
-
-                # Write all of ``b`` as one block.
                 b_matrix = pyrtl_matrix.make_systolic_input_memblock_writer(
                     name="b_memblock",
                     block=self.make_wire_matrix_2d(
-                        name="b", array=b, bitwidth=input_bitwidth
+                        name="b", array=padded_b, bitwidth=input_bitwidth
                     ),
                     m_shape=b.shape,
-                    addrwidth=counter_bitwidth,
                     block_row_index=pyrtl.Const(0),
                     block_column_index=pyrtl.Const(0),
                 )
